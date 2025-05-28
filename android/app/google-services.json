@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "56884086045",
+    "project_id": "dseller-c21ee",
+    "storage_bucket": "dseller-c21ee.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:56884086045:android:ec5e021d8b1e2b66a68df4",
+        "android_client_info": {
+          "package_name": "com.dseller"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBmeMDldlrXEoYLJIwzO9ghQoHm8JdW4CI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
