@@ -12,14 +12,16 @@ import { AppColors } from './src/constants/AppColors';
 import AuthNav from './src/navigation/AuthNav';
 import { useDispatch, useSelector } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { setAccessToken, setisLoggedin } from './src/redux/AppReducer';
+import { getAuth, onAuthStateChanged } from '@react-native-firebase/auth';
+import { setGlobalUser } from './src/redux/AppReducer';
 
 const Stack = createStackNavigator();
 
 const App = () => {
   const [splash, setSplash] = useState(true)
   const selector = useSelector(state => state.AppReducer);
-const dispatch=useDispatch()
+  const dispatch = useDispatch()
+  const auth=getAuth
   useEffect(() => {
     const timeout = setTimeout(() => {
       setSplash(false)
@@ -29,23 +31,35 @@ const dispatch=useDispatch()
 
   console.log('TEST LOG');
 
-  const fetchToken=async ()=>{
-    const token = await AsyncStorage.getItem('daraz_access_token');
-    if(token){
-      console.log('retreived Token',token);
-      
-      dispatch(setAccessToken(token))
-      dispatch(setisLoggedin(true))
-
+  const fetchToken = async () => {
+    const users = await AsyncStorage.getItem('daraz_users');
+    if (token) {
+      console.log('retreived Token', token);
     }
 
   }
 
-  useEffect(()=>{
+  useEffect(() => {
     fetchToken()
-  },[])
+  }, [])
 
-  
+
+  const [initializing, setInitializing] = useState(true);
+  const [user, setUser] = useState();
+
+  // Handle user state changes
+  function handleAuthStateChanged(user) {
+    setUser(user)
+    if (initializing) setInitializing(false);
+  }
+
+  useEffect(() => {
+    const subscriber = onAuthStateChanged(getAuth(), handleAuthStateChanged);
+    return subscriber; // unsubscribe on unmount
+  }, []);
+
+ 
+
   return (
 
     <View style={styles.container}>
@@ -54,7 +68,7 @@ const dispatch=useDispatch()
         <SplashScreen />
         :
         <NavigationContainer>
-                    {selector.isLoggedin ? <HomeNav /> : <AuthNav />}
+          {user? <HomeNav /> : <AuthNav />}
         </NavigationContainer>
       }
     </View>

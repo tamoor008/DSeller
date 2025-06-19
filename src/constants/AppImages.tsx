@@ -12,6 +12,8 @@ export const AppImages = {
   cross: require("../assets/icons/cross.png"),
   infoblack: require("../assets/icons/infoblack.png"),
   upload: require("../assets/icons/upload.png"),
+  logout: require("../assets/icons/logout.png"),
+  bin: require("../assets/icons/bin.png"),
 
 
 };

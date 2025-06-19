@@ -1,0 +1,25 @@
+{
+    "packaging": [
+      {
+        "product_id": "pack_001",
+        "name": "Wipes Boxes",
+        "price": 20,
+        "quantity": 100,
+        "image_url": "https://example.com/images/wireless-mouse.jpg"
+      },
+      {
+        "product_id": "pack_002",
+        "name": "Large Flyers",
+        "price": 13,
+        "quantity": 1000,
+        "image_url": "https://example.com/images/headphones.jpg"
+      },
+      {
+        "product_id": "pack_003",
+        "name": "USB-C Charging Cable",
+        "price": 11,
+        "quantity": 200,
+        "image_url": "https://example.com/images/usb-c-cable.jpg"
+      }
+    ]
+  }

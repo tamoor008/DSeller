@@ -13,6 +13,7 @@ import DarazTabs from './components/DarazTabs';
 import OrderTabs from './components/OrderTabs';
 import IncomeTab from './components/IncomeTab';
 import AdsTab from './components/AdsTab';
+import { useSelector } from 'react-redux';
 
 
 const DarazScreen = ({ navigation }) => {
@@ -53,14 +54,14 @@ const DarazScreen = ({ navigation }) => {
             <Header title={AppStrings.daraz} info={AppStrings.darazInfo} goBack={goBack} />
             <SelectStore />
             <DarazTabs toggleTabs={toggleTabs} tabs={tabs} />
-{tabs[0].selected&&(
-            <OrderTabs />
-)}
-{tabs[1].selected&&(
-            <IncomeTab />
-)}
-{tabs[2].selected&&(
-            <AdsTab />
+            {tabs[0].selected && (
+                <OrderTabs />
+            )}
+            {tabs[1].selected && (
+                <IncomeTab />
+            )}
+            {tabs[2].selected && (
+                <AdsTab />
             )}
         </View>
     );

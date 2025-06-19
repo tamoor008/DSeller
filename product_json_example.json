@@ -1,0 +1,25 @@
+{
+    "products": [
+      {
+        "product_id": "p001",
+        "name": "Wireless Mouse",
+        "price": 25.99,
+        "quantity": 120,
+        "image_url": "https://example.com/images/wireless-mouse.jpg"
+      },
+      {
+        "product_id": "p002",
+        "name": "Bluetooth Headphones",
+        "price": 79.99,
+        "quantity": 60,
+        "image_url": "https://example.com/images/headphones.jpg"
+      },
+      {
+        "product_id": "p003",
+        "name": "USB-C Charging Cable",
+        "price": 9.49,
+        "quantity": 200,
+        "image_url": "https://example.com/images/usb-c-cable.jpg"
+      }
+    ]
+  }

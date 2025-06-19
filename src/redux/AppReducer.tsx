@@ -5,6 +5,8 @@ import { act } from "react-test-renderer";
 const initialState = {
     isLoggedin: false,
     accessToken: '',
+    user:{},
+    access_tokens:[]
 
    
 
@@ -31,6 +33,14 @@ export const AppSlice = createSlice({
         setAccessToken: (state, action) => {
             state.accessToken = action.payload
         },
+        setGlobalUser: (state, action) => {
+            state.user = action.payload
+        },
+        setAccessTokens: (state, action) => {
+            console.log(action.payload,'payload');
+            
+            state.access_tokens = action.payload
+        },
 
         
         
@@ -42,6 +52,8 @@ export const {
 
     setisLoggedin,
     setAccessToken,
+    setGlobalUser,
+    setAccessTokens
 
 } = AppSlice.actions;
 

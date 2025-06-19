@@ -39,7 +39,9 @@ const OrderTabs = ({ }) => {
 
     const [failedDeliveries, setFailedDeliveries] = useState([])
 
+    const [all_access_tokens,setAll_access_tokens]=useState(selector.access_tokens)
 
+    
     
     const access_token = selector.accessToken
     const onInfoPress = () => {
@@ -203,11 +205,19 @@ const OrderTabs = ({ }) => {
         setOrderCount(0)
         setShippedOrderCount(0)
         const createdAfter = new Date(Date.now() - 1000 * 24 * 60 * 60 * 1000).toISOString(); // 7 days ago
-        getDarazOrders(access_token, createdAfter, 'shipped')
-        getDarazOrders(access_token, createdAfter, 'failed_delivery')
-        getDarazOrders(access_token, createdAfter, 'shipped_back')
+        console.log(all_access_tokens,'all_access_tokens');
 
-    }, [])
+        all_access_tokens.map((item)=>{
+            console.log(item,'iten');
+            
+
+            getDarazOrders(item, createdAfter, 'shipped')
+            getDarazOrders(item, createdAfter, 'failed_delivery')
+            getDarazOrders(item, createdAfter, 'shipped_back')
+        })
+      
+
+    }, [all_access_tokens])
 
     useEffect(() => {
         const merged = mergeSkuCounts(failedOrder, ITRSOrder);

@@ -10,8 +10,9 @@ import HomeScreen from '../ui/home/screens/HomeScreen';
 import StockScreen from '../ui/stock/StockScreen';
 import CashScreen from '../ui/cash/CashScreen';
 import PackagingScreen from '../ui/packaging/PackagingScreen';
-import SigninScreen from '../ui/auth/DarazOAuthScreen';
+import SigninScreen from '../ui/auth/SigninScreen';
 import DarazOAuthScreen from '../ui/auth/DarazOAuthScreen';
+import SignupScreen from '../ui/auth/SignupScreen';
 
 const Stack = createStackNavigator();
 
@@ -21,6 +22,9 @@ const AuthNav = () => {
 
 
         <Stack.Navigator screenOptions={{headerShown:false}}>
+            <Stack.Screen name="SigninScreen" component={SigninScreen} />
+            <Stack.Screen name="SignupScreen" component={SignupScreen} />
+
             <Stack.Screen name="DarazOAuthScreen" component={DarazOAuthScreen} />
         </Stack.Navigator>
 

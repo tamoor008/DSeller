@@ -15,16 +15,35 @@ import { AppStrings } from '../../../constants/AppStrings';
 import FontFamilty from '../../../constants/FontFamilty';
 import TextComp from '../../components/TextComp';
 import TextInputComp from '../../components/TextInputComp';
+import database from '@react-native-firebase/database';
 
 
 const AddNewItem = ({ setIsvisible }) => {
     const [productName, setProductName] = useState('')
     const [productDescription, setProductDescription] = useState('')
-    const [quantity, setQuantity] = useState('')
-    const [price, setPrice] = useState('')
+    const [quantity, setQuantity] = useState(0)
+    const [price, setPrice] = useState(0)
+    const addProductRef = database().ref('/products');
 
-    const isFormValid = productName && productDescription && quantity && price;
+    const isFormValid = productName && quantity && price;
 
+    const addItem = () => {
+
+        console.log('ADD ITEM');
+        
+        addProductRef.push({
+            productName:productName,
+            productDescription:productDescription,
+            quantity:quantity,
+            price: price,
+        }).then(() => {
+            setProductName('')
+            setProductDescription('')
+            setQuantity('')
+            setPrice('')
+
+        });
+    }
 
     return (
         <Modal transparent>
@@ -46,12 +65,11 @@ const AddNewItem = ({ setIsvisible }) => {
                         <TextInputComp cumpolsury={true} size={16} placeHolder={AppStrings.quantity} text={quantity} setText={setQuantity} />
                         <TextInputComp cumpolsury={true} size={16} placeHolder={AppStrings.price} text={price} setText={setPrice} />
                         <View style={{ flexDirection: 'row', alignItems: 'center', columnGap: 16 }}>
-                            <TouchableOpacity onPress={()=>setIsvisible(false)} activeOpacity={0.9} style={{ flex: 1, height: 50, alignItems: 'center', justifyContent: 'center', borderRadius: 4 }}>
+                            <TouchableOpacity onPress={() => setIsvisible(false)} activeOpacity={0.9} style={{ flex: 1, height: 50, alignItems: 'center', justifyContent: 'center', borderRadius: 4 }}>
                                 <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: AppColors.black80, textAlign: 'center' }}>{AppStrings.cancel}</TextComp>
-
                             </TouchableOpacity>
 
-                            <TouchableOpacity disabled={!isFormValid} activeOpacity={0.9} style={{ flex: 1, backgroundColor: isFormValid ? AppColors.primaryOrange : AppColors.black, height: 50, alignItems: 'center', justifyContent: 'center', borderRadius: 4 }}>
+                            <TouchableOpacity onPress={addItem} disabled={!isFormValid} activeOpacity={0.9} style={{ flex: 1, backgroundColor: isFormValid ? AppColors.primaryOrange : AppColors.black, height: 50, alignItems: 'center', justifyContent: 'center', borderRadius: 4 }}>
                                 <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: AppColors.white, textAlign: 'center' }}>{AppStrings.add}</TextComp>
                             </TouchableOpacity>
                         </View>

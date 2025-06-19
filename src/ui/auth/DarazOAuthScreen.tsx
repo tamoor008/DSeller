@@ -12,6 +12,7 @@ const REDIRECT_URI = 'https://www.moonsys.co';
 const AUTH_URL = `https://api.daraz.pk/oauth/authorize?response_type=code&force_auth=true&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&client_id=${CLIENT_ID}`;
 
 const DarazOAuthScreen = ({ navigation }) => {
+  
   const dispatch=useDispatch()
 
   const [loading, setLoading] = useState(false);
@@ -55,16 +56,22 @@ const DarazOAuthScreen = ({ navigation }) => {
   
       const data = await response.json();
       console.log("Daraz Token Response:", data); // this will contain access_token, etc.
-  
+   
       // Example: access individual fields
-      dispatch(setisLoggedin(true))
-      dispatch(setAccessToken(data.access_token))
-      await AsyncStorage.setItem('daraz_access_token', data.access_token).then(()=>{console.log('TOKEN SAVED');
+      // dispatch(setisLoggedin(true))
+      // dispatch(setAccessToken(data.access_token))
+
+      console.log(data,'USER DATA');
+      console.log(JSON.stringify(data),'USER DATA String');
+
+      
+
+      await AsyncStorage.setItem('daraz_users', JSON.stringify(data)).then(()=>{console.log('Daraz User SAVED');
       });
 
   
-      console.log("Access Token:", data.access_token);
-      console.log("Seller ID:", data.user_info?.seller_id);
+      // console.log("Access Token:", data.access_token);
+      // console.log("Seller ID:", data.user_info?.seller_id);
   
       return data;
     } catch (err) {

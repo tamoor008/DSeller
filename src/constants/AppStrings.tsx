@@ -45,5 +45,22 @@ export const AppStrings = {
     packagingInfo: 'This is the approximate value of all available packaging materials including boxes, flyers, bubble wrap, and other supplies used for order fulfillment. It helps in tracking logistics readiness and packaging costs.',
     cancel:'Cancel',
     info:'Information',
-    productDescription:'Product Description'
+    productDescription:'Product Description',
+    welcometo:'Welcome to',
+    dseller:'DSeller',
+    letscreateyourprofile:'Let’s create your profile and get started',
+    welcomeback:'Welcome Back!!',
+    wereallymissedyou:'We really missed you, Let’s login now',
+    email:'Email',
+    password:'Password',
+    forgotpassword:'Forgot Password?',
+    donthaveanaccount:'Don’t have an account?',
+    signup:'Sign Up',
+    signin:'Sign In',
+    alreadyhaveanaccount:'Already have an account?',
+    fullname:'Full Name',
+    youhavenoconnecteddarazstoreatthemoment:'You have no connected daraz store at the moment',
+    addaccount:'Add Account',
+    watchdetailsonlyforthisstore:'Watch details only for this store'
+
 };
