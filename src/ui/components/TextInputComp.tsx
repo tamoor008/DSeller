@@ -6,7 +6,7 @@ import { AppColors } from '../../constants/AppColors';
 const TextInputComp = ({ text, setText, placeHolder, cumpolsury, size, style,keyboardType,secureTextEntry }) => {
     return (
 
-        <TextInput secureTextEntry={secureTextEntry} keyboardType={keyboardType} autoCapitalize="sentences" placeholder={placeHolder + (cumpolsury ? '*' : '')} onChangeText={(text) => setText(text)} style={{ ...styles[size], ...style, borderColor: text ? AppColors.black80 : AppColors.border }}>
+        <TextInput placeholderTextColor={'grey'} secureTextEntry={secureTextEntry} keyboardType={keyboardType} autoCapitalize="sentences" placeholder={placeHolder + (cumpolsury ? '*' : '')} onChangeText={(text) => setText(text)} style={{ ...styles[size], ...style, borderColor: text ? AppColors.black80 : AppColors.border }}>
             {text}
         </TextInput>
     );

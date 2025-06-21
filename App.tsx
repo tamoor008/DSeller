@@ -29,12 +29,12 @@ const App = () => {
     return () => clearTimeout(timeout);
   }, []);
 
-  console.log('TEST LOG');
+  // console.log('TEST LOG');
 
   const fetchToken = async () => {
     const users = await AsyncStorage.getItem('daraz_users');
     if (token) {
-      console.log('retreived Token', token);
+      // console.log('retreived Token', token);
     }
 
   }

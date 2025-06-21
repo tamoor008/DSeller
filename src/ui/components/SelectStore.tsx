@@ -17,8 +17,8 @@ import { getAuth } from '@react-native-firebase/auth';
 import database from '@react-native-firebase/database';
 import WebView from 'react-native-webview';
 import { BASE_URL } from '../../utils/api/baseUrl';
-import { setAccessToken, setAccessTokens } from '../../redux/AppReducer';
-import { useDispatch } from 'react-redux';
+import { setAccessToken, setAccessTokens, setSelectedStore } from '../../redux/AppReducer';
+import { useDispatch, useSelector } from 'react-redux';
 
 
 const SelectStore = () => {
@@ -26,8 +26,8 @@ const SelectStore = () => {
     const currentUser = auth.currentUser
     const [darazOAuth, setDarazOAuth] = useState(false)
     const [stores, setStores] = useState([])
-
-    const dispatch=useDispatch()
+    const selector = useSelector(state => state.AppReducer);
+    const dispatch = useDispatch()
     const [loading, setLoading] = useState(false);
     const [code, setCode] = useState('CODE')
 
@@ -60,7 +60,6 @@ const SelectStore = () => {
         }
     };
 
-
     const listenToStores = (currentUser, setStores) => {
         if (!currentUser || !currentUser.uid) {
             console.warn('User not authenticated');
@@ -81,11 +80,11 @@ const SelectStore = () => {
                 : [];
 
 
-                const access_tokens = dataset.map((item) => item.user.token.access_token);
+            const access_tokens = dataset.map((item) => item.user.token.access_token);
 
-                console.log(access_tokens, 'All Access Tokens');
-                console.log(access_tokens[0], 'First Access Token');
-                dispatch(setAccessTokens(access_tokens))
+            // console.log(access_tokens, 'All Access Tokens');
+            // console.log(access_tokens[0], 'First Access Token');
+            dispatch(setAccessTokens(access_tokens))
 
 
             setStores(dataset);
@@ -95,50 +94,48 @@ const SelectStore = () => {
         return () => ref.off('value', onValueChange);
     };
 
-
     const deleteSeller = async (sellerId) => {
-      return new Promise((resolve, reject) => {
-        Alert.alert(
-          "Confirm Deletion",
-          "Are you sure you want to delete this seller?",
-          [
-            {
-              text: "Cancel",
-              onPress: () => {
-                console.log("Deletion cancelled");
-                resolve({ success: false, message: "Cancelled by user" });
-              },
-              style: "cancel",
-            },
-            {
-              text: "Delete",
-              onPress: async () => {
-                try {
-                  const sellerRef = database().ref(`/users/${currentUser.uid}/stores/${sellerId}`);
-                  const snapshot = await sellerRef.once('value');
-          
-                  if (!snapshot.exists()) {
-                    console.log(`Seller with ID ${sellerId} does not exist.`);
-                    resolve({ success: false, message: "Seller not found" });
-                    return;
-                  }
-          
-                  await sellerRef.remove();
-                  console.log(`Seller with ID ${sellerId} has been deleted.`);
-                  resolve({ success: true });
-                } catch (error) {
-                  console.error('Error deleting seller:', error);
-                  reject(error);
-                }
-              },
-              style: "destructive",
-            },
-          ],
-          { cancelable: false }
-        );
-      });
+        return new Promise((resolve, reject) => {
+            Alert.alert(
+                "Confirm Deletion",
+                "Are you sure you want to delete this seller?",
+                [
+                    {
+                        text: "Cancel",
+                        onPress: () => {
+                            console.log("Deletion cancelled");
+                            resolve({ success: false, message: "Cancelled by user" });
+                        },
+                        style: "cancel",
+                    },
+                    {
+                        text: "Delete",
+                        onPress: async () => {
+                            try {
+                                const sellerRef = database().ref(`/users/${currentUser.uid}/stores/${sellerId}`);
+                                const snapshot = await sellerRef.once('value');
+
+                                if (!snapshot.exists()) {
+                                    console.log(`Seller with ID ${sellerId} does not exist.`);
+                                    resolve({ success: false, message: "Seller not found" });
+                                    return;
+                                }
+
+                                await sellerRef.remove();
+                                console.log(`Seller with ID ${sellerId} has been deleted.`);
+                                resolve({ success: true });
+                            } catch (error) {
+                                console.error('Error deleting seller:', error);
+                                reject(error);
+                            }
+                        },
+                        style: "destructive",
+                    },
+                ],
+                { cancelable: false }
+            );
+        });
     };
-    
 
     const handleNavigationStateChange = (navState) => {
         const { url } = navState;
@@ -205,6 +202,14 @@ const SelectStore = () => {
 
 
     const [expandedSellers, setExpandedSellers] = useState(false)
+
+    const setStore = (details) => {
+        // console.log(details);
+        dispatch(setSelectedStore(details))
+        setExpandedSellers(false)
+    }
+
+
     return (
         <View style={styles.container}>
             {stores.length <= 0 ?
@@ -216,23 +221,50 @@ const SelectStore = () => {
                 </View>
                 :
                 <View>
-                    <TouchableOpacity onPress={() => setExpandedSellers(!expandedSellers)} activeOpacity={0.9} style={{ flexDirection: 'row', alignItems: 'center', columnGap: 5 }}>
-                        <TextComp size={16} style={{ fontFamily: FontFamilty.medium, color: AppColors.black }}>{AppStrings.allstores}</TextComp>
-                        <Image resizeMode='contain' style={{ width: 10, height: 10 }} source={AppImages.dropdown} />
-                    </TouchableOpacity>
+                    {selector.selectedStore.id ?
+
+                        <TouchableOpacity onPress={() => setExpandedSellers(!expandedSellers)} activeOpacity={0.9} style={{ flexDirection: 'row', alignItems: 'center', columnGap: 5 }}>
+                            <TextComp size={16} style={{ fontFamily: FontFamilty.medium, color: AppColors.black }}>{selector.selectedStore?.user?.seller?.data?.name}</TextComp>
+                            <Image resizeMode='contain' style={{ width: 10, height: 10 }} source={AppImages.dropdown} />
+                        </TouchableOpacity> :
+                        <TouchableOpacity onPress={() => setExpandedSellers(!expandedSellers)} activeOpacity={0.9} style={{ flexDirection: 'row', alignItems: 'center', columnGap: 5 }}>
+                            <TextComp size={16} style={{ fontFamily: FontFamilty.medium, color: AppColors.black }}>{AppStrings.allstores}</TextComp>
+                            <Image resizeMode='contain' style={{ width: 10, height: 10 }} source={AppImages.dropdown} />
+                        </TouchableOpacity>
+                    }
                     {expandedSellers && (
                         <View style={{ backgroundColor: AppColors.bgcolor, elevation: 10, borderRadius: 16, padding: 16, rowGap: 16, marginVertical: 16 }}>
-                            {stores.map((item, index) => <View key={index} style={{ paddingBottom: 8, flexDirection: 'row', alignItems: 'center' }}>
-                                <View style={{flex:1}}>
-                                <TextComp size={16} style={{ color: AppColors.black, fontFamily: FontFamilty.medium, flex: 1 }} >{item?.user?.seller?.data?.name}</TextComp>
-                                <TextComp size={12} style={{ color: AppColors.primaryOrange, fontFamily: FontFamilty.medium, flex: 1 }} >{AppStrings.watchdetailsonlyforthisstore}</TextComp>
+                            {stores.map((item, index) => {
+                                // Replace 'EXCLUDE123' with the ID you want to skip
+                                if (item?.user?.seller?.data?.short_code === selector.selectedStore.id) return null;
 
-                                </View>
-                                <TouchableOpacity onPress={()=>deleteSeller(item?.user?.seller?.data?.short_code)}>
-                                    <Image style={{ width: 32, height: 32 }} source={AppImages.bin} />
+                                return (
+                                    <View key={index} style={{ paddingBottom: 8, flexDirection: 'row', alignItems: 'center' }}>
+                                        <View style={{ flex: 1 }}>
+                                            <TextComp size={16} style={{ color: AppColors.black, fontFamily: FontFamilty.medium,}}>
+                                                {item?.user?.seller?.data?.name}
+                                            </TextComp>
+                                            <TouchableOpacity style={{ }} onPress={() => setStore(item)}>
+                                                <TextComp size={12} style={{ color: AppColors.primaryOrange, fontFamily: FontFamilty.medium, }}>
+                                                    {AppStrings.watchdetailsonlyforthisstore}
+                                                </TextComp>
+                                            </TouchableOpacity>
+                                        </View>
+                                        <TouchableOpacity onPress={() => deleteSeller(item?.user?.seller?.data?.short_code)}>
+                                            <Image style={{ width: 32, height: 32 }} source={AppImages.bin} />
+                                        </TouchableOpacity>
+                                    </View>
+                                );
+                            })}
+
+                            {selector.selectedStore.id && (
+                                <TouchableOpacity onPress={() => setStore('')} style={{}}>
+                                    <TextComp size={12} style={{ color: AppColors.primaryOrange, fontFamily: FontFamilty.medium, }}>
+                                        {AppStrings.watchdetailsofallstore}
+                                    </TextComp>
                                 </TouchableOpacity>
-                                
-                            </View>)}
+
+                            )}
                         </View>
                     )}
                     <TextComp size={12} style={{ fontFamily: FontFamilty.medium, color: AppColors.black50 }}>{AppStrings.total + ' : ' + stores.length}</TextComp>
@@ -245,7 +277,7 @@ const SelectStore = () => {
             {darazOAuth && (
                 <Modal>
                     <View style={{ flex: 1, position: 'absolute', width: '100%', height: '100%' }}>
-                        <View style={{ alignItems: 'flex-end' }}>
+                        <View style={{ alignItems: 'flex-end',padding:16 }}>
                             <TouchableOpacity onPress={() => setDarazOAuth(false)}>
                                 <Image style={{ width: 24, height: 24 }} source={AppImages.cross} />
                             </TouchableOpacity>

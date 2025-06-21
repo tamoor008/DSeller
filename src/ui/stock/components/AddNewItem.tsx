@@ -16,34 +16,53 @@ import FontFamilty from '../../../constants/FontFamilty';
 import TextComp from '../../components/TextComp';
 import TextInputComp from '../../components/TextInputComp';
 import database from '@react-native-firebase/database';
+import { getAuth } from '@react-native-firebase/auth';
+import DropDownPicker from 'react-native-dropdown-picker';
 
 
 const AddNewItem = ({ setIsvisible }) => {
+    const auth = getAuth()
+    const currentUser = auth.currentUser
     const [productName, setProductName] = useState('')
     const [productDescription, setProductDescription] = useState('')
-    const [quantity, setQuantity] = useState(0)
-    const [price, setPrice] = useState(0)
-    const addProductRef = database().ref('/products');
+    const [quantity, setQuantity] = useState('')
+    const [price, setPrice] = useState('')
+    const addProductRef = database().ref(`users/${currentUser.uid}/products`);
 
-    const isFormValid = productName && quantity && price;
 
     const addItem = () => {
 
         console.log('ADD ITEM');
-        
+
         addProductRef.push({
-            productName:productName,
-            productDescription:productDescription,
-            quantity:quantity,
+            productName: productName,
+            productDescription: productDescription,
+            quantity: quantity,
             price: price,
+            unit:value
         }).then(() => {
             setProductName('')
             setProductDescription('')
             setQuantity('')
             setPrice('')
+            setValue(null)
 
         });
     }
+
+    const [open, setOpen] = useState(false);
+    const [value, setValue] = useState(null);
+    const [items, setItems] = useState([
+        { label: 'Kg', value: 'kg' },
+        { label: 'Liter', value: 'liter' },
+        { label: 'Gram', value: 'gram' },
+        { label: 'Mili liter (ml)', value: 'ml' },
+        { label: 'Unit', value: 'unit' },
+
+
+    ]);
+    const isFormValid = productName && quantity && price&&value;
+
 
     return (
         <Modal transparent>
@@ -61,9 +80,20 @@ const AddNewItem = ({ setIsvisible }) => {
                             </TouchableOpacity>
                         </View>
                         <TextInputComp cumpolsury={true} size={16} placeHolder={AppStrings.productname} text={productName} setText={setProductName} />
+                        <DropDownPicker 
+                        placeholder={'Select Measuring Unit'}
+                            open={open}
+                            value={value}
+                            items={items}
+                            setOpen={setOpen}
+                            setValue={setValue}
+                            setItems={setItems}
+                        />
+                                                        <TextComp size={12} style={{ fontFamily: FontFamilty.medium, color: AppColors.black80, }}>{AppStrings.itsveryimportanttoselecttherightunitbecauseitwillbeliinkedtoyourproductsondarazanditcancauseissueswiththat}</TextComp>
+
                         <TextInputComp cumpolsury={false} size={16} placeHolder={AppStrings.productDescription} text={productDescription} setText={setProductDescription} />
-                        <TextInputComp cumpolsury={true} size={16} placeHolder={AppStrings.quantity} text={quantity} setText={setQuantity} />
-                        <TextInputComp cumpolsury={true} size={16} placeHolder={AppStrings.price} text={price} setText={setPrice} />
+                        <TextInputComp keyboardType={'numeric'} cumpolsury={true} size={16} placeHolder={AppStrings.quantity} text={quantity} setText={setQuantity} />
+                        <TextInputComp keyboardType={'numeric'} cumpolsury={true} size={16} placeHolder={AppStrings.price+' / '+value} text={price} setText={setPrice} />
                         <View style={{ flexDirection: 'row', alignItems: 'center', columnGap: 16 }}>
                             <TouchableOpacity onPress={() => setIsvisible(false)} activeOpacity={0.9} style={{ flex: 1, height: 50, alignItems: 'center', justifyContent: 'center', borderRadius: 4 }}>
                                 <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: AppColors.black80, textAlign: 'center' }}>{AppStrings.cancel}</TextComp>

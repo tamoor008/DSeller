@@ -6,7 +6,9 @@ const initialState = {
     isLoggedin: false,
     accessToken: '',
     user:{},
-    access_tokens:[]
+    access_tokens:[],
+    selectedStore:{
+    }
 
    
 
@@ -37,9 +39,12 @@ export const AppSlice = createSlice({
             state.user = action.payload
         },
         setAccessTokens: (state, action) => {
-            console.log(action.payload,'payload');
-            
+            // console.log(action.payload,'payload');
             state.access_tokens = action.payload
+        },
+        setSelectedStore: (state, action) => {    
+            // console.log(action.payload,'payload');
+            state.selectedStore = action.payload
         },
 
         
@@ -53,7 +58,8 @@ export const {
     setisLoggedin,
     setAccessToken,
     setGlobalUser,
-    setAccessTokens
+    setAccessTokens,
+    setSelectedStore
 
 } = AppSlice.actions;
 

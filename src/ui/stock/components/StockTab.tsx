@@ -19,11 +19,14 @@ import AddNewItem from './AddNewItem';
 import UpdateStock from './UpdateStock';
 
 import database from '@react-native-firebase/database';
+import { getAuth } from '@react-native-firebase/auth';
 
 
 const StockTab = ({ }) => {
+    const auth = getAuth()
+    const currentUser = auth.currentUser
     const [products, setProducts] = useState([]);
-    const productRef = database().ref('/products');
+    const productRef = database().ref(`users/${currentUser.uid}/products`);
     const [totalPrice, setTotalPrice] = useState(0)
     const [loader, setLoader] = useState(false)
     const [isVisible, setIsvisible] = useState(false)
@@ -35,14 +38,26 @@ const StockTab = ({ }) => {
             .once('value')
             .then(snapshot => {
                 console.log('User data: ', snapshot.val());
-                const array = Object.entries(snapshot.val()).map(([id, value]) => ({
-                    id, // this is the Firebase-generated key
-                    ...value,
-                }));
-                console.log('User data array: ', array);
 
-                setProducts(array)
-                setLoader(false)
+                const data = snapshot.val();
+
+                if (data) {
+                    const array = Object.entries(data).map(([id, value]) => ({
+                        id,
+                        ...value,
+                    }));
+                    console.log('User data array: ', array);
+                    setProducts(array);
+                } else {
+                    console.log('No product data found.');
+                    setProducts([]); // Optional: clear products if nothing is found
+                }
+
+                setLoader(false);
+            })
+            .catch(error => {
+                console.error('Error fetching data:', error);
+                setLoader(false); // ensure loader stops even on error
             });
     }, [isVisible, updatestock])
 
@@ -150,19 +165,20 @@ const StockTab = ({ }) => {
                 </View>
                 :
                 <View style={{ flex: 1 }}>
-                    <View style={{ backgroundColor: AppColors.white, elevation: 0, borderRadius: 4, zIndex: 0, borderLeftWidth: 1, borderRightWidth: 1, borderColor: AppColors.black25, flex: 1 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, paddingVertical: 8, backgroundColor: AppColors.primaryOrange, borderTopEndRadius: 4, borderTopLeftRadius: 4 }}>
-                            <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2, }}>{AppStrings.name}</TextComp>
-                            <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 1, textAlign: 'center' }}>{AppStrings.up}</TextComp>
-                            <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 1, textAlign: 'center' }}>{AppStrings.quantity}</TextComp>
-                            <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 1, textAlign: 'center' }}>{AppStrings.total}</TextComp>
-                        </View>
+                    {products.length > 0 ?
+                        <View style={{ backgroundColor: AppColors.white, elevation: 0, borderRadius: 4, zIndex: 0, borderLeftWidth: 1, borderRightWidth: 1, borderColor: AppColors.black25, flex: 1 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, paddingVertical: 8, backgroundColor: AppColors.primaryOrange, borderTopEndRadius: 4, borderTopLeftRadius: 4 }}>
+                                <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2, }}>{AppStrings.name}</TextComp>
+                                <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 1, textAlign: 'center' }}>{AppStrings.up}</TextComp>
+                                <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 1, textAlign: 'center' }}>{AppStrings.quantity}</TextComp>
+                                <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 1, textAlign: 'center' }}>{AppStrings.total}</TextComp>
+                            </View>
 
-                        <ScrollView contentContainerStyle={{ paddingBottom: 32 }} style={{ paddingVertical: 8, paddingHorizontal: 16, flex: 1 }}>
-                            {products?.map((item, index) => <View style={{ flexDirection: 'row', alignItems: 'center', borderBottomWidth: index === products.length - 1 ? 0 : 1, borderColor: AppColors.black25, paddingVertical: 16 }} key={index}>
-                                <View style={{ flex: 2, flexDirection: 'row', alignItems: 'center', borderRadius: 100 }}>
+                            <ScrollView contentContainerStyle={{ paddingBottom: 32 }} style={{ paddingVertical: 8, paddingHorizontal: 16, flex: 1 }}>
+                                {products?.map((item, index) => <View style={{ flexDirection: 'row', alignItems: 'center', borderBottomWidth: index === products.length - 1 ? 0 : 1, borderColor: AppColors.black25, paddingVertical: 16 }} key={index}>
+                                    <View style={{ flex: 2, flexDirection: 'row', alignItems: 'center', borderRadius: 100 }}>
 
-                                    {/* <Image
+                                        {/* <Image
                                 style={{ width: 32, height: 32, borderRadius: 100 }}
                                 source={
                                     item.image_url
@@ -171,26 +187,30 @@ const StockTab = ({ }) => {
                                 }
                             /> */}
 
-                                    <TextComp size={12} style={{ fontFamily: FontFamilty.medium, color: AppColors.black }}>{item.productName}</TextComp>
-                                </View>
-                                <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black, flex: 1, textAlign: 'center' }}>{'Rs ' + formatPrice(item.price)}</TextComp>
-                                <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black, flex: 1, textAlign: 'center' }}>{item.quantity}</TextComp>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-start' }}>
-                                    <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black80, textAlign: 'right' }}>{'Rs'}</TextComp>
-                                    <TextComp size={12} style={{ fontFamily: FontFamilty.semibold, color: AppColors.black, textAlign: 'right' }}>  {formatPrice(item.price * item.quantity)}</TextComp>
-                                </View>
+                                        <TextComp size={12} style={{ fontFamily: FontFamilty.medium, color: AppColors.black }}>{item.productName}</TextComp>
+                                    </View>
+                                    <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black, flex: 1, textAlign: 'center' }}>{'Rs ' + formatPrice(item.price)+'/'+item.unit}</TextComp>
+                                    <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black, flex: 1, textAlign: 'center' }}>{item.quantity}</TextComp>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-start' }}>
+                                        <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black80, textAlign: 'right' }}>{'Rs'}</TextComp>
+                                        <TextComp size={12} style={{ fontFamily: FontFamilty.semibold, color: AppColors.black, textAlign: 'right' }}>  {formatPrice(item.price * item.quantity)}</TextComp>
+                                    </View>
 
-                            </View>)}
-                        </ScrollView>
+                                </View>)}
+                            </ScrollView>
 
-                        <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, paddingVertical: 8, backgroundColor: AppColors.primaryOrange, borderBottomEndRadius: 4, borderBottomLeftRadius: 4 }}>
-                            <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2, }}>{AppStrings.total}</TextComp>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
-                                <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.white80, textAlign: 'right' }}>{'Rs '}</TextComp>
-                                <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: AppColors.white, textAlign: 'right' }}>{formatPrice(totalPrice)}</TextComp>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, paddingVertical: 8, backgroundColor: AppColors.primaryOrange, borderBottomEndRadius: 4, borderBottomLeftRadius: 4 }}>
+                                <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2, }}>{AppStrings.total}</TextComp>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
+                                    <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.white80, textAlign: 'right' }}>{'Rs '}</TextComp>
+                                    <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: AppColors.white, textAlign: 'right' }}>{formatPrice(totalPrice)}</TextComp>
+                                </View>
                             </View>
-                        </View>
-                    </View>
+                        </View> :
+                        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                            <TextComp size={16} style={{ fontFamily: FontFamilty.semibold,textAlign:'center' }}>{AppStrings.therearenoproductsaddnewproductstoseethemhere}</TextComp>
+
+                        </View>}
                 </View>
             }
 
