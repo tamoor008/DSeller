@@ -12,32 +12,24 @@ import FontFamilty from '../../../constants/FontFamilty';
 import InfoModal from '../../components/InfoModal';
 import TextComp from '../../components/TextComp';
 import { AppColors } from '../../../constants/AppColors';
+import { BASE_URL } from '../../../utils/api/baseUrl';
+import { useSelector } from 'react-redux';
 
 
 
 const IncomeTab = ({ }) => {
     const [isVisible, setIsvisible] = useState(false)
+    const selector = useSelector(state => state.AppReducer);
+
     const onInfoPress = () => {
         setIsvisible(true)
     }
+    const [all_access_tokens, setAll_access_tokens] = useState([]);
 
-    const [income, setIncome] = useState({
-        amountsettled: {
-            totalPrice: 0,
-            income: [
-                { id: 0, storeName: 'Swaat Enterprises', date: '28 Apr 2025 - 04 May 2025', amount: 2000 },
-                { id: 0, storeName: 'Tech Hunts', date: '28 Apr 2025 - 04 May 2025', amount: 1000 },
-            ],
-        },
-        weekinprogress: {
-            totalPrice: 0,
-            income: [
-                { id: 0, storeName: 'Swaat Enterprises', date: '28 Apr 2025 - 04 May 2025', amount: 500 },
-                { id: 0, storeName: 'Tech Hunts', date: '28 Apr 2025 - 04 May 2025', amount: 400 },
-            ],
-        },
 
-    });
+    const [income, setIncome] = useState([
+ 
+    ]);
 
     const [tabs, setTabs] = useState([
         {
@@ -50,25 +42,8 @@ const IncomeTab = ({ }) => {
         },
 
     ])
-    const calculateAllTotals = (ordersObj) => {
-        const updated = {};
 
-        for (const key in ordersObj) {
-            const { income: orderList } = ordersObj[key];
 
-            const totalPrice = orderList.reduce((sum, order) => sum + order.amount, 0);
-
-            updated[key] = {
-                ...ordersObj[key],
-                totalPrice,
-            };
-        }
-
-        return updated;
-    };
-    useEffect(() => {
-        setIncome((prev) => calculateAllTotals(prev));
-    }, []);
 
 
 
@@ -82,19 +57,96 @@ const IncomeTab = ({ }) => {
         );
     };
 
-    useEffect(() => {
-        setTabs([
-            {
-                title: AppStrings.amountsettled,
-                selected: tabs.find(t => t.title === AppStrings.amountsettled)?.selected || false,
-            },
-            {
-                title: AppStrings.weekinprogress,
-                selected: tabs.find(t => t.title === AppStrings.weekinprogress)?.selected || false,
-            },
 
-        ]);
+
+
+
+
+
+    const getDarazIncome = async (access_token,storeName, createdAfterISO) => {
+
+        try {
+            const response = await fetch(`${BASE_URL}/get-daraz-income-details?access_token=${access_token}&created_after=${encodeURIComponent(createdAfterISO)}&storeName=${storeName}`);
+
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            // console.log(data);
+            setIncome(prev=>[...prev,...data.financeRespone])
+
+
+        
+
+        } catch (error) {
+            console.error("Error fetching Daraz orders:", error.message);
+            return null;
+        }
+    };
+
+    useEffect(() => {
+        if (!all_access_tokens || (Array.isArray(all_access_tokens) && all_access_tokens.length === 0)) return;
+
+        const fetchOrders = async () => {
+
+ 
+
+            const createdAfter = new Date(Date.now() - 1000 * 24 * 60 * 60 * 1000).toISOString(); // 7 days ago
+
+            let requests = [];
+
+            if (Array.isArray(all_access_tokens)) {
+                requests = all_access_tokens.flatMap(item => [
+                    console.log(item),
+                    
+                    getDarazIncome(item.access_token,item.name, createdAfter),
+                
+                ]);
+            } else if (all_access_tokens) {
+                requests = [
+                    getDarazIncome(all_access_tokens.access_token,item.name, createdAfter),
+                ];
+            }
+
+            try {
+                await Promise.all(requests); // Wait for all async tasks to complete
+            } catch (error) {
+                console.error('Error while fetching income:', error);
+            } finally {
+                // setLoader(false);
+                // allOrder.map((item,index)=>console.log(item.sku))
+
+            }
+        };
+
+        fetchOrders();
+    }, [all_access_tokens]);
+
+    useEffect(() => {
+        let newTokens = [];
+
+        if (selector.selectedStore?.id) {
+            const token = selector.selectedStore.user?.token?.access_token;
+            newTokens = token ? [token] : [];
+        } else {
+            newTokens = Array.isArray(selector.access_tokens) ? selector.access_tokens : [];
+        }
+
+        // Only update state if value has changed
+        const hasChanged = JSON.stringify(newTokens) !== JSON.stringify(all_access_tokens);
+        if (hasChanged) {
+            setAll_access_tokens(newTokens);
+        }
+
+    }, [selector]);
+
+    useEffect(() => {
+     console.log(income);
+     
     }, [income]);
+
+
     return (
 
         <View style={{ rowGap: 16 }}>
@@ -109,13 +161,13 @@ const IncomeTab = ({ }) => {
 
 
             </View>
-            {tabs[0].selected && (
+            {/* {tabs[0].selected && (
 
                 <View style={{ backgroundColor: AppColors.white, elevation: 10, borderRadius: 4 }}>
 
 
                     <View style={{ paddingVertical: 8, paddingHorizontal: 16,rowGap:16}}>
-                        {income.amountsettled.income.map((item, index) =>
+                        {income?.map((item, index) =>
                              <View key={index} style={{rowGap:16}}>
                              <View style={{ flexDirection: 'row', alignItems: 'center', }} >
                                  <View style={{ flex: 1 }}>
@@ -144,9 +196,9 @@ const IncomeTab = ({ }) => {
                         </View>
                     </View>
                 </View>
-            )}
+            )} */}
 
-            {tabs[1].selected && (
+            {/* {tabs[1].selected && (
 
                 <View style={{ backgroundColor: AppColors.white, elevation: 10, borderRadius: 4 }}>
 
@@ -181,7 +233,7 @@ const IncomeTab = ({ }) => {
                         </View>
                     </View>
                 </View>
-            )}
+            )} */}
 
         </View>
 
