@@ -64,7 +64,8 @@ export const AppStrings = {
     watchdetailsonlyforthisstore:'Watch details only for this store',
     watchdetailsofallstore:'Watch details of all stores',
     itsveryimportanttoselecttherightunitbecauseitwillbeliinkedtoyourproductsondarazanditcancauseissueswiththat:'its very important to select the right unit because it will be liinked to your products on daraz and it can cause issues with that',
-    therearenoproductsaddnewproductstoseethemhere:'There are no products, add new products to see them here'
+    therearenoproductsaddnewproductstoseethemhere:'There are no products, add new products to see them here',
+    lastweek:'Last Week'
 
 
 };

@@ -80,8 +80,10 @@ const SelectStore = () => {
                 : [];
 
 
-            const access_tokens = dataset.map((item) => item.user.token.access_token);
-
+                const access_tokens = dataset.map((item) => ({
+                    access_token: item.user.token.access_token,
+                    name: item.user.seller.data.name,               // example: add name
+                  }));
             // console.log(access_tokens, 'All Access Tokens');
             // console.log(access_tokens[0], 'First Access Token');
             dispatch(setAccessTokens(access_tokens))

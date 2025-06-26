@@ -82,7 +82,8 @@ const SkuLinking = ({ setIsvisible,selectedSku }) => {
           price: quantity * selectedProduct.price, // or any field(s) you want to change
           productId:value,
           productQuantity:quantity,
-          productName:selectedProduct.productName
+          productName:selectedProduct.productName,
+          sku:selectedSku.sku
         };
       
         updateSKUref

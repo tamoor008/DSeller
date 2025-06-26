@@ -27,6 +27,13 @@ const HomeScreen = ({ navigation }) => {
         navigation.navigate(AppScreens.PackagingScreen)
     }
 
+    
+
+
+    
+
+
+
     return (
         <View style={styles.container}>
             <HomeHeader />

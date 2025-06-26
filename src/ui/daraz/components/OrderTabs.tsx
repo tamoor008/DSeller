@@ -1,17 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
-    Image,
+    Alert,
     ScrollView,
     StyleSheet,
-    Text,
     TouchableOpacity,
     View,
 } from 'react-native';
-import { AppImages } from '../../../constants/AppImages';
 import { AppStrings } from '../../../constants/AppStrings';
 import FontFamilty from '../../../constants/FontFamilty';
-import InfoModal from '../../components/InfoModal';
 import TextComp from '../../components/TextComp';
 import { AppColors } from '../../../constants/AppColors';
 import { useSelector } from 'react-redux';
@@ -20,8 +17,6 @@ import SkuLinking from './SkuLinking';
 import database from '@react-native-firebase/database';
 import { getAuth } from '@react-native-firebase/auth';
 
-
-
 const OrderTabs = ({ }) => {
     const auth = getAuth()
     const currentUser = auth.currentUser
@@ -29,40 +24,124 @@ const OrderTabs = ({ }) => {
     const selector = useSelector(state => state.AppReducer);
     const [allOrder, setAllOrder] = useState([])
     const [shippedOrder, setShippedOrder] = useState([])
+    const [finalShippedOrder, setFinalShippedOrder] = useState([])
     const [failedOrder, setFailedOrder] = useState([])
     const [ITRSOrder, setITRSOrder] = useState([])
     const [modalVisible, setmodalVisible] = useState(false)
-    const skuRef = database().ref(`users/${currentUser.uid}/skus`);
-
-    const [returnOrder, setReturnOrder] = useState([])
+    const skuRef = database().ref(`users/${currentUser.uid}/skusList`);
+    const productRef = database().ref(`users/${currentUser.uid}/products`);
     const [allOrderCount, setOrderCount] = useState(0)
     const [shippedOrderCount, setShippedOrderCount] = useState(0)
     const [failedOrderCount, setFailedOrderCount] = useState(0)
     const [returnOrderCount, setReturnOrderCount] = useState(0)
-
-    const [allQuantityCount, setQuantityCountCount] = useState(0)
-    const [shippedQuantityCount, setShippedQuantityCount] = useState(0)
-    const [failedQuantityCount, setFailedQuantityCount] = useState(0)
-    const [returnQuantityCount, setReturnQuantityCount] = useState(0)
-
     const [failedDeliveries, setFailedDeliveries] = useState([])
-
-
+    const [shippedOrdersTotal, setshippedOrdersTotal] = useState(0)
+    const [failedOrdersTotal, setfailedOrdersTotal] = useState(0)
     const [all_access_tokens, setAll_access_tokens] = useState([]);
+    const [allSkus, setAllSkus] = useState([])
+    const [firebaseSkus, setFirebaseSkus] = useState([])
+    const [selectedSku, setSelectedSku] = useState({})
 
-    const [allSkus,setAllSkus]=useState([])
-    const [firebaseSkus,setFirebaseSkus]=useState([])
+    const addAdditionalSkus = (existing, newskus) => {
+        // Step 1: Get list of existing SKUs (case-insensitive match)
+        const existingSkus = existing.map(item => item?.sku?.trim());
 
+        // Step 2: Filter only those new SKUs that are NOT in existing list
+        const missingSkus = newskus.filter(item =>
+            !existingSkus.includes(item?.sku?.trim())
+        );
+
+        if (missingSkus.length === 0) {
+            console.log('no missing skus');
+            
+            return;
+
+        }
+
+
+        // Step 3: Convert to object with custom keys (e.g., using the SKU itself)
+        const skusToSave = {};
+        missingSkus.forEach(item => {
+            skusToSave[item.sku] = {
+                sku: item.sku,
+                price: 0
+            };
+        });
+
+        // Step 4: Save them to Firebase under existing list
+        const userSkuListRef = database().ref(`/users/${currentUser.uid}/skusList`);
+        userSkuListRef.update(skusToSave)
+            .then(() => console.log('Missing SKUs saved to Firebase'))
+            .catch(err => console.error('Error saving new SKUs:', err));
+    };
+
+    useEffect(() => {
+        const listener = skuRef.on('value', snapshot => {
+            const data = snapshot.val();
+
+            if (data) {
+                const array = Object.entries(data).map(([id, value]) => ({
+                    id,
+                    ...value,
+                }));
+
+
+                setFirebaseSkus(array);
+                addAdditionalSkus(array, allOrder)
+            } else {
+                saveSkusAsArrayWithPriceZero(allOrder);
+                setFirebaseSkus([]);
+            }
+        }, error => {
+            console.error('Error fetching data:', error);
+            setLoader(false);
+        });
+
+        // 🔴 IMPORTANT: detach listener on unmount to prevent memory leaks
+        return () => skuRef.off('value', listener);
+    }, []);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const snapshot = await productRef.once('value');
+                const data = snapshot.val();
+
+                if (data) {
+                    const array = Object.entries(data).map(([id, value]) => ({
+                        id,
+                        ...value,
+                    }));
+                    console.log(array);
+                } else {
+                    Alert.alert('There are no products added kindly add products as well');
+                }
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                setLoader(false);
+            }
+        };
+
+        fetchData();
+
+        // No need to return cleanup for `.once()`
+    }, []);
 
     useEffect(() => {
         let newTokens = [];
 
         if (selector.selectedStore?.id) {
-            const token = selector.selectedStore.user?.token?.access_token;
-            newTokens = token ? [token] : [];
+            const access_token = selector.selectedStore.user?.token?.access_token;
+            const name = selector.selectedStore?.user.seller.data.name;
+
+            newTokens = [{
+                access_token: access_token || null,
+                storeName: name || null
+            }];
         } else {
             newTokens = Array.isArray(selector.access_tokens) ? selector.access_tokens : [];
         }
+
 
         // Only update state if value has changed
         const hasChanged = JSON.stringify(newTokens) !== JSON.stringify(all_access_tokens);
@@ -74,55 +153,16 @@ const OrderTabs = ({ }) => {
 
     const [loader, setLoader] = useState(true)
 
-
-    const access_token = selector.accessToken
     const onInfoPress = () => {
         setIsvisible(true)
     }
 
     const [orders, setOrders] = useState({
-        all: {
-            totalPrice: 0,
-            totalOrders: allOrderCount,
-            orders: [
-                { id: 0, sku: 'swaat-chia-500', quantity: 2, price: 1600 },
-                { id: 0, sku: 'swaat-chia-10', quantity: 1, price: 1600 },
-                { id: 0, sku: 'cx-07', quantity: 2, price: 1600 },
-                { id: 0, sku: 'cx-08', quantity: 2, price: 1600 },
-            ],
-        },
-        shipped: {
-            totalPrice: 0,
-            totalOrders: shippedOrderCount,
-            orders: [
-                { id: 0, sku: 'cx-07', quantity: 2, price: 1600 },
-                { id: 0, sku: 'cx-08', quantity: 2, price: 1600 },
-            ],
-        },
-        failed: {
-            totalPrice: 0,
-            totalOrders: failedOrderCount,
-            orders: [
-
-                { id: 0, sku: 'cx-08', quantity: 2, price: 1600 },
-            ],
-        },
-        returned: {
-            totalOrders: returnOrderCount,
-            totalPrice: 0,
-            orders: [
-                { id: 0, sku: 'cx-07', quantity: 1, price: 1600 },
-
-            ],
-        },
     });
 
     const [tabs, setTabs] = useState([]);
 
-
-
-
-
+    const [allOrdersTotal, setAllOrdersTotal] = useState(0)
 
     const toggleTabs = (index) => {
         setTabs(prevTabs =>
@@ -138,23 +178,16 @@ const OrderTabs = ({ }) => {
             {
                 title: AppStrings.all,
                 selected: tabs.find(t => t.title === AppStrings.all)?.selected || false,
-                totalOrders: orders.all.totalOrders
             },
             {
                 title: AppStrings.shipped,
                 selected: tabs.find(t => t.title === AppStrings.shipped)?.selected || false,
-                totalOrders: orders.shipped.totalOrders
             },
             {
                 title: AppStrings.failed,
                 selected: tabs.find(t => t.title === AppStrings.failed)?.selected || false,
-                totalOrders: orders.failed.totalOrders
             },
-            {
-                title: AppStrings.return,
-                selected: tabs.find(t => t.title === AppStrings.return)?.selected || false,
-                totalOrders: orders.returned.totalOrders
-            },
+
         ]);
     }, [orders]);
 
@@ -168,15 +201,16 @@ const OrderTabs = ({ }) => {
             });
         });
 
+
         return Object.entries(skuCount).map(([sku, quantity]) => ({
             sku,
             quantity,
+            price: getPriceBySku(firebaseSkus, sku)
         }));
     }
 
     function mergeSkuCounts(existing, incoming) {
         const combined = {};
-
         // Add existing items to the map
         existing.forEach(item => {
             combined[item.sku] = (combined[item.sku] || 0) + item.quantity;
@@ -194,9 +228,8 @@ const OrderTabs = ({ }) => {
         }));
     }
 
-
     const getDarazOrders = async (access_token, createdAfterISO, status) => {
-        // console.log(access_token);
+
 
         try {
             const response = await fetch(`${BASE_URL}/get-daraz-order-details?access_token=${access_token}&created_after=${encodeURIComponent(createdAfterISO)}&status=${status}`);
@@ -206,27 +239,23 @@ const OrderTabs = ({ }) => {
             }
 
             const data = await response.json();
-            // console.log("Daraz Orders Response:", data);
+
             setOrderCount(prev => prev + data.countTotal);
 
             if (status == 'shipped') {
                 setShippedOrderCount(prev => prev + data.countTotal)
                 setShippedOrder(prev => [...prev, ...countSkusFromOrders(data.orderItems)]);
-
-
             } else {
                 if (status == 'shipped_back') {
-
                     const newFailedOrders = countSkusFromOrders(data.orderItems);
-                    setFailedOrder(newFailedOrders)
+                    setFailedOrder(prev => [...prev, ...newFailedOrders])
                     setFailedOrderCount(prev => prev + data.countTotal);
                 } else {
                     const newFailedOrders = countSkusFromOrders(data.orderItems);
-                    setITRSOrder(newFailedOrders);
+                    setITRSOrder(prev => [...prev, ...newFailedOrders])
                     setFailedOrderCount(prev => prev + data.countTotal);
                 }
             }
-
 
         } catch (error) {
             console.error("Error fetching Daraz orders:", error.message);
@@ -235,11 +264,9 @@ const OrderTabs = ({ }) => {
     };
 
     useEffect(() => {
-        // console.log('USE EFFECT');
         if (!all_access_tokens || (Array.isArray(all_access_tokens) && all_access_tokens.length === 0)) return;
 
         const fetchOrders = async () => {
-            // console.log('FETCH ORDERS');
 
             setFailedOrder([]);
             setFailedOrderCount(0);
@@ -247,6 +274,8 @@ const OrderTabs = ({ }) => {
             setShippedOrderCount(0);
             setShippedOrder([])
             setLoader(true);
+            setAllOrder([])
+            setITRSOrder([])
 
             const createdAfter = new Date(Date.now() - 1000 * 24 * 60 * 60 * 1000).toISOString(); // 7 days ago
 
@@ -254,16 +283,19 @@ const OrderTabs = ({ }) => {
 
             if (Array.isArray(all_access_tokens)) {
                 requests = all_access_tokens.flatMap(item => [
-                    getDarazOrders(item, createdAfter, 'shipped'),
-                    getDarazOrders(item, createdAfter, 'failed_delivery'),
-                    getDarazOrders(item, createdAfter, 'shipped_back'),
+                    getDarazOrders(item.access_token, createdAfter, 'shipped'),
+                    getDarazOrders(item.access_token, createdAfter, 'failed_delivery'),
+                    getDarazOrders(item.access_token, createdAfter, 'shipped_back'),
                 ]);
             } else if (all_access_tokens) {
+
                 requests = [
-                    getDarazOrders(all_access_tokens, createdAfter, 'shipped'),
-                    getDarazOrders(all_access_tokens, createdAfter, 'failed_delivery'),
-                    getDarazOrders(all_access_tokens, createdAfter, 'shipped_back'),
+                    getDarazOrders(all_access_tokens[0].access_token, createdAfter, 'shipped'),
+                    getDarazOrders(all_access_tokens[0].access_token, createdAfter, 'failed_delivery'),
+                    getDarazOrders(all_access_tokens[0].access_token, createdAfter, 'shipped_back'),
                 ];
+            } else {
+
             }
 
             try {
@@ -272,8 +304,7 @@ const OrderTabs = ({ }) => {
                 console.error('Error while fetching orders:', error);
             } finally {
                 setLoader(false);
-                allOrder.map((item,index)=>console.log(item.sku))
-                
+
             }
         };
 
@@ -282,10 +313,43 @@ const OrderTabs = ({ }) => {
 
     useEffect(() => {
         const merged = mergeSkuCounts(failedOrder, ITRSOrder);
-        setFailedDeliveries(merged)
+        const enriched = merged.map(item => {
+            const price = getPriceBySku(firebaseSkus, item.sku)
+            return {
+                ...item,
+                price: price,
+                status: price > 0 ? true : false
+            };
+        });
+
+        setfailedOrdersTotal(enriched.reduce((sum, item) => {
+            return sum + (item.price * item.quantity);
+        }, 0));
+
+        setFailedDeliveries(enriched)
 
 
     }, [failedOrder, ITRSOrder])
+
+    useEffect(() => {
+        const merged = mergeSkuCounts(shippedOrder, []);
+        const enriched = merged.map(item => {
+            const price = getPriceBySku(firebaseSkus, item.sku)
+            return {
+                ...item,
+                price: price,
+                status: price > 0 ? true : false
+            };
+        });
+
+        setshippedOrdersTotal(enriched.reduce((sum, item) => {
+            return sum + (item.price * item.quantity);
+        }, 0));
+
+        setFinalShippedOrder(enriched)
+
+
+    }, [shippedOrder])
 
     useEffect(() => {
         setTabs([
@@ -302,51 +366,63 @@ const OrderTabs = ({ }) => {
                 title: AppStrings.failed,
                 totalOrders: failedOrderCount,
             },
-            {
-                title: AppStrings.return,
-                totalOrders: returnOrderCount,
-            },
+
         ]);
     }, [allOrderCount, shippedOrderCount, failedOrderCount, returnOrderCount]);
 
     useEffect(() => {
         const merged = mergeSkuCounts(shippedOrder, failedDeliveries);
-        // console.log(merged,'all orders');
-        
-        setAllOrder(merged)
+
+        const enriched = merged.map(item => {
+            const price = getPriceBySku(firebaseSkus, item.sku)
+            return {
+                ...item,
+                price: price,
+                status: price > 0 ? true : false
+            };
+        });
+        setAllOrder(enriched)
 
         setAllSkus(merged.map(item => item.sku))
-    }, [shippedOrder, failedDeliveries])
+
+        setAllOrdersTotal(enriched.reduce((sum, item) => {
+            return sum + (item.price * item.quantity);
+        }, 0));
+    }, [shippedOrder, failedDeliveries, firebaseSkus])
+
+    const saveSkusAsArrayWithPriceZero = async (skuArray) => {
+        try {
+
+            if (!currentUser) {
+                console.warn('User not authenticated');
+                return;
+            }
 
 
-    useEffect(() => {
-        skuRef
-            .once('value')
-            .then(snapshot => {
-                console.log('User data: ', snapshot.val());
-
-                const data = snapshot.val();
-
-                if (data) {
-                    const array = Object.entries(data).map(([id, value]) => ({
-                        id,
-                        ...value,
-                    }));
-                    console.log('User data array: ', array);
-                    setFirebaseSkus(array);
-                } else {
-                    console.log('No SKUs data found.');
-                    setFirebaseSkus([]); // Optional: clear products if nothing is found
-                }
-
-            })
-            .catch(error => {
-                console.error('Error fetching data:', error);
-                setLoader(false); // ensure loader stops even on error
+            const cleanedSkus = {};
+            skuArray.forEach(item => {
+                cleanedSkus[item.sku] = {
+                    sku: item.sku,
+                    price: 0,
+                };
             });
-    }, [])
 
-  
+            await database()
+                .ref(`/users/${currentUser.uid}/skusList`)
+                .set(cleanedSkus);
+
+
+
+        } catch (error) {
+            console.error('Error saving SKUs:', error);
+        }
+    };
+
+    const getPriceBySku = (skuList, targetSku) => {
+        const found = firebaseSkus.find(item => item.sku === targetSku);
+        return found ? found.price : 0; // returns null if not found
+    }
+
     return (
 
         <View style={{ flex: 1 }}>
@@ -365,12 +441,10 @@ const OrderTabs = ({ }) => {
                                 </View>
                             </TouchableOpacity>
                         ))}
-
-
                     </View>
                     {tabs[0]?.selected && (
 
-                        <View style={{ backgroundColor: AppColors.white, elevation: 10, borderRadius: 4,flex:1 }}>
+                        <View style={{ backgroundColor: AppColors.white, elevation: 10, borderRadius: 4, flex: 1 }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, paddingVertical: 8, backgroundColor: AppColors.primaryOrange, borderTopEndRadius: 4, borderTopLeftRadius: 4 }}>
                                 <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2, }}>{AppStrings.sku}</TextComp>
                                 <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 1, textAlign: 'center' }}>{AppStrings.price}</TextComp>
@@ -380,7 +454,13 @@ const OrderTabs = ({ }) => {
 
                             <ScrollView contentContainerStyle={{ paddingBottom: 24 }} style={{ paddingVertical: 8, paddingHorizontal: 16, flex: 1 }}>
                                 {allOrder?.map((item, index) => <View style={{ flexDirection: 'row', alignItems: 'center' }} key={index}>
-                                    <TextComp numberOfLines={1} size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.primaryOrange, textDecorationLine: 'underline', flex: 2, }}>{item.sku}</TextComp>
+                                    <TouchableOpacity style={{ flex: 2 }} activeOpacity={0.9} onPress={() => {
+                                        setmodalVisible(true)
+                                        setSelectedSku(item)
+                                    }}>
+                                        <TextComp numberOfLines={1} size={12} style={{ fontFamily: FontFamilty.regular, color: item.status ? AppColors.black : AppColors.primaryOrange, textDecorationLine: item.status ? 'normal' : 'underline' }}>{item.sku}</TextComp>
+
+                                    </TouchableOpacity>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black, flex: 1, textAlign: 'center' }}>{item.price}</TextComp>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black, flex: 1, textAlign: 'center' }}>{item.quantity}</TextComp>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
@@ -395,7 +475,7 @@ const OrderTabs = ({ }) => {
                                 <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2, }}>{AppStrings.total}</TextComp>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.white80, textAlign: 'right' }}>{'Rs '}</TextComp>
-                                    <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: AppColors.white, textAlign: 'right' }}>{orders.all.totalPrice}</TextComp>
+                                    <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: AppColors.white, textAlign: 'right' }}>{allOrdersTotal}</TextComp>
                                 </View>
                             </View>
                         </View>
@@ -412,8 +492,8 @@ const OrderTabs = ({ }) => {
                             </View>
 
                             <ScrollView contentContainerStyle={{ paddingBottom: 24 }} style={{ paddingVertical: 8, paddingHorizontal: 16, flex: 1 }}>
-                                {shippedOrder?.map((item, index) => <View style={{ flexDirection: 'row', alignItems: 'center' }} key={index}>
-                                    <TextComp numberOfLines={1} size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.primaryOrange, textDecorationLine: 'underline', flex: 2, }}>{item.sku}</TextComp>
+                                {finalShippedOrder?.map((item, index) => <View style={{ flexDirection: 'row', alignItems: 'center' }} key={index}>
+                                    <TextComp numberOfLines={1} size={12} style={{ fontFamily: FontFamilty.regular, color: item.status ? AppColors.black : AppColors.primaryOrange, textDecorationLine: item.status ? 'normal' : 'underline', flex: 2, }}>{item.sku}</TextComp>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black, flex: 1, textAlign: 'center' }}>{item.price}</TextComp>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black, flex: 1, textAlign: 'center' }}>{item.quantity}</TextComp>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
@@ -428,7 +508,7 @@ const OrderTabs = ({ }) => {
                                 <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2, }}>{AppStrings.total}</TextComp>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.white80, textAlign: 'right' }}>{'Rs '}</TextComp>
-                                    <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: AppColors.white, textAlign: 'right' }}>{orders.shipped.totalPrice}</TextComp>
+                                    <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: AppColors.white, textAlign: 'right' }}>{shippedOrdersTotal}</TextComp>
                                 </View>
                             </View>
                         </View>
@@ -447,7 +527,7 @@ const OrderTabs = ({ }) => {
 
                             <ScrollView contentContainerStyle={{ paddingBottom: 24 }} style={{ paddingVertical: 8, paddingHorizontal: 16, flex: 1 }}>
                                 {failedDeliveries?.map((item, index) => <View style={{ flexDirection: 'row', alignItems: 'center' }} key={index}>
-                                    <TextComp numberOfLines={1} size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.primaryOrange, textDecorationLine: 'underline', flex: 2, }}>{item.sku}</TextComp>
+                                    <TextComp numberOfLines={1} size={12} style={{ fontFamily: FontFamilty.regular, color: item.status ? AppColors.black : AppColors.primaryOrange, textDecorationLine: item.status ? 'normal' : 'underline', flex: 2, }}>{item.sku}</TextComp>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black, flex: 1, textAlign: 'center' }}>{item.price}</TextComp>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black, flex: 1, textAlign: 'center' }}>{item.quantity}</TextComp>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
@@ -462,13 +542,13 @@ const OrderTabs = ({ }) => {
                                 <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2, }}>{AppStrings.total}</TextComp>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.white80, textAlign: 'right' }}>{'Rs '}</TextComp>
-                                    <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: AppColors.white, textAlign: 'right' }}>{orders.shipped.totalPrice}</TextComp>
+                                    <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: AppColors.white, textAlign: 'right' }}>{failedOrdersTotal}</TextComp>
                                 </View>
                             </View>
                         </View>
                     )}
 
-                    {tabs[3]?.selected && (
+                    {/* {tabs[3]?.selected && (
 
                         <View style={{ backgroundColor: AppColors.white, elevation: 10, borderRadius: 4 }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, paddingVertical: 8, backgroundColor: AppColors.primaryOrange, borderTopEndRadius: 4, borderTopLeftRadius: 4 }}>
@@ -480,7 +560,7 @@ const OrderTabs = ({ }) => {
 
                             <View style={{ paddingVertical: 8, paddingHorizontal: 16 }}>
                                 {orders.returned.orders.map((item, index) => <View style={{ flexDirection: 'row', alignItems: 'center' }} key={index}>
-                                    <TextComp numberOfLines={1} size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.primaryOrange, textDecorationLine: 'underline', flex: 2, }}>{item.sku}</TextComp>
+                                    <TextComp numberOfLines={1} size={12} style={{ fontFamily: FontFamilty.regular, color: item.status ? AppColors.black : AppColors.primaryOrange, textDecorationLine: item.status ? 'normal' : 'underline', flex: 2, }}>{item.sku}</TextComp>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black, flex: 1, textAlign: 'center' }}>{item.price}</TextComp>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black, flex: 1, textAlign: 'center' }}>{item.quantity}</TextComp>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
@@ -499,12 +579,13 @@ const OrderTabs = ({ }) => {
                                 </View>
                             </View>
                         </View>
-                    )}
+                    )} */}
                 </View>}
 
             {modalVisible && (
-                <SkuLinking setIsvisible={setmodalVisible} />
+                <SkuLinking setIsvisible={setmodalVisible} selectedSku={selectedSku} />
             )}
+
         </View>
 
     );
