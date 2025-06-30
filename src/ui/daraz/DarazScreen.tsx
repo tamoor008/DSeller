@@ -30,11 +30,12 @@ const DarazScreen = ({ navigation }) => {
             title: AppStrings.income,
             selected: false
         },
-        {
-            title: AppStrings.ads,
-            selected: false
-        },
+        // {
+        //     title: AppStrings.ads,
+        //     selected: false
+        // },
     ])
+    
     const toggleTabs = (index) => {
         setTabs(prevTabs =>
             prevTabs.map((tab, i) => ({
@@ -60,9 +61,9 @@ const DarazScreen = ({ navigation }) => {
             {tabs[1].selected && (
                 <IncomeTab />
             )}
-            {tabs[2].selected && (
+            {/* {tabs[2].selected && (
                 <AdsTab />
-            )}
+            )} */}
         </View>
     );
 }

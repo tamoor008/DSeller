@@ -14,6 +14,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAuth, onAuthStateChanged } from '@react-native-firebase/auth';
 import { setGlobalUser } from './src/redux/AppReducer';
+import { startFirebaseListener, stopFirebaseListener } from './src/utils/firebase/firebaseListeners';
 
 const Stack = createStackNavigator();
 
@@ -60,11 +61,16 @@ const App = () => {
 
  
 
+  useEffect(() => {
+    startFirebaseListener(dispatch);
+    return () => stopFirebaseListener(); // Clean up
+  }, []);
+
   return (
 
     <View style={styles.container}>
       <StatusBar barStyle={'dark-content'} backgroundColor={AppColors.bgcolor} />
-      {splash ?
+    {splash ?
         <SplashScreen />
         :
         <NavigationContainer>

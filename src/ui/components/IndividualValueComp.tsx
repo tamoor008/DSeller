@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+    ActivityIndicator,
     Image,
     Modal,
     StyleSheet,
@@ -14,32 +15,41 @@ import TextComp from './TextComp';
 import InfoModal from './InfoModal';
 
 
-const IndividualValueComp = ({ amount, label, onPress, info }) => {
+const IndividualValueComp = ({ amount, label, onPress, info, loader }) => {
     const [isVisible, setIsvisible] = useState(false)
     const onInfoPress = () => {
         setIsvisible(true)
     }
     return (
         <View style={styles.card}>
-            <View style={styles.topRow}>
-                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                    <TextComp style={styles.currency}>Rs</TextComp>
-                    <TextComp style={styles.amount}>{amount}</TextComp>
+            {loader?
+            <View style={{justifyContent:'center',alignItems:'center',flex:1}}>
+                <ActivityIndicator color={AppColors.primaryOrange}></ActivityIndicator>
+            </View>
+            :
+            <View style={styles.card2}>
+
+                <View style={styles.topRow}>
+                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                        <TextComp style={styles.currency}>Rs</TextComp>
+                        <TextComp style={styles.amount}>{Math.floor(amount)}</TextComp>
+                    </View>
+
+                    <TouchableOpacity onPress={onInfoPress}>
+                        <Image style={{ width: 16, height: 16 }} source={AppImages.info} />
+                    </TouchableOpacity>
                 </View>
 
-                <TouchableOpacity onPress={onInfoPress}>
-                    <Image style={{ width: 16, height: 16 }} source={AppImages.info} />
-                </TouchableOpacity>
+                <View style={styles.bottomRow}>
+                    <TextComp style={styles.label}>{label}</TextComp>
+                    <TouchableOpacity style={styles.arrowButton} onPress={onPress}>
+                        <Image resizeMode='contain' style={{ width: 12, height: 12 }} source={AppImages.arrow} />
+                    </TouchableOpacity>
+                </View>
             </View>
-
-            <View style={styles.bottomRow}>
-                <TextComp style={styles.label}>{label}</TextComp>
-                <TouchableOpacity style={styles.arrowButton} onPress={onPress}>
-                    <Image resizeMode='contain' style={{ width: 12, height: 12 }} source={AppImages.arrow} />
-                </TouchableOpacity>
-            </View>
-            {isVisible&&(
-                <InfoModal setIsvisible={setIsvisible} info={info}/>
+}
+            {isVisible && (
+                <InfoModal setIsvisible={setIsvisible} info={info} />
             )}
         </View>
     );
@@ -58,6 +68,8 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
+    },
+    card2: {
     },
     topRow: {
         flexDirection: 'row',

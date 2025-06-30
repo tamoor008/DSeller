@@ -48,6 +48,7 @@ const HomeHeader = () => {
         <View style={styles.container}>
             <Image style={{width:127,height:56}} source={AppImages.dsellerlogo}/>
             <View style={{flexDirection:'row',columnGap:16}}>
+     
             <TouchableOpacity activeOpacity={0.9}>
             <Image resizeMode='contain' style={{width:20,height:20}} source={AppImages.notification}/>
             </TouchableOpacity>

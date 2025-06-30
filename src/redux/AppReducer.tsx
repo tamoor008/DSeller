@@ -7,8 +7,8 @@ const initialState = {
     accessToken: '',
     user:{},
     access_tokens:[],
-    selectedStore:{
-    }
+    selectedStore:{},
+    firebaseProducts:{}
 
    
 
@@ -46,7 +46,10 @@ export const AppSlice = createSlice({
             // console.log(action.payload,'payload');
             state.selectedStore = action.payload
         },
-
+        setFirebaseProducts: (state, action) => {    
+            // console.log(action.payload,'payload');
+            state.firebaseProducts = action.payload
+        },
         
         
 
@@ -59,7 +62,8 @@ export const {
     setAccessToken,
     setGlobalUser,
     setAccessTokens,
-    setSelectedStore
+    setSelectedStore,
+    setFirebaseProducts
 
 } = AppSlice.actions;
 

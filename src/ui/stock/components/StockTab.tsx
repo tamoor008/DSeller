@@ -63,26 +63,6 @@ const StockTab = ({ }) => {
 
 
 
-
-
-
-    const [options, setOptions] = useState(false)
-    const onInfoPress = () => {
-        setIsvisible(true)
-    }
-
-    const [orders, setOrders] = useState({
-        totalPrice: 0,
-        totalQuantity: 0,
-        stock: [
-            { id: 0, img: SampleImages.cx08, product: 'Chia Seeds', quantity: 2, price: 1600 },
-            { id: 0, img: SampleImages.cx08, product: 'Memo CX07', quantity: 2, price: 1600 },
-            { id: 0, img: SampleImages.cx08, product: 'Memo CX08', quantity: 2, price: 1600 },
-        ],
-
-    });
-
-
     const calculateTotalPrice = (products) => {
         return products?.reduce((total, item) => {
             return total + item.price * item.quantity;
@@ -161,7 +141,7 @@ const StockTab = ({ }) => {
 
             {loader ?
                 <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                    <ActivityIndicator></ActivityIndicator>
+                    <ActivityIndicator color={AppColors.primaryOrange} size={'large'}></ActivityIndicator>
                 </View>
                 :
                 <View style={{ flex: 1 }}>
