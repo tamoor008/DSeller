@@ -24,10 +24,12 @@ const Header = ({ goBack, info,title }) => {
                 <Image resizeMode='contain' style={{ width: 24, height: 24 }} source={AppImages.back} />
             </TouchableOpacity>
             <TextComp size={20} style={{ FontFamilty: FontFamilty.regular, flex: 1 }}>{title}</TextComp>
-
-            <TouchableOpacity onPress={onInfoPress} activeOpacity={0.9}>
-                <Image resizeMode='contain' style={{ width: 20, height: 20 }} source={AppImages.infoblack} />
-            </TouchableOpacity>
+{info&&(
+   <TouchableOpacity onPress={onInfoPress} activeOpacity={0.9}>
+   <Image resizeMode='contain' style={{ width: 20, height: 20 }} source={AppImages.infoblack} />
+</TouchableOpacity>
+)}
+         
             {isVisible && (
                 <InfoModal setIsvisible={setIsvisible} info={info} />
             )}

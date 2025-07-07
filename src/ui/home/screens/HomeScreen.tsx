@@ -16,9 +16,16 @@ import IndividualValueComp from '../../components/IndividualValueComp';
 import { AppStrings } from '../../../constants/AppStrings';
 import { AppScreens } from '../../../constants/AppScreens';
 import { getAuth } from '@react-native-firebase/auth';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { BASE_URL } from '../../../utils/api/baseUrl';
 import database from '@react-native-firebase/database';
+import IndividualDataComp from '../../components/IndividualDataComp';
+import TextComp from '../../components/TextComp';
+import FontFamilty from '../../../constants/FontFamilty';
+import DeliveredOrders from './DeliveredOrders';
+import InfoModal from '../../components/InfoModal';
+import { getDarazDeliveredOrders } from '../../../utils/api/getDarazDeliveredOrders';
+import { setTodayDeliveredOrders } from '../../../redux/AppReducer';
 
 
 const HomeScreen = ({ navigation }) => {
@@ -35,9 +42,8 @@ const HomeScreen = ({ navigation }) => {
         navigation.navigate(AppScreens.PackagingScreen)
     }
 
-    const [reloadScreen,setReloadScreen]=useState(false)
-
-
+    const dispatch=useDispatch()
+    const [reloadScreen, setReloadScreen] = useState(false)
     const auth = getAuth()
     const currentUser = auth.currentUser
     const selector = useSelector(state => state.AppReducer);
@@ -46,7 +52,6 @@ const HomeScreen = ({ navigation }) => {
     const [ITRSOrder, setITRSOrder] = useState([])
     const skuRef = database().ref(`users/${currentUser.uid}/skusList`);
     const productRef = database().ref(`users/${currentUser.uid}/products`);
-
     const [failedDeliveries, setFailedDeliveries] = useState([])
     const [all_access_tokens, setAll_access_tokens] = useState([]);
     const [firebaseSkus, setFirebaseSkus] = useState([])
@@ -93,7 +98,6 @@ const HomeScreen = ({ navigation }) => {
                         id,
                         ...value,
                     }));
-                    console.log(array);
                 } else {
                     Alert.alert('There are no products added kindly add products as well');
                 }
@@ -137,6 +141,8 @@ const HomeScreen = ({ navigation }) => {
         if (!firebaseDataLoaded || !all_access_tokens || (Array.isArray(all_access_tokens) && all_access_tokens.length === 0)) return;
 
         const fetchOrders = async () => {
+            console.log('FUCNTION IN HOMESCREEN');
+            
 
             setFailedOrder([]);
             setShippedOrder([])
@@ -175,7 +181,7 @@ const HomeScreen = ({ navigation }) => {
         };
 
         fetchOrders();
-    }, [all_access_tokens, firebaseDataLoaded,reloadScreen]);
+    }, [all_access_tokens, firebaseDataLoaded, reloadScreen]);
 
     useEffect(() => {
         const merged = mergeSkuCounts(failedOrder, ITRSOrder);
@@ -288,7 +294,7 @@ const HomeScreen = ({ navigation }) => {
         }
     };
 
-   
+
     ////INCOME PART
     const [total, setTotal] = useState(0)
 
@@ -307,7 +313,6 @@ const HomeScreen = ({ navigation }) => {
             }
 
             const data = await response.json();
-            // console.log(data);
             setIncome(prev => [...prev, ...data.financeRespone])
 
 
@@ -320,7 +325,6 @@ const HomeScreen = ({ navigation }) => {
     };
 
     useEffect(() => {
-        console.log(all_access_tokens);
 
 
         if (!all_access_tokens || (Array.isArray(all_access_tokens) && all_access_tokens.length === 0)) return;
@@ -335,7 +339,6 @@ const HomeScreen = ({ navigation }) => {
 
             if (Array.isArray(all_access_tokens)) {
                 requests = all_access_tokens.flatMap(item => [
-                    console.log(item),
 
                     getDarazIncome(item.access_token, item.name, createdAfter),
 
@@ -356,10 +359,9 @@ const HomeScreen = ({ navigation }) => {
         };
 
         fetchOrders();
-    }, [all_access_tokens,reloadScreen]);
+    }, [all_access_tokens, reloadScreen]);
 
     useEffect(() => {
-        // console.log(income);
         const totalIncome = income.reduce((sum, item) => {
             return sum + parseFloat(item.payout.replace(' PKR', '') || 0);
         }, 0);
@@ -368,11 +370,11 @@ const HomeScreen = ({ navigation }) => {
     }, [income]);
 
     useEffect(() => {
-        if(income&&allOrdersTotal!=0){
-       
+        if (income && allOrdersTotal != 0) {
+
         }
 
-    }, [total,allOrdersTotal]);
+    }, [total, allOrdersTotal]);
 
 
 
@@ -390,7 +392,6 @@ const HomeScreen = ({ navigation }) => {
         productRef
             .once('value')
             .then(snapshot => {
-                console.log('User data: ', snapshot.val());
 
                 const data = snapshot.val();
 
@@ -399,10 +400,8 @@ const HomeScreen = ({ navigation }) => {
                         id,
                         ...value,
                     }));
-                    console.log('User data array: ', array);
                     setProducts(array);
                 } else {
-                    console.log('No product data found.');
                     setProducts([]); // Optional: clear products if nothing is found
                 }
 
@@ -414,8 +413,6 @@ const HomeScreen = ({ navigation }) => {
             });
     }, [reloadScreen])
 
-
-
     const calculateTotalPrice = (products) => {
         return products?.reduce((total, item) => {
             return total + item.price * item.quantity;
@@ -424,35 +421,155 @@ const HomeScreen = ({ navigation }) => {
 
     useEffect(() => {
         setTotalPrice(calculateTotalPrice(products));
-    }, [products,reloadScreen]);
+    }, [products, reloadScreen]);
+
+    useEffect(() => {
+
+    }, [reloadScreen])
+
+
+    // Data functions
+
+    const [pendingOrders, setPendingOrders] = useState(0)
+    const [readyToShipOrders, setReadyToShipOrders] = useState(0)
+    const [darazOrdersLoader, setDarazOrdersLoader] = useState(false)
+
+    const [darazDeliveredOrders, setDarazDeliveredOrders] = useState([])
+    const [darazDeliveredOrdersCount, setDarazDeliveredOrdersCount] = useState(0)
+
+
+    // this function get the orders from daraz api, orders with different statuses
+    const getDarazPendingOrders = async (access_token, createdAfterISO, status) => {
+
+
+        try {
+            const response = await fetch(`${BASE_URL}/get-daraz-order-details?access_token=${access_token}&created_after=${encodeURIComponent(createdAfterISO)}&status=${status}`);
+
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+
+            if (status == 'pending') {
+                setPendingOrders(prev => prev + data.countTotal)
+
+            } else {
+                if(status=='delivered'){                    
+                    setDarazDeliveredOrders(prev => [...prev, ...countSkusFromOrders(data.orderItems)])
+                    setDarazDeliveredOrdersCount(prev=>prev+data?.orderItems?.length)
+                }else{
+                    setReadyToShipOrders(prev => prev + data.countTotal)
+
+                }
+
+            }
 
 
 
-    useEffect(()=>{
 
-    },[reloadScreen])
+        } catch (error) {
+            console.error("Error fetching Daraz orders:", error.message);
+            return null;
+        }
+    };
+
+    useEffect(() => {
+        setDarazDeliveredOrders(selector.todayDeliveredOrders || []);
+        setDarazDeliveredOrdersCount(selector.todayDeliveredOrders?.length || 0);
+
+    }, [selector.todayDeliveredOrders]);
+  
+    useEffect(() => {
+        if (!all_access_tokens || (Array.isArray(all_access_tokens) && all_access_tokens.length === 0)) return;
+
+        const fetchOrders = async () => {
+            setDarazOrdersLoader(true)
+
+            setPendingOrders(0)
+            setReadyToShipOrders(0)
+            setDarazDeliveredOrders([])
+            setDarazDeliveredOrdersCount(0)
+            dispatch(setTodayDeliveredOrders([]))
+
+            const createdAfter = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(); // 7 days ago
+            
+            const startOfToday = new Date();
+            startOfToday.setHours(0, 0, 0, 0);
+            let requests = [];
+
+            if (Array.isArray(all_access_tokens)) {
+                requests = all_access_tokens.flatMap(item => [
+                    getDarazPendingOrders(item.access_token, createdAfter, 'pending'),
+                    getDarazPendingOrders(item.access_token, createdAfter, 'ready_to_ship'),
+                    getDarazDeliveredOrders(item.access_token, startOfToday.toISOString(), 'delivered',dispatch),
+                ]);
+            } else if (all_access_tokens) {
+
+                requests = [
+                    getDarazPendingOrders(all_access_tokens[0].access_token, createdAfter, 'pending'),
+                    getDarazPendingOrders(all_access_tokens[0].access_token, createdAfter, 'ready_to_ship'),
+                    getDarazDeliveredOrders(all_access_tokens[0].access_token, startOfToday.toISOString(), 'delivered',dispatch),
+                ];
+            } else {
+            }
+
+            try {
+                await Promise.all(requests); // Wait for all async tasks to complete
+            } catch (error) {
+                console.error('Error while fetching orders:', error);
+            } finally {
+                setDarazOrdersLoader(false)
+            }
+        };
+
+        fetchOrders();
+    }, [all_access_tokens,reloadScreen]);
+
+    const navigatedeliveredOrders=()=>{
+        
+        navigation.navigate('DeliveredOrders',{darazDeliveredOrders:darazDeliveredOrders,firebaseSkus:firebaseSkus})
+    }
 
     return (
-        <ScrollView    refreshControl={
-            <RefreshControl refreshing={screenloader} onRefresh={()=>{
+        <ScrollView refreshControl={
+            <RefreshControl refreshing={screenloader} onRefresh={() => {
                 setScreenloader(true)
-                setReloadScreen(!reloadScreen)}} />
-          } 
-          contentContainerStyle={styles.container}>
+                setReloadScreen(!reloadScreen)
+            }} />
+        }
+            contentContainerStyle={styles.container}>
 
-            <HomeHeader  />
+            <HomeHeader />
             <SelectStore />
             <TotalBusinessComp businessValue={'500,000'} />
             <View style={{ rowGap: 16 }}>
+                <TextComp size={16} style={{ fontFamily: FontFamilty.bold, color: AppColors.black, }}>{AppStrings.darazDetails}</TextComp>
                 <View style={{ flexDirection: 'row', columnGap: 16, }}>
-                    <IndividualValueComp loader={darazLoader} onPress={navigateDaraz} amount={allOrdersTotal+total} label={AppStrings.daraz} info={AppStrings.darazInfo} />
-                    <IndividualValueComp loader={stockLoader}  onPress={navigateStock} amount={totalPrice} label={AppStrings.stock} info={AppStrings.stockInfo} />
+                    <IndividualDataComp loader={darazOrdersLoader}  data={pendingOrders} label={AppStrings.pendingOrders} info={AppStrings.darazInfo} />
+                    <IndividualDataComp loader={darazOrdersLoader} data={readyToShipOrders} label={AppStrings.readyToShipOrders} info={AppStrings.stockInfo} />
                 </View>
+
                 <View style={{ flexDirection: 'row', columnGap: 16, }}>
-                    <IndividualValueComp loader={false}  onPress={navigateCash} amount={25000} label={AppStrings.cash} info={AppStrings.cashInfo} />
-                    <IndividualValueComp loader={false}  onPress={navigatePackaging} amount={25000} label={AppStrings.packaging} info={AppStrings.packagingInfo} />
+                    <IndividualDataComp loader={false} onPress={navigatedeliveredOrders} data={darazDeliveredOrdersCount} label={AppStrings.deliveredOrdersToday} info={AppStrings.cashInfo} />
+                    <IndividualDataComp loader={false}  data={25000} label={AppStrings.packaging} info={AppStrings.packagingInfo} />
                 </View>
             </View>
+            <View style={{ rowGap: 16 }}>
+                <TextComp size={16} style={{ fontFamily: FontFamilty.bold, color: AppColors.black, }}>{AppStrings.businessDetails}</TextComp>
+
+                <View style={{ flexDirection: 'row', columnGap: 16, }}>
+                    <IndividualValueComp loader={darazLoader} onPress={navigateDaraz} amount={allOrdersTotal + total} label={AppStrings.daraz} info={AppStrings.darazInfo} />
+                    <IndividualValueComp loader={stockLoader} onPress={navigateStock} amount={totalPrice} label={AppStrings.stock} info={AppStrings.stockInfo} />
+                </View>
+                <View style={{ flexDirection: 'row', columnGap: 16, }}>
+                    <IndividualValueComp loader={false} onPress={navigateCash} amount={25000} label={AppStrings.cash} info={AppStrings.cashInfo} />
+                    <IndividualValueComp loader={false} onPress={navigatePackaging} amount={25000} label={AppStrings.packaging} info={AppStrings.packagingInfo} />
+                </View>
+            </View>
+
+
 
         </ScrollView>
     );

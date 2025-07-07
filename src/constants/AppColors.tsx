@@ -12,4 +12,7 @@ export const AppColors = {
   orange20:'#F8560620',
   border:'#D9D9D9',
   red:'#FF0000',
+  green: '#28a745',
+  greenbg: '#e6f4ea',
+
 };

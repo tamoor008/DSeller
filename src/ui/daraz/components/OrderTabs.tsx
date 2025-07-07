@@ -186,18 +186,20 @@ const OrderTabs = ({ }) => {
 
     useEffect(() => {
         const merged = mergeSkuCounts(failedOrder, ITRSOrder);
-        const enriched = merged.map(item => {
-            const price = getPriceBySku(firebaseSkus, item.sku)
-            return {
-                ...item,
-                price: price,
-                status: price > 0 ? true : false
-            };
-        });
+        const enriched = enrichProductsWithPrices(selector.firebaseProducts, merged)
 
         setfailedOrdersTotal(enriched.reduce((sum, item) => {
-            return sum + (item.price * item.quantity);
+            return sum + (item.unitPrice * item.quantity);
         }, 0));
+
+        const total = enriched.reduce((sum, item) => {
+            const unitTotal = typeof item.price === 'number' && typeof item.quantity === 'number'
+              ? item.price * item.quantity
+              : 0;
+            return sum + unitTotal;
+          }, 0);
+          
+          setfailedOrdersTotal(total)
 
         setFailedDeliveries(enriched)
 
@@ -205,7 +207,16 @@ const OrderTabs = ({ }) => {
     }, [failedOrder, ITRSOrder])
 
     useEffect(() => {
-        const data=enrichProductsWithPrices(selector.firebaseProducts,shippedOrder)
+        const data = enrichProductsWithPrices(selector.firebaseProducts, shippedOrder)
+
+        const total = data.reduce((sum, item) => {
+            const unitTotal = typeof item.price === 'number' && typeof item.quantity === 'number'
+              ? item.price * item.quantity
+              : 0;
+            return sum + unitTotal;
+          }, 0);
+          
+          setshippedOrdersTotal(total)
         setFinalShippedOrder(data)
     }, [shippedOrder])
 
@@ -226,27 +237,31 @@ const OrderTabs = ({ }) => {
             },
 
         ]);
-    }, [shippedOrderCount,allOrderCount,failedOrdersTotal]);
+    }, [shippedOrderCount, allOrderCount, failedOrdersTotal]);
 
 
 
     useEffect(() => {
-        console.log(failedDeliveries[0],'failedDelivery');
-        
+
         const merged = mergeSkuCounts(shippedOrder, failedDeliveries);
 
-        const enriched = merged.map(item => {
-            const price = getPriceBySku(firebaseSkus, item.sku)
-            return {
-                ...item,
-                price: price,
-                status: price > 0 ? true : false
-            };
-        });
+
+        const enriched = enrichProductsWithPrices(selector.firebaseProducts, merged)
+
+
         setAllOrder(enriched)
-        setAllOrdersTotal(enriched.reduce((sum, item) => {
-            return sum + (item.price * item.quantity);
-        }, 0));
+        console.log(enriched[0],'enriched');
+        
+   
+        const total = enriched.reduce((sum, item) => {
+            const unitTotal = typeof item.price === 'number' && typeof item.quantity === 'number'
+              ? item.price * item.quantity
+              : 0;
+            return sum + unitTotal;
+          }, 0);
+          
+          console.log('Total:', total);
+          setAllOrdersTotal(total)
     }, [shippedOrder, failedDeliveries, firebaseSkus])
 
     // This function saves the sku to firebase initially when there is no order
@@ -289,11 +304,11 @@ const OrderTabs = ({ }) => {
         return found ? found.productQuantity : 0; // returns null if not found
     }
 
-        //This function gets the price of any sku
-        const getIdbySku = (skuList, targetSku) => {
-            const found = firebaseSkus.find(item => item.sku === targetSku);
-            return found ? found.productId : 0; // returns null if not found
-        }
+    //This function gets the price of any sku
+    const getIdbySku = (skuList, targetSku) => {
+        const found = firebaseSkus.find(item => item.sku === targetSku);
+        return found ? found.productId : 0; // returns null if not found
+    }
 
     //This function get the orders from daraz and then merge it in sku's and show us sku and quantity
     function countSkusFromOrders(data) {
@@ -332,6 +347,8 @@ const OrderTabs = ({ }) => {
         return Object.entries(combined).map(([sku, quantity]) => ({
             sku,
             quantity,
+            productQuantity: getQuantitybySku(firebaseSkus, sku),
+            productId: getIdbySku(firebaseSkus, sku),
         }));
     }
 
@@ -412,7 +429,6 @@ const OrderTabs = ({ }) => {
             .catch(err => console.error('Error saving new SKUs:', err));
     };
 
-
     const enrichProductsWithPrices = (firebaseProducts, items) => {
         if (!firebaseProducts || !items || !Array.isArray(items)) return [];
 
@@ -429,7 +445,7 @@ const OrderTabs = ({ }) => {
                     productName: null,
                     unitPrice: null,
                     totalPrice: 0,
-                    status:false
+                    status: false
 
                 };
             }
@@ -442,7 +458,7 @@ const OrderTabs = ({ }) => {
                 productName: product.productName || '',
                 unitPrice: price,
                 price: price * item.productQuantity,
-                status:true
+                status: true
             };
         });
     };
@@ -499,7 +515,7 @@ const OrderTabs = ({ }) => {
                                 <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2, }}>{AppStrings.total}</TextComp>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.white80, textAlign: 'right' }}>{'Rs '}</TextComp>
-                                    <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: AppColors.white, textAlign: 'right' }}>{allOrdersTotal}</TextComp>
+                                    <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: AppColors.white, textAlign: 'right' }}>  {parseFloat(allOrdersTotal).toFixed(2)}</TextComp>
                                 </View>
                             </View>
                         </View>
@@ -540,7 +556,7 @@ const OrderTabs = ({ }) => {
                                 <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2, }}>{AppStrings.total}</TextComp>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.white80, textAlign: 'right' }}>{'Rs '}</TextComp>
-                                    <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: AppColors.white, textAlign: 'right' }}>{shippedOrdersTotal}</TextComp>
+                                    <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: AppColors.white, textAlign: 'right' }}>{parseFloat(shippedOrdersTotal).toFixed(2)}</TextComp>
                                 </View>
                             </View>
                         </View>
@@ -582,7 +598,7 @@ const OrderTabs = ({ }) => {
                                 <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2, }}>{AppStrings.total}</TextComp>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.white80, textAlign: 'right' }}>{'Rs '}</TextComp>
-                                    <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: AppColors.white, textAlign: 'right' }}>{failedOrdersTotal}</TextComp>
+                                    <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: AppColors.white, textAlign: 'right' }}>{parseFloat(failedOrdersTotal).toFixed(2)}</TextComp>
                                 </View>
                             </View>
                         </View>

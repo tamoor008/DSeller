@@ -15,6 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAuth, onAuthStateChanged } from '@react-native-firebase/auth';
 import { setGlobalUser } from './src/redux/AppReducer';
 import { startFirebaseListener, stopFirebaseListener } from './src/utils/firebase/firebaseListeners';
+import InfoModal from './src/ui/components/InfoModal';
 
 const Stack = createStackNavigator();
 
@@ -30,12 +31,10 @@ const App = () => {
     return () => clearTimeout(timeout);
   }, []);
 
-  // console.log('TEST LOG');
 
   const fetchToken = async () => {
     const users = await AsyncStorage.getItem('daraz_users');
     if (token) {
-      // console.log('retreived Token', token);
     }
 
   }
@@ -77,6 +76,8 @@ const App = () => {
           {user? <HomeNav /> : <AuthNav />}
         </NavigationContainer>
       }
+
+
     </View>
   );
 }

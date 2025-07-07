@@ -8,7 +8,8 @@ const initialState = {
     user:{},
     access_tokens:[],
     selectedStore:{},
-    firebaseProducts:{}
+    firebaseProducts:{},
+    todayDeliveredOrders:[]
 
    
 
@@ -39,20 +40,21 @@ export const AppSlice = createSlice({
             state.user = action.payload
         },
         setAccessTokens: (state, action) => {
-            // console.log(action.payload,'payload');
             state.access_tokens = action.payload
         },
         setSelectedStore: (state, action) => {    
-            // console.log(action.payload,'payload');
             state.selectedStore = action.payload
         },
         setFirebaseProducts: (state, action) => {    
-            // console.log(action.payload,'payload');
             state.firebaseProducts = action.payload
+        },
+        setTodayDeliveredOrders: (state, action) => {    
+            state.todayDeliveredOrders = action.payload
+            
+            
         },
         
         
-
     },
 });
 
@@ -63,7 +65,8 @@ export const {
     setGlobalUser,
     setAccessTokens,
     setSelectedStore,
-    setFirebaseProducts
+    setFirebaseProducts,
+    setTodayDeliveredOrders
 
 } = AppSlice.actions;
 

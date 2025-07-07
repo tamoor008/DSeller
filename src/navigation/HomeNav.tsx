@@ -10,6 +10,7 @@ import HomeScreen from '../ui/home/screens/HomeScreen';
 import StockScreen from '../ui/stock/StockScreen';
 import CashScreen from '../ui/cash/CashScreen';
 import PackagingScreen from '../ui/packaging/PackagingScreen';
+import DeliveredOrders from '../ui/home/screens/DeliveredOrders';
 
 const Stack = createStackNavigator();
 
@@ -24,6 +25,8 @@ const HomeNav = () => {
             <Stack.Screen name="StockScreen" component={StockScreen} />
             <Stack.Screen name="CashScreen" component={CashScreen} />
             <Stack.Screen name="PackagingScreen" component={PackagingScreen} />
+            <Stack.Screen name="DeliveredOrders" component={DeliveredOrders} />
+
         </Stack.Navigator>
 
     );
