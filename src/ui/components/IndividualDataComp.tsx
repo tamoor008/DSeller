@@ -41,13 +41,20 @@ const IndividualDataComp = ({ data, label, onPress, info, loader }) => {
                     </View>
 
                     <View style={styles.bottomRow}>
-                        <TextComp style={styles.label}>{label}</TextComp>
+                        <View style={{ flex: 1 }}>
+                            <TextComp style={styles.label}>
+                                {label}
+                            </TextComp>
+                        </View>
                         {onPress && (
                             <TouchableOpacity style={styles.arrowButton} onPress={onPress}>
-                                <Image resizeMode='contain' style={{ width: 12, height: 12 }} source={AppImages.arrow} />
+                                <Image
+                                    resizeMode="contain"
+                                    style={{ width: 12, height: 12 }}
+                                    source={AppImages.arrow}
+                                />
                             </TouchableOpacity>
                         )}
-
                     </View>
                 </View>
             }
@@ -91,17 +98,19 @@ const styles = StyleSheet.create({
     bottomRow: {
         marginTop: 10,
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
+        justifyContent: 'space-between',
     },
     label: {
         fontSize: 16,
         fontFamily: 'Poppins-Medium',
     },
     arrowButton: {
-        backgroundColor: '#f4511e', // orange
+        backgroundColor: '#f4511e',
         borderRadius: 16,
         padding: 6,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
 });
 

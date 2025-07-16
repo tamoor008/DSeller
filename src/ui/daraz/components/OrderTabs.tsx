@@ -12,12 +12,14 @@ import FontFamilty from '../../../constants/FontFamilty';
 import TextComp from '../../components/TextComp';
 import { AppColors } from '../../../constants/AppColors';
 import { useSelector } from 'react-redux';
-import { BASE_URL } from '../../../utils/api/baseUrl';
 import SkuLinking from './SkuLinking';
 import database from '@react-native-firebase/database';
 import auth from '@react-native-firebase/auth';
+import { getBaseUrl } from '../../../utils/api/baseUrl';
 
 const OrderTabs = ({ }) => {
+    const BASE_URL = getBaseUrl(); // instant access, no async
+
     const currentUser = auth().currentUser
     const selector = useSelector(state => state.AppReducer);
     const [allOrder, setAllOrder] = useState([])

@@ -16,9 +16,7 @@ export const startFirebaseListener = (dispatch) => {
   isListenerActive = true;
 
   productRef.on('value', snapshot => {
-    const data = snapshot.val();
-    console.log(data,'firebase Products');
-    
+    const data = snapshot.val();    
     console.log('Firebase data called');
     
     dispatch(setFirebaseProducts(data));

@@ -17,7 +17,6 @@ import { AppStrings } from '../../../constants/AppStrings';
 import { AppScreens } from '../../../constants/AppScreens';
 import { getAuth } from '@react-native-firebase/auth';
 import { useDispatch, useSelector } from 'react-redux';
-import { BASE_URL } from '../../../utils/api/baseUrl';
 import database from '@react-native-firebase/database';
 import IndividualDataComp from '../../components/IndividualDataComp';
 import TextComp from '../../components/TextComp';
@@ -26,9 +25,15 @@ import DeliveredOrders from './DeliveredOrders';
 import InfoModal from '../../components/InfoModal';
 import { getDarazDeliveredOrders } from '../../../utils/api/getDarazDeliveredOrders';
 import { setTodayDeliveredOrders } from '../../../redux/AppReducer';
+import WeeklyReportComp from '../../components/WeeklyReportComp';
+import { getBaseUrl } from '../../../utils/api/baseUrl';
 
 
 const HomeScreen = ({ navigation }) => {
+    const BASE_URL = getBaseUrl(); // instant access, no async
+    // console.log(BASE_URL,'BASE_URL');
+    
+
     const navigateDaraz = () => {
         navigation.navigate(AppScreens.DarazScreen)
     }
@@ -59,6 +64,8 @@ const HomeScreen = ({ navigation }) => {
     const [allOrdersTotal, setAllOrdersTotal] = useState(0)
     const [firebaseDataLoaded, setfirebaseDataLoaded] = useState(false)
     const [screenloader, setScreenloader] = useState(false)
+
+    const [failedOrders,setFailedOrders]=useState([])
 
 
     useEffect(() => {
@@ -144,9 +151,10 @@ const HomeScreen = ({ navigation }) => {
             console.log('FUCNTION IN HOMESCREEN');
             
 
-            setFailedOrder([]);
+            setFailedOrder([])
             setShippedOrder([])
             setITRSOrder([])
+            setFailedOrders([])
             setDarazLoader(true)
 
             const createdAfter = new Date(Date.now() - 1000 * 24 * 60 * 60 * 1000).toISOString(); // 7 days ago
@@ -280,9 +288,11 @@ const HomeScreen = ({ navigation }) => {
                 setShippedOrder(prev => [...prev, ...countSkusFromOrders(data.orderItems)]);
             } else {
                 if (status == 'shipped_back') {
+                    setFailedOrders(prev=>[...prev,...data.orderItems])
                     const newFailedOrders = countSkusFromOrders(data.orderItems);
                     setFailedOrder(prev => [...prev, ...newFailedOrders])
                 } else {
+                    setFailedOrders(prev=>[...prev,...data.orderItems])
                     const newFailedOrders = countSkusFromOrders(data.orderItems);
                     setITRSOrder(prev => [...prev, ...newFailedOrders])
                 }
@@ -493,7 +503,7 @@ const HomeScreen = ({ navigation }) => {
             setDarazDeliveredOrdersCount(0)
             dispatch(setTodayDeliveredOrders([]))
 
-            const createdAfter = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(); // 7 days ago
+            const createdAfter = new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(); // 7 days ago
             
             const startOfToday = new Date();
             startOfToday.setHours(0, 0, 0, 0);
@@ -532,6 +542,17 @@ const HomeScreen = ({ navigation }) => {
         navigation.navigate('DeliveredOrders',{darazDeliveredOrders:darazDeliveredOrders,firebaseSkus:firebaseSkus})
     }
 
+    const navigateFailedOrders=()=>{
+        
+        navigation.navigate('FailedDeliveryOrders',{failedOrderss:failedOrders,firebaseSkus:firebaseSkus})
+    }
+
+    const navigateWeeklyReport=()=>{
+        
+        navigation.navigate('WeekllyReport',{firebaseSkus:firebaseSkus})
+    }
+
+
     return (
         <ScrollView refreshControl={
             <RefreshControl refreshing={screenloader} onRefresh={() => {
@@ -553,7 +574,10 @@ const HomeScreen = ({ navigation }) => {
 
                 <View style={{ flexDirection: 'row', columnGap: 16, }}>
                     <IndividualDataComp loader={false} onPress={navigatedeliveredOrders} data={darazDeliveredOrdersCount} label={AppStrings.deliveredOrdersToday} info={AppStrings.cashInfo} />
-                    <IndividualDataComp loader={false}  data={25000} label={AppStrings.packaging} info={AppStrings.packagingInfo} />
+                    <IndividualDataComp loader={false} onPress={navigateFailedOrders} data={failedOrders.length} label={AppStrings.failedOrdersToday} info={AppStrings.cashInfo} />
+                </View>
+                <View style={{ flexDirection: 'row', columnGap: 16, }}>
+                <WeeklyReportComp onPress={navigateWeeklyReport} text={'check weekly report'} />
                 </View>
             </View>
             <View style={{ rowGap: 16 }}>
@@ -577,7 +601,7 @@ const HomeScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
+        
         padding: 16,
         backgroundColor: AppColors.bgcolor,
         rowGap: 16,

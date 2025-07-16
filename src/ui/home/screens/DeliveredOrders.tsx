@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
-import { BASE_URL } from '../../../utils/api/baseUrl';
 import { AppColors } from '../../../constants/AppColors';
 import TextComp from '../../components/TextComp';
 import FontFamilty from '../../../constants/FontFamilty';
@@ -22,29 +21,41 @@ import { AppStrings } from '../../../constants/AppStrings';
 import Header from '../../components/Header';
 import { setTodayDeliveredOrders } from '../../../redux/AppReducer';
 import { getDarazDeliveredOrders } from '../../../utils/api/getDarazDeliveredOrders';
+import WeekRangePST from '../components/WeekRangePST';
+import { getBaseUrl } from '../../../utils/api/baseUrl';
 
 
 
 const DeliveredOrders = ({ navigation }) => {
+    const BASE_URL = getBaseUrl(); // instant access, no async
+
     const route = useRoute();
     const selector = useSelector((state) => state.AppReducer);
     const [totalProfit, setTotalProfit] = useState(0);
+    const [amountReceived, setAmountReceived] = useState(0);
+
     const [darazDeliveredOrders, setDarazDeliveredOrders] = useState([])
     const [darazDeliveredOrdersCount, setDarazDeliveredOrdersCount] = useState(0)
     const [all_access_tokens, setAll_access_tokens] = useState([]);
     const dispatch = useDispatch()
 
+    const [startWeek, setStartWeek] = useState()
+    const [endWeek, setEndWeek] = useState()
     // Delivered Orders
     const [darazDeliveredOrdersYesterday, setDarazDeliveredOrdersYesterday] = useState([]);
     const [darazDeliveredOrdersSevenDays, setDarazDeliveredOrdersSevenDays] = useState([]);
     const [darazDeliveredOrdersThirtyDays, setDarazDeliveredOrdersThirtyDays] = useState([]);
+    const [darazDeliveredOrdersByWeek, setDarazDeliveredOrdersByWeek] = useState([]);
     const [darazDeliveredOrdersCustom, setDarazDeliveredOrdersCustom] = useState([]);
 
     // Delivered Orders Count
     const [darazDeliveredOrdersYesterdayCount, setDarazDeliveredOrdersYesterdayCount] = useState(0);
     const [darazDeliveredOrdersSevenDaysCount, setDarazDeliveredOrdersSevenDaysCount] = useState(0);
     const [darazDeliveredOrdersThirtyDaysCount, setDarazDeliveredOrdersThirtyDaysCount] = useState(0);
+    const [darazDeliveredOrdersByWeekCount, setDarazDeliveredOrdersByWeekCount] = useState(0);
     const [darazDeliveredOrdersCustomCount, setDarazDeliveredOrdersCustomCount] = useState(0);
+
+    const [processedItemIds, setProcessedItemIds] = useState(new Set());
 
 
     useEffect(() => {
@@ -73,34 +84,40 @@ const DeliveredOrders = ({ navigation }) => {
 
     const { firebaseSkus = [] } = route.params || {};
 
-    const handleProfitCalculated = (profit) => {
-        setTotalProfit((prev) => prev + profit);
+    const handleProfitCalculated = (orderItemId, profit,amount) => {
+        if (processedItemIds.has(orderItemId)) return;
+
+        setProcessedItemIds(prevSet => {
+            const newSet = new Set(prevSet);
+            newSet.add(orderItemId);
+            return newSet;
+        });
+
+        setTotalProfit(prev => prev + profit);
+        setAmountReceived(prev => prev + amount);
+
     };
 
-    const renderOrder = (item, onProfitCalculated) => (
+
+
+    const renderOrder = (item, onProfitCalculated,) => (
         <View style={styles.card}>
             <TextComp style={styles.orderId}>Order ID: {item.order_id}</TextComp>
             {item.order_items.map((orderItem) => (
                 <OrderItem
+                    failed={false}
                     key={orderItem.order_item_id}
                     item={orderItem}
                     firebaseSkus={firebaseSkus}
                     selector={selector}
-                    onProfitCalculated={onProfitCalculated}
+                    onProfitCalculated={(profit,amount) => handleProfitCalculated(orderItem.order_item_id, profit,amount)}
+
                 />
             ))}
         </View>
     );
 
-    const extractAllOrderItemIds = (orders) => {
-        if (!Array.isArray(orders)) return [];
-        return orders.flatMap((order) => order.order_items.map((item) => item.order_item_id));
-    };
 
-    useEffect(() => {
-        setTotalProfit(0); // Reset when orders change
-        extractAllOrderItemIds(darazDeliveredOrders);
-    }, [darazDeliveredOrders]);
 
     const onChange = () => {
 
@@ -108,14 +125,7 @@ const DeliveredOrders = ({ navigation }) => {
 
     const [selectedRange, setSelectedRange] = useState('today');
     const [customDate, setCustomDate] = useState(null);
-    const handleRangeChange = (rangeKey, date = null) => {
-        setSelectedRange(rangeKey);
-        if (rangeKey === 'custom') {
-            setCustomDate(date);
-        }
-        setTotalProfit(0); // Reset profit
-        // You can refetch orders based on selected range + date here
-    };
+
 
 
     useEffect(() => {
@@ -127,7 +137,7 @@ const DeliveredOrders = ({ navigation }) => {
         navigation.goBack()
     }
 
-    const [darazOrdersLoader, setDarazOrdersLoader] = useState(true)
+    const [darazOrdersLoader, setDarazOrdersLoader] = useState(false)
 
     const getDarazDeliveredOrdersLocal = async (access_token, update_after, update_before, status, date) => {
         try {
@@ -144,27 +154,26 @@ const DeliveredOrders = ({ navigation }) => {
             if (!data?.orderItems?.length) return;
 
             if (selectedRange === 'today') {
-                console.log('Today Orders:', data.orderItems);
                 setDarazDeliveredOrders(prev => [...prev, ...data.orderItems]);
                 setDarazDeliveredOrdersCount(prev => prev + data.orderItems.length);
             }
             else if (selectedRange === 'yesterday') {
-                console.log('Yesterday Orders:', data.orderItems);
                 setDarazDeliveredOrdersYesterday(prev => [...prev, ...data.orderItems]);
                 setDarazDeliveredOrdersYesterdayCount(prev => prev + data.orderItems.length);
             }
             else if (selectedRange === '7days') {
-                console.log('Last 7 Days Orders:', data.orderItems);
                 setDarazDeliveredOrdersSevenDays(prev => [...prev, ...data.orderItems]);
                 setDarazDeliveredOrdersSevenDaysCount(prev => prev + data.orderItems.length);
             }
             else if (selectedRange === '30days') {
-                console.log('Last 30 Days Orders:', data.orderItems);
                 setDarazDeliveredOrdersThirtyDays(prev => [...prev, ...data.orderItems]);
                 setDarazDeliveredOrdersThirtyDaysCount(prev => prev + data.orderItems.length);
             }
+            else if (selectedRange === 'By Week') {
+                setDarazDeliveredOrdersByWeek(prev => [...prev, ...data.orderItems]);
+                setDarazDeliveredOrdersByWeekCount(prev => prev + data.orderItems.length);
+            }
             else if (selectedRange === 'custom') {
-                console.log('Custom Date Orders:', data.orderItems);
                 setDarazDeliveredOrdersCustom(prev => [...prev, ...data.orderItems]);
                 setDarazDeliveredOrdersCustomCount(prev => prev + data.orderItems.length);
             }
@@ -174,11 +183,15 @@ const DeliveredOrders = ({ navigation }) => {
         }
     };
 
+    
+
 
     useEffect(() => {
-        if (!all_access_tokens || (Array.isArray(all_access_tokens) && all_access_tokens.length === 0)) return;
 
-        console.log('function');
+        if (
+            !all_access_tokens ||
+            (Array.isArray(all_access_tokens) && all_access_tokens.length === 0))
+            return;
 
         const fetchOrders = async () => {
 
@@ -200,6 +213,10 @@ const DeliveredOrders = ({ navigation }) => {
                 case '30days':
                     setDarazDeliveredOrdersThirtyDays([]);
                     setDarazDeliveredOrdersThirtyDaysCount(0);
+                    break;
+                case 'By Week':
+                    setDarazDeliveredOrdersByWeek([]);
+                    setDarazDeliveredOrdersByWeekCount(0);
                     break;
                 case 'custom':
                     setDarazDeliveredOrdersCustom([]);
@@ -232,15 +249,29 @@ const DeliveredOrders = ({ navigation }) => {
                     updateAfter.setHours(0, 0, 0, 0);
                     // updateBefore remains as now
                     break;
+                case 'By Week':
+                    if (startWeek && endWeek) {
+                        updateAfter.setTime(new Date(startWeek).getTime());     // End of week
+                        updateBefore.setTime(new Date(endWeek).getTime());  // Start of week
+                        console.log(updateAfter.toISOString(), 'updateAfter');
+                        console.log(updateBefore.toISOString(), 'updateBefore');
+
+                    }
+                    break;
                 case 'custom':
                     if (customDate) {
                         updateAfter.setTime(new Date(customDate).setHours(0, 0, 0, 0));
                         updateBefore.setTime(new Date(customDate).setHours(23, 59, 59, 999));
+                        console.log(updateBefore.toISOString());
+
                     }
                     break;
             }
 
 
+            setTotalProfit(0);
+            setAmountReceived(0)
+            setProcessedItemIds(new Set());
             setDarazOrdersLoader(true)
 
 
@@ -272,7 +303,7 @@ const DeliveredOrders = ({ navigation }) => {
         };
 
         fetchOrders();
-    }, [selectedRange]);
+    }, [selectedRange, customDate, startWeek]);
 
 
 
@@ -289,6 +320,8 @@ const DeliveredOrders = ({ navigation }) => {
                 return darazDeliveredOrdersSevenDays;
             case '30days':
                 return darazDeliveredOrdersThirtyDays;
+            case 'By Week':
+                return darazDeliveredOrdersByWeek;
             case 'custom':
                 return darazDeliveredOrdersCustom;
             default:
@@ -306,12 +339,24 @@ const DeliveredOrders = ({ navigation }) => {
                 return darazDeliveredOrdersSevenDaysCount;
             case '30days':
                 return darazDeliveredOrdersThirtyDaysCount;
+            case 'By Week':
+                return darazDeliveredOrdersByWeekCount;
             case 'custom':
                 return darazDeliveredOrdersCustomCount;
             default:
                 return 0;
         }
     };
+
+
+    const onWeekSelected = ({ start, end }) => {
+        console.log('Start of week (PST in ISO):', start);
+        console.log('End of week (PST in ISO):', end);
+        setStartWeek(start)
+        setEndWeek(end)
+    }
+
+
 
 
     return (
@@ -335,10 +380,9 @@ const DeliveredOrders = ({ navigation }) => {
                             setCustomDate(date);
                         }
 
-                        setTotalProfit(0);
                     }}
                 />
-
+                {selectedRange == 'By Week' && <WeekRangePST onWeekSelected={onWeekSelected} />}
                 {darazOrdersLoader ?
                     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                         <ActivityIndicator size={'large'} color={AppColors.primaryOrange}></ActivityIndicator>
@@ -364,14 +408,17 @@ const DeliveredOrders = ({ navigation }) => {
                                 </TextComp>
                             }
                         />
-                        <View style={styles.totalProfitContainer}>
-                            <TextComp size={16} style={styles.profitText}>
-                                Total Profit: Rs. {parseFloat(totalProfit).toFixed(2)}
-                            </TextComp>
-                        </View>
+
                     </ScrollView>
                 }
-
+                <View style={styles.totalProfitContainer}>
+                    <TextComp size={16} style={styles.profitText}>
+                        Total Profit: Rs. {parseFloat(totalProfit).toFixed(2)}
+                    </TextComp>
+                    <TextComp size={16} style={styles.profitText}>
+                        Total Amount Received: Rs. {parseFloat(amountReceived).toFixed(2)}
+                    </TextComp>
+                </View>
             </View>
         </View>
     );
@@ -430,11 +477,14 @@ const styles = StyleSheet.create({
     },
     totalProfitContainer: {
 
+        position: 'absolute',
+        bottom: 16,
         backgroundColor: AppColors.greenbg,
         borderRadius: 100,
         paddingVertical: 10,
         alignItems: 'center',
         justifyContent: 'center',
+        width: '100%'
     },
     emptyTextComp: {
         textAlign: 'center',

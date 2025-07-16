@@ -5,7 +5,6 @@ import { AppColors } from '../../constants/AppColors';
 import { setAccessToken, setisLoggedin } from '../../redux/AppReducer';
 import { useDispatch } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { BASE_URL } from '../../utils/api/baseUrl';
 import { AppStrings } from '../../constants/AppStrings';
 import AuthHeader from './components/AuthHeader';
 import TextInputComp from '../components/TextInputComp';

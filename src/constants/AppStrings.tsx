@@ -72,7 +72,10 @@ export const AppStrings = {
     darazDetails:'Daraz Details',
     businessDetails:'Business Details',
     deliveredOrdersToday:'Delivered Orders Today',
-    DeliveredOrders:'Delivered Orders'
+    failedOrdersToday:'Failed Delivery Today',
+    DeliveredOrders:'Delivered Orders',
+    FailedDeliveredOrders:'Failed Delivered Orders',
+    weeklyReport:'Weekly Report'
 
 
 

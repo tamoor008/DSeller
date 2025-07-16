@@ -16,12 +16,14 @@ import TextComp from './TextComp';
 import { getAuth } from '@react-native-firebase/auth';
 import database from '@react-native-firebase/database';
 import WebView from 'react-native-webview';
-import { BASE_URL } from '../../utils/api/baseUrl';
 import { setAccessToken, setAccessTokens, setSelectedStore } from '../../redux/AppReducer';
 import { useDispatch, useSelector } from 'react-redux';
+import { getBaseUrl } from '../../utils/api/baseUrl';
 
 
 const SelectStore = () => {
+    const BASE_URL = getBaseUrl(); // instant access, no async
+
     const auth = getAuth()
     const currentUser = auth.currentUser
     const [darazOAuth, setDarazOAuth] = useState(false)

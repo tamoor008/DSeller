@@ -17,6 +17,7 @@ const OPTIONS = [
   { label: 'Yesterday', key: 'yesterday' },
   { label: 'Last 7 Days', key: '7days' },
   { label: 'Last 30 Days', key: '30days' },
+  { label: 'By Week', key: 'By Week' },
   { label: 'Custom', key: 'custom' },
 ];
 

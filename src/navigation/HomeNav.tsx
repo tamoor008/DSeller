@@ -11,6 +11,8 @@ import StockScreen from '../ui/stock/StockScreen';
 import CashScreen from '../ui/cash/CashScreen';
 import PackagingScreen from '../ui/packaging/PackagingScreen';
 import DeliveredOrders from '../ui/home/screens/DeliveredOrders';
+import FailedDeliveryOrders from '../ui/home/screens/FailedDeliveryOrders';
+import WeekllyReport from '../ui/home/screens/WeekllyReport';
 
 const Stack = createStackNavigator();
 
@@ -26,7 +28,10 @@ const HomeNav = () => {
             <Stack.Screen name="CashScreen" component={CashScreen} />
             <Stack.Screen name="PackagingScreen" component={PackagingScreen} />
             <Stack.Screen name="DeliveredOrders" component={DeliveredOrders} />
+            <Stack.Screen name="FailedDeliveryOrders" component={FailedDeliveryOrders} />
+            <Stack.Screen name="WeekllyReport" component={WeekllyReport} />
 
+            
         </Stack.Navigator>
 
     );

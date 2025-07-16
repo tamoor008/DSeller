@@ -5,14 +5,15 @@ import { AppColors } from '../../constants/AppColors';
 import { setAccessToken, setisLoggedin } from '../../redux/AppReducer';
 import { useDispatch } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { BASE_URL } from '../../utils/api/baseUrl';
+import { getBaseUrl } from '../../utils/api/baseUrl';
 
 const CLIENT_ID = '503646';
 const REDIRECT_URI = 'https://www.moonsys.co';
 const AUTH_URL = `https://api.daraz.pk/oauth/authorize?response_type=code&force_auth=true&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&client_id=${CLIENT_ID}`;
 
 const DarazOAuthScreen = ({ navigation }) => {
-  
+  const BASE_URL = getBaseUrl(); // instant access, no async
+
   const dispatch=useDispatch()
 
   const [loading, setLoading] = useState(false);

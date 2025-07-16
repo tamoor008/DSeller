@@ -1,8 +1,10 @@
 import { setTodayDeliveredOrders } from '../../redux/AppReducer';
 import { store } from '../../redux/store'; // Adjust based on your project setup
-import { BASE_URL } from './baseUrl';
+import { getBaseUrl } from './baseUrl';
 
 export const getDarazDeliveredOrders = async (access_token, createdAfterISO, status, dispatch) => {
+    const BASE_URL = getBaseUrl(); // instant access, no async
+
     try {
         const response = await fetch(
             `${BASE_URL}/get-daraz-delivered-order-details?access_token=${access_token}&update_after=${encodeURIComponent(createdAfterISO)}&status=${status}`

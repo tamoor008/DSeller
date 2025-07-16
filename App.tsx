@@ -16,6 +16,7 @@ import { getAuth, onAuthStateChanged } from '@react-native-firebase/auth';
 import { setGlobalUser } from './src/redux/AppReducer';
 import { startFirebaseListener, stopFirebaseListener } from './src/utils/firebase/firebaseListeners';
 import InfoModal from './src/ui/components/InfoModal';
+import { initializeBaseUrl } from './src/utils/api/baseUrl';
 
 const Stack = createStackNavigator();
 
@@ -65,6 +66,9 @@ const App = () => {
     return () => stopFirebaseListener(); // Clean up
   }, []);
 
+  useEffect(() => {
+    initializeBaseUrl();
+  }, []);
   return (
 
     <View style={styles.container}>

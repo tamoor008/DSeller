@@ -5,7 +5,6 @@ import { AppColors } from '../../constants/AppColors';
 import { setAccessToken, setGlobalUser, setisLoggedin } from '../../redux/AppReducer';
 import { useDispatch } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { BASE_URL } from '../../utils/api/baseUrl';
 import { AppStrings } from '../../constants/AppStrings';
 import AuthHeader from './components/AuthHeader';
 import TextInputComp from '../components/TextInputComp';
@@ -19,6 +18,8 @@ const SigninScreen = ({ navigation }) => {
     const [error, setError] = useState('')
     const [email, setEmail] = useState('tam@gmail.com')
     const [password, setPassword] = useState('12345678')
+    // const [email, setEmail] = useState('')
+    // const [password, setPassword] = useState('')
     const dispatch = useDispatch()
     const navigateSignup = () => {
         navigation.navigate('SignupScreen')

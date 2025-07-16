@@ -13,12 +13,14 @@ import FontFamilty from '../../../constants/FontFamilty';
 import InfoModal from '../../components/InfoModal';
 import TextComp from '../../components/TextComp';
 import { AppColors } from '../../../constants/AppColors';
-import { BASE_URL } from '../../../utils/api/baseUrl';
 import { useSelector } from 'react-redux';
+import { getBaseUrl } from '../../../utils/api/baseUrl';
 
 
 
 const IncomeTab = ({ }) => {
+  const BASE_URL = getBaseUrl(); // instant access, no async
+
   const [isVisible, setIsvisible] = useState(false)
   const selector = useSelector(state => state.AppReducer);
   const [loader, setLoader] = useState(false)
