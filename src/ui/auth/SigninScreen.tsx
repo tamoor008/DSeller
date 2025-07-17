@@ -20,7 +20,7 @@ const SigninScreen = ({ navigation }) => {
     const [password, setPassword] = useState('12345678');
     const [secure, setSecure] = useState(true); // 🔥 Added this state
     const dispatch = useDispatch();
-
+    //hello
     const navigateSignup = () => {
         navigation.navigate('SignupScreen');
     };
