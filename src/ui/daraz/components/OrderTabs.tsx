@@ -23,35 +23,35 @@ import { getAuth } from '@react-native-firebase/auth';
 
 
 const OrderTabs = ({ }) => {
-    const auth = getAuth()
-    const currentUser = auth.currentUser
-    const [isVisible, setIsvisible] = useState(false)
+    const auth = getAuth();
+    const currentUser = auth.currentUser;
+    const [isVisible, setIsvisible] = useState(false);
     const selector = useSelector(state => state.AppReducer);
-    const [allOrder, setAllOrder] = useState([])
-    const [shippedOrder, setShippedOrder] = useState([])
-    const [failedOrder, setFailedOrder] = useState([])
-    const [ITRSOrder, setITRSOrder] = useState([])
-    const [modalVisible, setmodalVisible] = useState(false)
+    const [allOrder, setAllOrder] = useState([]);
+    const [shippedOrder, setShippedOrder] = useState([]);
+    const [failedOrder, setFailedOrder] = useState([]);
+    const [ITRSOrder, setITRSOrder] = useState([]);
+    const [modalVisible, setmodalVisible] = useState(false);
     const skuRef = database().ref(`users/${currentUser.uid}/skus`);
 
-    const [returnOrder, setReturnOrder] = useState([])
-    const [allOrderCount, setOrderCount] = useState(0)
-    const [shippedOrderCount, setShippedOrderCount] = useState(0)
-    const [failedOrderCount, setFailedOrderCount] = useState(0)
-    const [returnOrderCount, setReturnOrderCount] = useState(0)
+    const [returnOrder, setReturnOrder] = useState([]);
+    const [allOrderCount, setOrderCount] = useState(0);
+    const [shippedOrderCount, setShippedOrderCount] = useState(0);
+    const [failedOrderCount, setFailedOrderCount] = useState(0);
+    const [returnOrderCount, setReturnOrderCount] = useState(0);
 
-    const [allQuantityCount, setQuantityCountCount] = useState(0)
-    const [shippedQuantityCount, setShippedQuantityCount] = useState(0)
-    const [failedQuantityCount, setFailedQuantityCount] = useState(0)
-    const [returnQuantityCount, setReturnQuantityCount] = useState(0)
+    const [allQuantityCount, setQuantityCountCount] = useState(0);
+    const [shippedQuantityCount, setShippedQuantityCount] = useState(0);
+    const [failedQuantityCount, setFailedQuantityCount] = useState(0);
+    const [returnQuantityCount, setReturnQuantityCount] = useState(0);
 
-    const [failedDeliveries, setFailedDeliveries] = useState([])
+    const [failedDeliveries, setFailedDeliveries] = useState([]);
 
 
     const [all_access_tokens, setAll_access_tokens] = useState([]);
 
-    const [allSkus,setAllSkus]=useState([])
-    const [firebaseSkus,setFirebaseSkus]=useState([])
+    const [allSkus, setAllSkus] = useState([]);
+    const [firebaseSkus, setFirebaseSkus] = useState([]);
 
 
     useEffect(() => {
@@ -72,13 +72,13 @@ const OrderTabs = ({ }) => {
 
     }, [selector]);
 
-    const [loader, setLoader] = useState(true)
+    const [loader, setLoader] = useState(true);
 
 
-    const access_token = selector.accessToken
+    const access_token = selector.accessToken;
     const onInfoPress = () => {
-        setIsvisible(true)
-    }
+        setIsvisible(true);
+    };
 
     const [orders, setOrders] = useState({
         all: {
@@ -128,7 +128,7 @@ const OrderTabs = ({ }) => {
         setTabs(prevTabs =>
             prevTabs.map((tab, i) => ({
                 ...tab,
-                selected: i === index
+                selected: i === index,
             }))
         );
     };
@@ -138,22 +138,22 @@ const OrderTabs = ({ }) => {
             {
                 title: AppStrings.all,
                 selected: tabs.find(t => t.title === AppStrings.all)?.selected || false,
-                totalOrders: orders.all.totalOrders
+                totalOrders: orders.all.totalOrders,
             },
             {
                 title: AppStrings.shipped,
                 selected: tabs.find(t => t.title === AppStrings.shipped)?.selected || false,
-                totalOrders: orders.shipped.totalOrders
+                totalOrders: orders.shipped.totalOrders,
             },
             {
                 title: AppStrings.failed,
                 selected: tabs.find(t => t.title === AppStrings.failed)?.selected || false,
-                totalOrders: orders.failed.totalOrders
+                totalOrders: orders.failed.totalOrders,
             },
             {
                 title: AppStrings.return,
                 selected: tabs.find(t => t.title === AppStrings.return)?.selected || false,
-                totalOrders: orders.returned.totalOrders
+                totalOrders: orders.returned.totalOrders,
             },
         ]);
     }, [orders]);
@@ -210,7 +210,7 @@ const OrderTabs = ({ }) => {
             setOrderCount(prev => prev + data.countTotal);
 
             if (status == 'shipped') {
-                setShippedOrderCount(prev => prev + data.countTotal)
+                setShippedOrderCount(prev => prev + data.countTotal);
                 setShippedOrder(prev => [...prev, ...countSkusFromOrders(data.orderItems)]);
 
 
@@ -218,7 +218,7 @@ const OrderTabs = ({ }) => {
                 if (status == 'shipped_back') {
 
                     const newFailedOrders = countSkusFromOrders(data.orderItems);
-                    setFailedOrder(newFailedOrders)
+                    setFailedOrder(newFailedOrders);
                     setFailedOrderCount(prev => prev + data.countTotal);
                 } else {
                     const newFailedOrders = countSkusFromOrders(data.orderItems);
@@ -229,14 +229,14 @@ const OrderTabs = ({ }) => {
 
 
         } catch (error) {
-            console.error("Error fetching Daraz orders:", error.message);
+            console.error('Error fetching Daraz orders:', error.message);
             return null;
         }
     };
 
     useEffect(() => {
         // console.log('USE EFFECT');
-        if (!all_access_tokens || (Array.isArray(all_access_tokens) && all_access_tokens.length === 0)) return;
+        if (!all_access_tokens || (Array.isArray(all_access_tokens) && all_access_tokens.length === 0)) { return; }
 
         const fetchOrders = async () => {
             // console.log('FETCH ORDERS');
@@ -245,7 +245,7 @@ const OrderTabs = ({ }) => {
             setFailedOrderCount(0);
             setOrderCount(0);
             setShippedOrderCount(0);
-            setShippedOrder([])
+            setShippedOrder([]);
             setLoader(true);
 
             const createdAfter = new Date(Date.now() - 1000 * 24 * 60 * 60 * 1000).toISOString(); // 7 days ago
@@ -272,8 +272,8 @@ const OrderTabs = ({ }) => {
                 console.error('Error while fetching orders:', error);
             } finally {
                 setLoader(false);
-                allOrder.map((item,index)=>console.log(item.sku))
-                
+                allOrder.map((item, index) => console.log(item.sku));
+
             }
         };
 
@@ -282,17 +282,17 @@ const OrderTabs = ({ }) => {
 
     useEffect(() => {
         const merged = mergeSkuCounts(failedOrder, ITRSOrder);
-        setFailedDeliveries(merged)
+        setFailedDeliveries(merged);
 
 
-    }, [failedOrder, ITRSOrder])
+    }, [failedOrder, ITRSOrder]);
 
     useEffect(() => {
         setTabs([
             {
                 title: AppStrings.all,
                 totalOrders: allOrderCount,
-                selected: true
+                selected: true,
             },
             {
                 title: AppStrings.shipped,
@@ -312,11 +312,11 @@ const OrderTabs = ({ }) => {
     useEffect(() => {
         const merged = mergeSkuCounts(shippedOrder, failedDeliveries);
         // console.log(merged,'all orders');
-        
-        setAllOrder(merged)
 
-        setAllSkus(merged.map(item => item.sku))
-    }, [shippedOrder, failedDeliveries])
+        setAllOrder(merged);
+
+        setAllSkus(merged.map(item => item.sku));
+    }, [shippedOrder, failedDeliveries]);
 
 
     useEffect(() => {
@@ -344,22 +344,22 @@ const OrderTabs = ({ }) => {
                 console.error('Error fetching data:', error);
                 setLoader(false); // ensure loader stops even on error
             });
-    }, [])
+    }, []);
 
-  
+
     return (
 
         <View style={{ flex: 1 }}>
             {loader ?
                 <View style={{ flex: 1, justifyContent: 'center' }}>
-                    <ActivityIndicator size={'large'} color={AppColors.primaryOrange}></ActivityIndicator>
+                    <ActivityIndicator size={'large'} color={AppColors.primaryOrange} />
                 </View>
                 :
                 <View style={{ rowGap: 16, flex: 1 }}>
                     <View style={styles.container}>
                         {tabs.map((item, index) => (
-                            <TouchableOpacity onPress={() => { toggleTabs(index) }} activeOpacity={0.9} style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: item.selected ? AppColors.primaryOrange : AppColors.black25, borderRadius: 16, paddingVertical: 4, flexDirection: 'row', columnGap: 4 }} key={index}>
-                                <TextComp size={12} style={{ fontFamily: FontFamilty.medium, color: item.selected ? AppColors.white : AppColors.black50, textAlign: 'center', }}>{item.title}</TextComp>
+                            <TouchableOpacity onPress={() => { toggleTabs(index); }} activeOpacity={0.9} style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: item.selected ? AppColors.primaryOrange : AppColors.black25, borderRadius: 16, paddingVertical: 4, flexDirection: 'row', columnGap: 4 }} key={index}>
+                                <TextComp size={12} style={{ fontFamily: FontFamilty.medium, color: item.selected ? AppColors.white : AppColors.black50, textAlign: 'center' }}>{item.title}</TextComp>
                                 <View style={{ alignItems: 'center', justifyContent: 'center', backgroundColor: AppColors.white, borderRadius: 100, padding: 4 }}>
                                     <TextComp size={8} style={{ fontFamily: FontFamilty.semibold, color: item.selected ? AppColors.primaryOrange : AppColors.black, textAlignVertical: 'center' }}>{item.totalOrders}</TextComp>
                                 </View>
@@ -370,9 +370,9 @@ const OrderTabs = ({ }) => {
                     </View>
                     {tabs[0]?.selected && (
 
-                        <View style={{ backgroundColor: AppColors.white, elevation: 10, borderRadius: 4,flex:1 }}>
+                        <View style={{ backgroundColor: AppColors.white, elevation: 10, borderRadius: 4, flex: 1 }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, paddingVertical: 8, backgroundColor: AppColors.primaryOrange, borderTopEndRadius: 4, borderTopLeftRadius: 4 }}>
-                                <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2, }}>{AppStrings.sku}</TextComp>
+                                <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2 }}>{AppStrings.sku}</TextComp>
                                 <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 1, textAlign: 'center' }}>{AppStrings.price}</TextComp>
                                 <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 1, textAlign: 'center' }}>{AppStrings.quantity}</TextComp>
                                 <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 1, textAlign: 'center' }}>{AppStrings.total}</TextComp>
@@ -380,7 +380,7 @@ const OrderTabs = ({ }) => {
 
                             <ScrollView contentContainerStyle={{ paddingBottom: 24 }} style={{ paddingVertical: 8, paddingHorizontal: 16, flex: 1 }}>
                                 {allOrder?.map((item, index) => <View style={{ flexDirection: 'row', alignItems: 'center' }} key={index}>
-                                    <TextComp numberOfLines={1} size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.primaryOrange, textDecorationLine: 'underline', flex: 2, }}>{item.sku}</TextComp>
+                                    <TextComp numberOfLines={1} size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.primaryOrange, textDecorationLine: 'underline', flex: 2 }}>{item.sku}</TextComp>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black, flex: 1, textAlign: 'center' }}>{item.price}</TextComp>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black, flex: 1, textAlign: 'center' }}>{item.quantity}</TextComp>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
@@ -392,7 +392,7 @@ const OrderTabs = ({ }) => {
                             </ScrollView>
 
                             <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, paddingVertical: 8, backgroundColor: AppColors.primaryOrange, borderBottomEndRadius: 4, borderBottomLeftRadius: 4 }}>
-                                <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2, }}>{AppStrings.total}</TextComp>
+                                <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2 }}>{AppStrings.total}</TextComp>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.white80, textAlign: 'right' }}>{'Rs '}</TextComp>
                                     <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: AppColors.white, textAlign: 'right' }}>{orders.all.totalPrice}</TextComp>
@@ -405,7 +405,7 @@ const OrderTabs = ({ }) => {
 
                         <View style={{ backgroundColor: AppColors.white, elevation: 10, borderRadius: 4, flex: 1 }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, paddingVertical: 8, backgroundColor: AppColors.primaryOrange, borderTopEndRadius: 4, borderTopLeftRadius: 4 }}>
-                                <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2, }}>{AppStrings.sku}</TextComp>
+                                <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2 }}>{AppStrings.sku}</TextComp>
                                 <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 1, textAlign: 'center' }}>{AppStrings.price}</TextComp>
                                 <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 1, textAlign: 'center' }}>{AppStrings.quantity}</TextComp>
                                 <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 1, textAlign: 'center' }}>{AppStrings.total}</TextComp>
@@ -413,7 +413,7 @@ const OrderTabs = ({ }) => {
 
                             <ScrollView contentContainerStyle={{ paddingBottom: 24 }} style={{ paddingVertical: 8, paddingHorizontal: 16, flex: 1 }}>
                                 {shippedOrder?.map((item, index) => <View style={{ flexDirection: 'row', alignItems: 'center' }} key={index}>
-                                    <TextComp numberOfLines={1} size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.primaryOrange, textDecorationLine: 'underline', flex: 2, }}>{item.sku}</TextComp>
+                                    <TextComp numberOfLines={1} size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.primaryOrange, textDecorationLine: 'underline', flex: 2 }}>{item.sku}</TextComp>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black, flex: 1, textAlign: 'center' }}>{item.price}</TextComp>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black, flex: 1, textAlign: 'center' }}>{item.quantity}</TextComp>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
@@ -425,7 +425,7 @@ const OrderTabs = ({ }) => {
                             </ScrollView>
 
                             <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, paddingVertical: 8, backgroundColor: AppColors.primaryOrange, borderBottomEndRadius: 4, borderBottomLeftRadius: 4 }}>
-                                <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2, }}>{AppStrings.total}</TextComp>
+                                <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2 }}>{AppStrings.total}</TextComp>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.white80, textAlign: 'right' }}>{'Rs '}</TextComp>
                                     <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: AppColors.white, textAlign: 'right' }}>{orders.shipped.totalPrice}</TextComp>
@@ -439,7 +439,7 @@ const OrderTabs = ({ }) => {
 
                         <View style={{ backgroundColor: AppColors.white, elevation: 10, borderRadius: 4, flex: 1 }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, paddingVertical: 8, backgroundColor: AppColors.primaryOrange, borderTopEndRadius: 4, borderTopLeftRadius: 4 }}>
-                                <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2, }}>{AppStrings.sku}</TextComp>
+                                <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2 }}>{AppStrings.sku}</TextComp>
                                 <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 1, textAlign: 'center' }}>{AppStrings.price}</TextComp>
                                 <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 1, textAlign: 'center' }}>{AppStrings.quantity}</TextComp>
                                 <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 1, textAlign: 'center' }}>{AppStrings.total}</TextComp>
@@ -447,7 +447,7 @@ const OrderTabs = ({ }) => {
 
                             <ScrollView contentContainerStyle={{ paddingBottom: 24 }} style={{ paddingVertical: 8, paddingHorizontal: 16, flex: 1 }}>
                                 {failedDeliveries?.map((item, index) => <View style={{ flexDirection: 'row', alignItems: 'center' }} key={index}>
-                                    <TextComp numberOfLines={1} size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.primaryOrange, textDecorationLine: 'underline', flex: 2, }}>{item.sku}</TextComp>
+                                    <TextComp numberOfLines={1} size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.primaryOrange, textDecorationLine: 'underline', flex: 2 }}>{item.sku}</TextComp>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black, flex: 1, textAlign: 'center' }}>{item.price}</TextComp>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black, flex: 1, textAlign: 'center' }}>{item.quantity}</TextComp>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
@@ -459,7 +459,7 @@ const OrderTabs = ({ }) => {
                             </ScrollView>
 
                             <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, paddingVertical: 8, backgroundColor: AppColors.primaryOrange, borderBottomEndRadius: 4, borderBottomLeftRadius: 4 }}>
-                                <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2, }}>{AppStrings.total}</TextComp>
+                                <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2 }}>{AppStrings.total}</TextComp>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.white80, textAlign: 'right' }}>{'Rs '}</TextComp>
                                     <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: AppColors.white, textAlign: 'right' }}>{orders.shipped.totalPrice}</TextComp>
@@ -472,7 +472,7 @@ const OrderTabs = ({ }) => {
 
                         <View style={{ backgroundColor: AppColors.white, elevation: 10, borderRadius: 4 }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, paddingVertical: 8, backgroundColor: AppColors.primaryOrange, borderTopEndRadius: 4, borderTopLeftRadius: 4 }}>
-                                <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2, }}>{AppStrings.sku}</TextComp>
+                                <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2 }}>{AppStrings.sku}</TextComp>
                                 <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 1, textAlign: 'center' }}>{AppStrings.price}</TextComp>
                                 <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 1, textAlign: 'center' }}>{AppStrings.quantity}</TextComp>
                                 <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 1, textAlign: 'center' }}>{AppStrings.total}</TextComp>
@@ -480,7 +480,7 @@ const OrderTabs = ({ }) => {
 
                             <View style={{ paddingVertical: 8, paddingHorizontal: 16 }}>
                                 {orders.returned.orders.map((item, index) => <View style={{ flexDirection: 'row', alignItems: 'center' }} key={index}>
-                                    <TextComp numberOfLines={1} size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.primaryOrange, textDecorationLine: 'underline', flex: 2, }}>{item.sku}</TextComp>
+                                    <TextComp numberOfLines={1} size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.primaryOrange, textDecorationLine: 'underline', flex: 2 }}>{item.sku}</TextComp>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black, flex: 1, textAlign: 'center' }}>{item.price}</TextComp>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black, flex: 1, textAlign: 'center' }}>{item.quantity}</TextComp>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
@@ -492,7 +492,7 @@ const OrderTabs = ({ }) => {
                             </View>
 
                             <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, paddingVertical: 8, backgroundColor: AppColors.primaryOrange, borderBottomEndRadius: 4, borderBottomLeftRadius: 4 }}>
-                                <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2, }}>{AppStrings.total}</TextComp>
+                                <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2 }}>{AppStrings.total}</TextComp>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.white80, textAlign: 'right' }}>{'Rs '}</TextComp>
                                     <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: AppColors.white, textAlign: 'right' }}>{orders.returned.totalPrice}</TextComp>
@@ -508,14 +508,14 @@ const OrderTabs = ({ }) => {
         </View>
 
     );
-}
+};
 
 const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
         alignItems: 'center',
         width: '100%',
-        columnGap: 8
+        columnGap: 8,
     },
 
 });
