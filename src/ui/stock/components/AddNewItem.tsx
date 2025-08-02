@@ -18,7 +18,7 @@ import TextInputComp from '../../components/TextInputComp';
 import database from '@react-native-firebase/database';
 import { getAuth } from '@react-native-firebase/auth';
 import DropDownPicker from 'react-native-dropdown-picker';
-
+//heheh
 
 const AddNewItem = ({ setIsvisible }) => {
     const auth = getAuth()
