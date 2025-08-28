@@ -51,7 +51,7 @@ export const initializeBaseUrl = async () => {
       console.log('✅ Fetched BASE_URL from Firebase:', BASE_URL);
     }
   } catch (error) {
-    console.error('❌ Failed to fetch BASE_URL from Firebase:', error);
+    console.log('❌ Failed to fetch BASE_URL from Firebase:', error);
   }
 };
 

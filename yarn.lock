@@ -2034,10 +2034,10 @@
   resolved "https://registry.npmjs.org/@react-native-firebase/database/-/database-22.2.1.tgz"
   integrity sha512-DC/02/gsYbRuWuXUpLSUPkiIbckMC7vDII+uqY/p+xuWbn0CtvBuGo6bPrmA7FP4A5wUzGhGlBxySe7V32NsfA==
 
-"@react-native-firebase/remote-config@^22.4.0":
-  version "22.4.0"
-  resolved "https://registry.yarnpkg.com/@react-native-firebase/remote-config/-/remote-config-22.4.0.tgz#73f8562c712c0328ae28fe42525dd7b26f361b75"
-  integrity sha512-uisPD4ACE1PDGtAzQMmlPLg08jozT7PI2ddVLUJke499Fne9wc9f3edRqi+7afdMfXf7P70IxA3rR0iE9wagsQ==
+"@react-native-firebase/remote-config@22.2.0":
+  version "22.2.0"
+  resolved "https://registry.yarnpkg.com/@react-native-firebase/remote-config/-/remote-config-22.2.0.tgz#946405809d76403612b165607fa735fb06200914"
+  integrity sha512-D5DEeHnO8+a1MsB6E4HZbSUr4hbmiGfI/P+rqy4gWTN1aPkiPEUmMnqAnCHBKYWp3btDf4fKE0/93/GKsaUb3w==
 
 "@react-native/assets-registry@0.79.2":
   version "0.79.2"

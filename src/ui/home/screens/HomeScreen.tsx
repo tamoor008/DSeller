@@ -21,8 +21,6 @@ import database from '@react-native-firebase/database';
 import IndividualDataComp from '../../components/IndividualDataComp';
 import TextComp from '../../components/TextComp';
 import FontFamilty from '../../../constants/FontFamilty';
-import DeliveredOrders from './DeliveredOrders';
-import InfoModal from '../../components/InfoModal';
 import { getDarazDeliveredOrders } from '../../../utils/api/getDarazDeliveredOrders';
 import { setTodayDeliveredOrders } from '../../../redux/AppReducer';
 import WeeklyReportComp from '../../components/WeeklyReportComp';
@@ -30,8 +28,8 @@ import { getBaseUrl } from '../../../utils/api/baseUrl';
 
 
 const HomeScreen = ({ navigation }) => {
-    const BASE_URL = getBaseUrl(); // instant access, no async
-    // console.log(BASE_URL,'BASE_URL');
+    const BASE_URL = getBaseUrl();
+    console.log(BASE_URL,'BASE_URL');
     
 
     const navigateDaraz = () => {
@@ -440,8 +438,10 @@ const HomeScreen = ({ navigation }) => {
 
     // Data functions
 
-    const [pendingOrders, setPendingOrders] = useState(0)
-    const [readyToShipOrders, setReadyToShipOrders] = useState(0)
+    const [pendingOrders, setPendingOrders] = useState([])
+    const [pendingOrdersCount, setPendingOrdersCount] = useState(0)
+    const [readyToShipOrders, setReadyToShipOrders] = useState([])
+    const [readyToShipOrdersCount, setReadyToShipOrdersCount] = useState(0)
     const [darazOrdersLoader, setDarazOrdersLoader] = useState(false)
 
     const [darazDeliveredOrders, setDarazDeliveredOrders] = useState([])
@@ -463,17 +463,18 @@ const HomeScreen = ({ navigation }) => {
 
 
             if (status == 'pending') {
-                setPendingOrders(prev => prev + data.countTotal)
+                setPendingOrdersCount(prev => prev + data.countTotal)
+                setPendingOrders(prev => [...prev, ...data.orderItems])
+
+            } else if (status == 'ready_to_ship') {
+                setReadyToShipOrdersCount(prev => prev + data.countTotal)
+                setReadyToShipOrders(prev => [...prev, ...data.orderItems])
 
             } else {
                 if(status=='delivered'){                    
                     setDarazDeliveredOrders(prev => [...prev, ...countSkusFromOrders(data.orderItems)])
                     setDarazDeliveredOrdersCount(prev=>prev+data?.orderItems?.length)
-                }else{
-                    setReadyToShipOrders(prev => prev + data.countTotal)
-
                 }
-
             }
 
 
@@ -497,13 +498,15 @@ const HomeScreen = ({ navigation }) => {
         const fetchOrders = async () => {
             setDarazOrdersLoader(true)
 
-            setPendingOrders(0)
-            setReadyToShipOrders(0)
+            setPendingOrders([])
+            setPendingOrdersCount(0)
+            setReadyToShipOrders([])
+            setReadyToShipOrdersCount(0)
             setDarazDeliveredOrders([])
             setDarazDeliveredOrdersCount(0)
             dispatch(setTodayDeliveredOrders([]))
 
-            const createdAfter = new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(); // 7 days ago
+            const createdAfter = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(); // 7 days ago
             
             const startOfToday = new Date();
             startOfToday.setHours(0, 0, 0, 0);
@@ -553,6 +556,14 @@ const HomeScreen = ({ navigation }) => {
     }
 
 
+    const navigatePendingOrders=()=>{
+        navigation.navigate('PendingOrders',{pendingOrders:pendingOrders,firebaseSkus:firebaseSkus})
+    }
+
+    const navigateReadyToShipOrders=()=>{
+        navigation.navigate('ReadyToShipOrders',{readyToShipOrders:readyToShipOrders,firebaseSkus:firebaseSkus})
+    }
+
     return (
         <ScrollView refreshControl={
             <RefreshControl refreshing={screenloader} onRefresh={() => {
@@ -568,8 +579,8 @@ const HomeScreen = ({ navigation }) => {
             <View style={{ rowGap: 16 }}>
                 <TextComp size={16} style={{ fontFamily: FontFamilty.bold, color: AppColors.black, }}>{AppStrings.darazDetails}</TextComp>
                 <View style={{ flexDirection: 'row', columnGap: 16, }}>
-                    <IndividualDataComp loader={darazOrdersLoader}  data={pendingOrders} label={AppStrings.pendingOrders} info={AppStrings.darazInfo} />
-                    <IndividualDataComp loader={darazOrdersLoader} data={readyToShipOrders} label={AppStrings.readyToShipOrders} info={AppStrings.stockInfo} />
+                    <IndividualDataComp onPress={navigatePendingOrders} loader={darazOrdersLoader}  data={pendingOrdersCount} label={AppStrings.pendingOrders} info={AppStrings.darazInfo} />
+                    <IndividualDataComp onPress={navigateReadyToShipOrders} loader={darazOrdersLoader} data={readyToShipOrdersCount} label={AppStrings.readyToShipOrders} info={AppStrings.stockInfo} />
                 </View>
 
                 <View style={{ flexDirection: 'row', columnGap: 16, }}>

@@ -9,7 +9,9 @@ const initialState = {
     access_tokens:[],
     selectedStore:{},
     firebaseProducts:{},
-    todayDeliveredOrders:[]
+    todayDeliveredOrders:[],
+    todayPendingOrders:[],
+    todayReadyToShipOrders:[]
 
    
 
@@ -51,6 +53,15 @@ export const AppSlice = createSlice({
         setTodayDeliveredOrders: (state, action) => {    
             state.todayDeliveredOrders = action.payload
             
+        },
+        setTodayPendingOrders: (state, action) => {    
+            state.todayPendingOrders = action.payload
+            
+            
+        },
+        setTodayReadyToShipOrders: (state, action) => {    
+            state.todayReadyToShipOrders = action.payload
+            
             
         },
         
@@ -66,7 +77,9 @@ export const {
     setAccessTokens,
     setSelectedStore,
     setFirebaseProducts,
-    setTodayDeliveredOrders
+    setTodayDeliveredOrders,
+    setTodayPendingOrders,
+    setTodayReadyToShipOrders
 
 } = AppSlice.actions;
 
