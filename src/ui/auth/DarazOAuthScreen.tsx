@@ -1,25 +1,30 @@
 import React, { useState } from 'react';
-import { View, ActivityIndicator, Text } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { AppColors } from '../../constants/AppColors';
+import type { WebViewNavigation } from 'react-native-webview';
 import { setAccessToken, setisLoggedin } from '../../redux/AppReducer';
 import { useDispatch } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getBaseUrl } from '../../utils/api/baseUrl';
+import { AppColors } from '../../constants/AppColors';
 
 const CLIENT_ID = '503646';
 const REDIRECT_URI = 'https://www.moonsys.co';
 const AUTH_URL = `https://api.daraz.pk/oauth/authorize?response_type=code&force_auth=true&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&client_id=${CLIENT_ID}`;
 
-const DarazOAuthScreen = ({ navigation }) => {
+type DarazOAuthScreenProps = {
+  navigation: any; // TODO: replace with proper navigation type when available
+};
+
+const DarazOAuthScreen: React.FC<DarazOAuthScreenProps> = ({ navigation }) => {
   const BASE_URL = getBaseUrl(); // instant access, no async
 
-  const dispatch=useDispatch()
+  const dispatch = useDispatch();
 
   const [loading, setLoading] = useState(false);
   const [code, setCode] = useState('CODE')
 
-  const handleNavigationStateChange = (navState) => {
+  const handleNavigationStateChange = (navState: WebViewNavigation) => {
     const { url } = navState;
 
     // Listen for Daraz's callback with ?code=
@@ -41,14 +46,14 @@ const DarazOAuthScreen = ({ navigation }) => {
     }
   };
 
-  const getDarazToken = async (code) => {
+  const getDarazToken = async (authorizationCode: string) => {
     try {
       const response = await fetch(`${BASE_URL}/get-daraz-token`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code: authorizationCode }),
       });
   
       if (!response.ok) {
@@ -75,27 +80,34 @@ const DarazOAuthScreen = ({ navigation }) => {
       // console.log("Seller ID:", data.user_info?.seller_id);
   
       return data;
-    } catch (err) {
-      console.error("Failed to fetch Daraz token:", err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("Failed to fetch Daraz token:", message);
     }
   };
   
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: AppColors.bgcolor }}>
       {loading && (
-        <View style={{flex:1,alignItems:'center',justifyContent:'center',backgroundColor:AppColors.bgcolor}}>
-          <ActivityIndicator size={'large'} color={AppColors.primaryOrange}></ActivityIndicator>
+        <View
+          style={{
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: AppColors.bgcolor,
+          }}>
+          <ActivityIndicator size="large" color={AppColors.primaryOrange} />
         </View>
       )}
       {!loading && (
         <WebView
+          style={{ flex: 1 }}
           source={{ uri: AUTH_URL }} // ← Correct URL to start OAuth
           onLoadEnd={() => setLoading(false)}
           onNavigationStateChange={handleNavigationStateChange}
         />
       )}
-
     </View>
   );
 };

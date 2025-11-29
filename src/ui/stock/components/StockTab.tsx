@@ -17,6 +17,7 @@ import TextComp from '../../components/TextComp';
 import { SampleImages } from '../../../constants/SampleImages';
 import AddNewItem from './AddNewItem';
 import UpdateStock from './UpdateStock';
+import EditPrice from './EditPrice';
 
 import database from '@react-native-firebase/database';
 import { getAuth } from '@react-native-firebase/auth';
@@ -31,6 +32,8 @@ const StockTab = ({ }) => {
     const [loader, setLoader] = useState(false)
     const [isVisible, setIsvisible] = useState(false)
     const [updatestock, setUpdateStock] = useState(false)
+    const [editPriceVisible, setEditPriceVisible] = useState(false)
+    const [selectedProduct, setSelectedProduct] = useState(null)
 
     useEffect(() => {
         setLoader(true)
@@ -59,7 +62,7 @@ const StockTab = ({ }) => {
                 console.error('Error fetching data:', error);
                 setLoader(false); // ensure loader stops even on error
             });
-    }, [isVisible, updatestock])
+    }, [isVisible, updatestock, editPriceVisible])
 
 
 
@@ -157,19 +160,19 @@ const StockTab = ({ }) => {
                             <ScrollView contentContainerStyle={{ paddingBottom: 32 }} style={{ paddingVertical: 8, paddingHorizontal: 16, flex: 1 }}>
                                 {products?.map((item, index) => <View style={{ flexDirection: 'row', alignItems: 'center', borderBottomWidth: index === products.length - 1 ? 0 : 1, borderColor: AppColors.black25, paddingVertical: 16 }} key={index}>
                                     <View style={{ flex: 2, flexDirection: 'row', alignItems: 'center', borderRadius: 100 }}>
-
-                                        {/* <Image
-                                style={{ width: 32, height: 32, borderRadius: 100 }}
-                                source={
-                                    item.image_url
-                                        ? { uri: item.image_url }
-                                        : AppImages.addproduct // Update the path based on your file location
-                                }
-                            /> */}
-
                                         <TextComp size={12} style={{ fontFamily: FontFamilty.medium, color: AppColors.black }}>{item.productName}</TextComp>
                                     </View>
-                                    <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black, flex: 1, textAlign: 'center' }}>{'Rs ' + formatPrice(item.price)+'/'+item.unit}</TextComp>
+                                    <TouchableOpacity 
+                                        onPress={() => {
+                                            setSelectedProduct(item);
+                                            setEditPriceVisible(true);
+                                        }}
+                                        activeOpacity={0.7}
+                                        style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', columnGap: 4 }}
+                                    >
+                                        <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black, textAlign: 'center' }}>{'Rs ' + formatPrice(item.price)+'/'+item.unit}</TextComp>
+                                        <Image style={{ width: 14, height: 14, tintColor: AppColors.primaryOrange }} source={AppImages.updatestock} />
+                                    </TouchableOpacity>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black, flex: 1, textAlign: 'center' }}>{item.quantity}</TextComp>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-start' }}>
                                         <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black80, textAlign: 'right' }}>{'Rs'}</TextComp>
@@ -250,6 +253,15 @@ const StockTab = ({ }) => {
 
             {updatestock && (
                 <UpdateStock setIsvisible={setUpdateStock} />
+            )}
+
+            {editPriceVisible && selectedProduct && (
+                <EditPrice setIsvisible={(value) => {
+                    setEditPriceVisible(value);
+                    if (!value) {
+                        setSelectedProduct(null);
+                    }
+                }} product={selectedProduct} />
             )}
 
 

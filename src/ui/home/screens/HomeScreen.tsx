@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     Alert,
     RefreshControl,
@@ -43,6 +43,9 @@ const HomeScreen = ({ navigation }) => {
     }
     const navigatePackaging = () => {
         navigation.navigate(AppScreens.PackagingScreen)
+    }
+    const navigateSettings = () => {
+        navigation.navigate(AppScreens.Settings)
     }
 
     const dispatch=useDispatch()
@@ -297,7 +300,7 @@ const HomeScreen = ({ navigation }) => {
             }
 
         } catch (error) {
-            console.error("Error fetching Daraz orders:", error.message);
+            console.error("Error fetching Daraz orders: DARAZ ORDERS", error.message);
             return null;
         }
     };
@@ -327,7 +330,7 @@ const HomeScreen = ({ navigation }) => {
 
 
         } catch (error) {
-            console.error("Error fetching Daraz orders:", error.message);
+            console.error("Error fetching Daraz orders: DARAZ INCOME", error.message);
             return null;
         }
     };
@@ -481,7 +484,7 @@ const HomeScreen = ({ navigation }) => {
 
 
         } catch (error) {
-            console.error("Error fetching Daraz orders:", error.message);
+            console.error("Error fetching Daraz orders PENDING ORDERS:", error.message);
             return null;
         }
     };
@@ -565,7 +568,9 @@ const HomeScreen = ({ navigation }) => {
     }
 
     return (
-        <ScrollView refreshControl={
+        <ScrollView
+            style={{ flex: 1}}
+            refreshControl={
             <RefreshControl refreshing={screenloader} onRefresh={() => {
                 setScreenloader(true)
                 setReloadScreen(!reloadScreen)
@@ -573,11 +578,11 @@ const HomeScreen = ({ navigation }) => {
         }
             contentContainerStyle={styles.container}>
 
-            <HomeHeader />
+            <HomeHeader onOpenSettings={navigateSettings} />
             <SelectStore />
             <TotalBusinessComp businessValue={'500,000'} />
             <View style={{ rowGap: 16 }}>
-                <TextComp size={16} style={{ fontFamily: FontFamilty.bold, color: AppColors.black, }}>{AppStrings.darazDetails}</TextComp>
+                <TextComp size={16} style={{ fontFamily: FontFamilty.bold, color: AppColors.textPrimary }}>{AppStrings.darazDetails}</TextComp>
                 <View style={{ flexDirection: 'row', columnGap: 16, }}>
                     <IndividualDataComp onPress={navigatePendingOrders} loader={darazOrdersLoader}  data={pendingOrdersCount} label={AppStrings.pendingOrders} info={AppStrings.darazInfo} />
                     <IndividualDataComp onPress={navigateReadyToShipOrders} loader={darazOrdersLoader} data={readyToShipOrdersCount} label={AppStrings.readyToShipOrders} info={AppStrings.stockInfo} />
@@ -592,7 +597,7 @@ const HomeScreen = ({ navigation }) => {
                 </View>
             </View>
             <View style={{ rowGap: 16 }}>
-                <TextComp size={16} style={{ fontFamily: FontFamilty.bold, color: AppColors.black, }}>{AppStrings.businessDetails}</TextComp>
+                <TextComp size={16} style={{ fontFamily: FontFamilty.bold, color: AppColors.textPrimary }}>{AppStrings.businessDetails}</TextComp>
 
                 <View style={{ flexDirection: 'row', columnGap: 16, }}>
                     <IndividualValueComp loader={darazLoader} onPress={navigateDaraz} amount={allOrdersTotal + total} label={AppStrings.daraz} info={AppStrings.darazInfo} />
@@ -612,13 +617,11 @@ const HomeScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
     container: {
-        
         padding: 16,
         backgroundColor: AppColors.bgcolor,
         rowGap: 16,
-
+        flexGrow: 1,
     },
-
 });
 
 export default HomeScreen;

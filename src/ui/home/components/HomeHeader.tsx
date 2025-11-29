@@ -3,21 +3,21 @@ import {
     Alert,
     Image,
     StyleSheet,
-    Text,
     TouchableOpacity,
     View,
 } from 'react-native';
 import { AppColors } from '../../../constants/AppColors';
 import { AppImages } from '../../../constants/AppImages';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useDispatch } from 'react-redux';
-import { setAccessToken, setisLoggedin } from '../../../redux/AppReducer';
 import { getAuth, signOut } from '@react-native-firebase/auth';
+import TextComp from '../../components/TextComp';
+import FontFamilty from '../../../constants/FontFamilty';
+import { AppStrings } from '../../../constants/AppStrings';
 
+type HomeHeaderProps = {
+    onOpenSettings?: () => void;
+};
 
-const HomeHeader = () => {
-
-    const dispatch=useDispatch()
+const HomeHeader: React.FC<HomeHeaderProps> = ({ onOpenSettings }) => {
     const confirmLogout = () => {
         Alert.alert(
           'Confirm Logout',
@@ -48,13 +48,17 @@ const HomeHeader = () => {
         <View style={styles.container}>
             <Image style={{width:127,height:56}} source={AppImages.dsellerlogo}/>
             <View style={{flexDirection:'row',columnGap:16}}>
-     
-            <TouchableOpacity activeOpacity={0.9}>
-            <Image resizeMode='contain' style={{width:20,height:20}} source={AppImages.notification}/>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={()=>{confirmLogout()}} activeOpacity={0.9}>
-            <Image resizeMode='contain' style={{width:20,height:20}} source={AppImages.logout}/>
-            </TouchableOpacity>
+                <TouchableOpacity onPress={onOpenSettings} activeOpacity={0.8}>
+                    <TextComp size={12} style={{ fontFamily: FontFamilty.medium, color: AppColors.primaryOrange }}>
+                        {AppStrings.settings}
+                    </TextComp>
+                </TouchableOpacity>
+                <TouchableOpacity activeOpacity={0.9}>
+                    <Image resizeMode='contain' style={{width:20,height:20}} source={AppImages.notification}/>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={confirmLogout} activeOpacity={0.9}>
+                    <Image resizeMode='contain' style={{width:20,height:20}} source={AppImages.logout}/>
+                </TouchableOpacity>
             </View>
          
         </View>

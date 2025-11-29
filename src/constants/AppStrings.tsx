@@ -27,6 +27,8 @@ export const AppStrings = {
     updatestock: 'Update Stock',
     addnewproduct: 'Add New Product',
     addnewitem: 'Add New Item',
+    editprice: 'Edit Price',
+    save: 'Save',
     productname: 'Product Name',
     description: 'Description',
     add: 'Add',
@@ -75,7 +77,12 @@ export const AppStrings = {
     failedOrdersToday:'Failed Delivery Today',
     DeliveredOrders:'Delivered Orders',
     FailedDeliveredOrders:'Failed Delivered Orders',
-    weeklyReport:'Weekly Report'
+    weeklyReport:'Weekly Report',
+    settings:'Settings',
+    appearance:'Appearance',
+    lightTheme:'Light Theme',
+    darkTheme:'Dark Theme',
+    themeDescription:'Switch between light and dark themes anytime.'
 
 
 

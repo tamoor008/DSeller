@@ -7,6 +7,7 @@ import {
     Text,
     TouchableOpacity,
     View,
+    SafeAreaView
 } from 'react-native';
 import { AppImages } from '../../constants/AppImages';
 import { AppStrings } from '../../constants/AppStrings';
@@ -37,27 +38,99 @@ const SelectStore = () => {
     const REDIRECT_URI = 'https://www.moonsys.co';
     const AUTH_URL = `https://api.daraz.pk/oauth/authorize?response_type=code&force_auth=true&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&client_id=${CLIENT_ID}`;
 
+    useEffect(() => {
+        console.log(AUTH_URL, 'AUTH_URL');
+    }, [AUTH_URL]);
+
+    // Health check function to test if API is working
+    const checkApiHealth = async () => {
+        try {
+            console.log('🔍 [API Health Check] Testing API connection...');
+            console.log('📍 [API Health Check] URL:', `${BASE_URL}/test`);
+            
+            const response = await fetch(`${BASE_URL}/test`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            console.log('📊 [API Health Check] Response Status:', response.status);
+            console.log('📊 [API Health Check] Response OK:', response.ok);
+            console.log('📊 [API Health Check] Content-Type:', response.headers.get('content-type'));
+
+            // Get response as text first to handle both JSON and plain text responses
+            const responseText = await response.text();
+            console.log('📥 [API Health Check] Raw Response Text:', responseText);
+
+            let data;
+            try {
+                // Try to parse as JSON
+                data = JSON.parse(responseText);
+                console.log('✅ [API Health Check] Parsed as JSON:', JSON.stringify(data, null, 2));
+            } catch (jsonError) {
+                // If not JSON, treat as plain text
+                console.log('ℹ️ [API Health Check] Response is not JSON, treating as plain text');
+                data = responseText;
+                console.log('✅ [API Health Check] Response Data (text):', data);
+            }
+            
+            return { success: response.ok, data, isJson: typeof data === 'object' };
+        } catch (error) {
+            console.error('❌ [API Health Check] Error:', error);
+            console.error('❌ [API Health Check] Error Type:', error instanceof Error ? error.constructor.name : typeof error);
+            console.error('❌ [API Health Check] Error Message:', error instanceof Error ? error.message : String(error));
+            if (error instanceof Error && error.stack) {
+                console.error('❌ [API Health Check] Stack Trace:', error.stack);
+            }
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
+        }
+    };
 
 
     const addAccessToken = async (user) => {
         try {
-            const sellerRef = database()
-                .ref(`/users/${currentUser.uid}/stores/${user.seller_id}`);
+            const sellerId = user.seller_id || user.user?.seller?.data?.short_code;
+            const firebasePath = `/users/${currentUser.uid}/stores/${sellerId}`;
+            
+            console.log('💾 [Firebase] Starting addAccessToken operation...');
+            console.log('📍 [Firebase] Firebase Path:', firebasePath);
+            console.log('👤 [Firebase] User UID:', currentUser.uid);
+            console.log('🏪 [Firebase] Seller ID:', sellerId);
+            console.log('📦 [Firebase] User Data Keys:', Object.keys(user));
 
+            const sellerRef = database().ref(firebasePath);
+
+            console.log('🔍 [Firebase] Checking if seller already exists...');
             const snapshot = await sellerRef.once('value');
 
             if (snapshot.exists()) {
-                console.log('Seller already connected:', user.seller_id);
-                return;
+                console.log('⚠️ [Firebase] Seller already connected:', sellerId);
+                console.log('📥 [Firebase] Existing Data:', JSON.stringify(snapshot.val(), null, 2));
+                return { added: false, reason: 'already_exists' };
             }
 
-            await sellerRef.set({ user }); // or you can store fields directly like: { name: user.name, accessToken: user.access_token }
+            console.log('💾 [Firebase] Saving seller data to Firebase...');
+            console.log('📤 [Firebase] Data to save:', JSON.stringify(user, null, 2));
+            
+            await sellerRef.set({ user });
 
-            console.log('Seller added successfully:', user.seller_id);
-            return { added: true };
+            console.log('✅ [Firebase] Seller added successfully!');
+            console.log('✅ [Firebase] Seller ID:', sellerId);
+            console.log('✅ [Firebase] Firebase Path:', firebasePath);
+            
+            return { added: true, sellerId };
 
         } catch (error) {
-            console.error('Error saving seller data:', error);
+            console.error('❌ [Firebase] Error saving seller data');
+            console.error('❌ [Firebase] Error Type:', error instanceof Error ? error.constructor.name : typeof error);
+            console.error('❌ [Firebase] Error Message:', error instanceof Error ? error.message : String(error));
+            console.error('❌ [Firebase] Full Error:', error);
+            
+            if (error instanceof Error && error.stack) {
+                console.error('❌ [Firebase] Stack Trace:', error.stack);
+            }
+            
             throw error;
         }
     };
@@ -159,49 +232,85 @@ const SelectStore = () => {
 
     const getDarazToken = async (code) => {
         try {
-            const response = await fetch(`${BASE_URL}/get-daraz-token`, {
+            const url = `${BASE_URL}/get-daraz-token`;
+            const requestBody = { code };
+            
+            console.log('🚀 [API Request] Starting get-daraz-token API call...');
+            console.log('📍 [API Request] URL:', url);
+            console.log('📤 [API Request] Method: POST');
+            console.log('📤 [API Request] Headers:', { 'Content-Type': 'application/json' });
+            console.log('📤 [API Request] Body:', JSON.stringify(requestBody, null, 2));
+            console.log('📤 [API Request] Authorization Code:', code);
+
+            const response = await fetch(url, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ code }),
+                body: JSON.stringify(requestBody),
             });
 
+            console.log('📊 [API Response] Status:', response.status);
+            console.log('📊 [API Response] Status Text:', response.statusText);
+            console.log('📊 [API Response] OK:', response.ok);
+            console.log('📊 [API Response] Headers:', Object.fromEntries(response.headers.entries()));
+
             if (!response.ok) {
-                throw new Error(`Server error: ${response.status}`);
+                const errorText = await response.text();
+                console.error('❌ [API Response] Error Response Body:', errorText);
+                throw new Error(`Server error: ${response.status} - ${errorText}`);
             }
 
             const data = await response.json();
-            // console.log("Daraz Token Response:", data); // this will contain access_token, etc.
+            console.log('✅ [API Response] Success!');
+            console.log('📥 [API Response] Full Response Data:', JSON.stringify(data, null, 2));
+            console.log('📥 [API Response] Response Keys:', Object.keys(data));
+            
+            if (data.access_token) {
+                console.log('🔑 [API Response] Access Token received:', data.access_token.substring(0, 20) + '...');
+            }
+            if (data.user_info || data.user) {
+                console.log('👤 [API Response] User Info received');
+            }
+            if (data.seller_id || data.user?.seller?.data?.short_code) {
+                const sellerId = data.seller_id || data.user?.seller?.data?.short_code;
+                console.log('🏪 [API Response] Seller ID:', sellerId);
+            }
 
-            // Example: access individual fields
-            // dispatch(setisLoggedin(true))
-            // dispatch(setAccessToken(data.access_token))
-
-            // console.log(data, 'USER DATA');
-            // console.log(JSON.stringify(data), 'USER DATA String');
-            addAccessToken(data)
-            setDarazOAuth(false)
-
-
-
-
-            // console.log("Access Token:", data.access_token);
-            // console.log("Seller ID:", data.user_info?.seller_id);
+            // Call addAccessToken with logging
+            console.log('💾 [Firebase] Starting to add access token to Firebase...');
+            await addAccessToken(data);
+            console.log('✅ [Firebase] Access token added successfully');
+            
+            setDarazOAuth(false);
+            console.log('✅ [UI] Modal closed after successful token retrieval');
 
             return data;
         } catch (err) {
-            console.log("Failed to fetch Daraz token:", err.message);
+            console.error('❌ [API Error] Failed to fetch Daraz token');
+            console.error('❌ [API Error] Error Type:', err instanceof Error ? err.constructor.name : typeof err);
+            console.error('❌ [API Error] Error Message:', err instanceof Error ? err.message : String(err));
+            console.error('❌ [API Error] Full Error:', err);
+            
+            if (err instanceof Error && err.stack) {
+                console.error('❌ [API Error] Stack Trace:', err.stack);
+            }
         }
     };
 
     useEffect(() => {
         const unsubscribe = listenToStores(currentUser, setStores);
 
+        // Check API health when component mounts
+        if (BASE_URL) {
+            checkApiHealth();
+        }
+
         return () => {
             // Clean up the real-time listener on component unmount
             if (unsubscribe) unsubscribe();
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentUser]);
 
 
@@ -279,19 +388,26 @@ const SelectStore = () => {
             }
 
             {darazOAuth && (
-                <Modal>
-                    <View style={{ flex: 1, position: 'absolute', width: '100%', height: '100%' }}>
-                        <View style={{ alignItems: 'flex-end',padding:16 }}>
+                <Modal
+                    visible={darazOAuth}
+                    animationType="slide"
+                    presentationStyle="fullScreen"
+                    onRequestClose={() => setDarazOAuth(false)}
+                >
+                    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+                        <View style={{ alignItems: 'flex-end', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8 }}>
                             <TouchableOpacity onPress={() => setDarazOAuth(false)}>
                                 <Image style={{ width: 24, height: 24 }} source={AppImages.cross} />
                             </TouchableOpacity>
                         </View>
                         <WebView
+                           userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                            style={{ flex: 1 }}
                             source={{ uri: AUTH_URL }} // ← Correct URL to start OAuth
                             onLoadEnd={() => setLoading(false)}
                             onNavigationStateChange={handleNavigationStateChange}
                         />
-                    </View>
+                    </SafeAreaView>
                 </Modal>
             )}
         </View>
