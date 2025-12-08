@@ -15,6 +15,7 @@ import WeekllyReport from '../ui/home/screens/WeekllyReport';
 import PendingOrders from '../ui/home/screens/PendingOrders';
 import ReadyToShipOrders from '../ui/home/screens/ReadyToShipOrders';
 import SettingsScreen from '../ui/settings/SettingsScreen';
+import ProfitCalculatorScreen from '../ui/calculator/ProfitCalculatorScreen';
 
 const Stack = createStackNavigator();
 
@@ -35,6 +36,7 @@ const HomeNav = () => {
                 <Stack.Screen name="PendingOrders" component={PendingOrders} />
                 <Stack.Screen name="ReadyToShipOrders" component={ReadyToShipOrders} />
                 <Stack.Screen name="Settings" component={SettingsScreen} />
+                <Stack.Screen name="ProfitCalculatorScreen" component={ProfitCalculatorScreen} />
 
 
             </Stack.Navigator>

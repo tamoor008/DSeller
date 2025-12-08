@@ -14,6 +14,7 @@ import FailedDeliveryOrdersPage from '../pages/FailedDeliveryOrdersPage'
 import WeeklyReportPage from '../pages/WeeklyReportPage'
 import PendingOrdersPage from '../pages/PendingOrdersPage'
 import ReadyToShipOrdersPage from '../pages/ReadyToShipOrdersPage'
+import ProfitCalculatorPage from '../pages/ProfitCalculatorPage'
 import { useAuth } from '../hooks/useAuth'
 import { AppColors } from '../constants/colors'
 
@@ -101,6 +102,10 @@ const AppRoutes = () => {
       <Route 
         path="/settings" 
         element={user ? <SettingsPage /> : <Navigate to="/login" replace />} 
+      />
+      <Route 
+        path="/profit-calculator" 
+        element={user ? <ProfitCalculatorPage /> : <Navigate to="/login" replace />} 
       />
       
       {/* Order Detail Routes */}

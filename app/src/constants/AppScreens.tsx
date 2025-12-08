@@ -5,4 +5,5 @@ export const AppScreens = {
   CashScreen: "CashScreen",
   PackagingScreen: "PackagingScreen",
   Settings: "Settings",
+  ProfitCalculatorScreen: "ProfitCalculatorScreen",
 };
