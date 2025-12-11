@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import {
-    Image,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from 'react-native';
-import { AppImages } from '../../constants/AppImages';
+import Icon from 'react-native-vector-icons/Ionicons';
+import { useTheme } from '../../context/ThemeContext';
 import TextComp from './TextComp';
 import FontFamilty from '../../constants/FontFamilty';
 import { AppStrings } from '../../constants/AppStrings';
@@ -14,6 +14,7 @@ import InfoModal from './InfoModal';
 
 
 const Header = ({ goBack, info,title }) => {
+    const { theme } = useTheme();
     const [isVisible, setIsvisible] = useState(false)
     const onInfoPress = () => {
         setIsvisible(true)
@@ -21,12 +22,12 @@ const Header = ({ goBack, info,title }) => {
     return (
         <View style={styles.container}>
             <TouchableOpacity activeOpacity={0.9} onPress={goBack}>
-                <Image resizeMode='contain' style={{ width: 24, height: 24 }} source={AppImages.back} />
+                <Icon name="arrow-back" size={24} color={theme.textPrimary} />
             </TouchableOpacity>
-            <TextComp size={20} style={{ FontFamilty: FontFamilty.regular, flex: 1 }}>{title}</TextComp>
+            <TextComp size={20} numberOfLines={1} style={{ fontFamily: FontFamilty.regular, flex: 1, color: theme.textPrimary }}>{title}</TextComp>
 {info&&(
    <TouchableOpacity onPress={onInfoPress} activeOpacity={0.9}>
-   <Image resizeMode='contain' style={{ width: 20, height: 20 }} source={AppImages.infoblack} />
+   <Icon name="information-circle" size={20} color={theme.textPrimary} />
 </TouchableOpacity>
 )}
          

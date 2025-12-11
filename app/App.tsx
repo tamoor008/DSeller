@@ -1,18 +1,20 @@
 import { NavigationContainer } from '@react-navigation/native';
 import React, { useEffect, useMemo, useState } from 'react';
 import { SafeAreaView, StatusBar, StyleSheet, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useDispatch } from 'react-redux';
 import { getAuth, onAuthStateChanged } from '@react-native-firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import BottomTabNav from './src/navigation/BottomTabNav';
 import SplashScreen from './src/ui/splash/SplashScreen';
 import AuthNav from './src/navigation/AuthNav';
 import { startFirebaseListener, stopFirebaseListener } from './src/utils/firebase/firebaseListeners';
 import { initializeBaseUrl } from './src/utils/api/baseUrl';
-import { AppColors } from './src/constants/AppColors';
 
 const AppContent = () => {
+  const { theme, isDark } = useTheme();
   const [splash, setSplash] = useState(true)
   const dispatch = useDispatch()
   const auth=getAuth
@@ -60,14 +62,14 @@ const AppContent = () => {
   }, []);
   
   const navigationTheme = useMemo(() => ({
-    dark: false,
+    dark: isDark,
     colors: {
-      background: AppColors.bgcolor,
-      border: AppColors.border,
-      card: AppColors.card,
-      primary: AppColors.primaryOrange,
-      notification: AppColors.primaryOrange,
-      text: AppColors.textPrimary,
+      background: theme.bgcolor,
+      border: theme.border,
+      card: theme.card,
+      primary: theme.primaryOrange,
+      notification: theme.primaryOrange,
+      text: theme.textPrimary,
     },
     fonts: {
       regular: {
@@ -87,14 +89,14 @@ const AppContent = () => {
         fontWeight: '900' as const,
       },
     },
-  }), []);
+  }), [theme, isDark]);
 
   return (
-    <View style={{ flex: 1,backgroundColor:AppColors.bgcolor}}>
+    <View style={{ flex: 1, backgroundColor: theme.bgcolor }}>
     <SafeAreaView></SafeAreaView>
       <StatusBar
-        barStyle="dark-content"
-        backgroundColor={AppColors.statusBar}
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={theme.statusBar}
       />
       {splash ? (
         <SplashScreen />
@@ -107,7 +109,13 @@ const AppContent = () => {
   );
 };
 
-const App = () => <AppContent />;
+const App = () => (
+  <GestureHandlerRootView style={{ flex: 1 }}>
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
+  </GestureHandlerRootView>
+);
 
 const styles = StyleSheet.create({
   container: {

@@ -77,7 +77,6 @@ export const AppStrings = {
     failedOrdersToday:'Failed Delivery Today',
     DeliveredOrders:'Delivered Orders',
     FailedDeliveredOrders:'Failed Delivered Orders',
-    weeklyReport:'Weekly Report',
     settings:'Settings',
     appearance:'Appearance',
     lightTheme:'Light Theme',

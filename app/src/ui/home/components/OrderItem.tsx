@@ -11,7 +11,7 @@ import {
     ScrollView,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { AppColors } from '../../../constants/AppColors';
+import { useTheme } from '../../../context/ThemeContext';
 import FontFamilty from '../../../constants/FontFamilty';
 import TextComp from '../../components/TextComp';
 import LogisticsModal from './LogisticsModal';
@@ -29,8 +29,10 @@ interface OrderItemProps {
     readyToShip?: boolean;
 }
 
-const OrderItem: React.FC<OrderItemProps> = ({ item, firebaseSkus, selector, onProfitCalculated, failed, pending, onMakeReadyToShip,readyToShip }) => {
+const OrderItem: React.FC<OrderItemProps> = ({ item, firebaseSkus, selector, onProfitCalculated, failed, pending, onMakeReadyToShip, readyToShip }) => {
+    const { theme } = useTheme();
     const BASE_URL = getBaseUrl(); // instant access, no async
+    const styles = getStyles(theme);
 
     const [darazAmount, setDarazAmount] = useState(0);
     const [productPrice, setProductPrice] = useState(0);
@@ -166,19 +168,19 @@ const OrderItem: React.FC<OrderItemProps> = ({ item, firebaseSkus, selector, onP
                                 Alert.alert('Action', 'Make this order ready to ship?');
                             }
                         }} 
-                        style={{padding: 8, backgroundColor: AppColors.primaryOrange, borderRadius: 8, marginTop: 8}}
+                        style={{ padding: 8, backgroundColor: theme.primaryOrange, borderRadius: 8, marginTop: 8 }}
                     >
-                        <TextComp size={16} numberOfLines={1} style={{ color: '#fff', textAlign: 'center' }}>
+                        <TextComp size={16} numberOfLines={1} style={{ color: theme.white, textAlign: 'center' }}>
                             Make Ready to Ship
                         </TextComp>
                     </TouchableOpacity>
                 ) : failed ? (
-                    <TouchableOpacity onPress={()=>setModalVisible(true)} style={{padding:4}}>
-                        <TextComp size={16} numberOfLines={1} style={{...styles.amount,color:AppColors.primaryOrange}}>
-                           check logistic details
+                    <TouchableOpacity onPress={() => setModalVisible(true)} style={{ padding: 4 }}>
+                        <TextComp size={16} numberOfLines={1} style={{ ...styles.amount, color: theme.primaryOrange }}>
+                            check logistic details
                         </TextComp>
                     </TouchableOpacity>
-                ) :  readyToShip ? (
+                ) : readyToShip ? (
                     <></>
                 ) : (
                     <View>
@@ -215,14 +217,14 @@ const OrderItem: React.FC<OrderItemProps> = ({ item, firebaseSkus, selector, onP
                         }}
                         style={{
                             padding: 6, 
-                            backgroundColor: AppColors.primaryOrange, 
+                            backgroundColor: theme.primaryOrange, 
                             borderRadius: 6, 
                             marginTop: 8,
                             alignItems: 'center'
                         }}
                         disabled={incomeLoading}
                     >
-                        <TextComp size={14} numberOfLines={1} style={{ color: '#fff', textAlign: 'center', fontFamily: FontFamilty.medium }}>
+                        <TextComp size={14} numberOfLines={1} style={{ color: theme.white, textAlign: 'center', fontFamily: FontFamilty.medium }}>
                             {incomeLoading ? 'Loading...' : 'View Income Details'}
                         </TextComp>
                     </TouchableOpacity>
@@ -253,7 +255,7 @@ const OrderItem: React.FC<OrderItemProps> = ({ item, firebaseSkus, selector, onP
                             </TouchableOpacity>
                         </View>
                         
-                        <ScrollView style={styles.modalBody}>
+                        <ScrollView showsVerticalScrollIndicator={false} style={styles.modalBody}>
                             {incomeDetails ? (
                                 <View>
                                     <TextComp size={16} numberOfLines={1} style={styles.sectionTitle}>
@@ -329,13 +331,13 @@ const OrderItem: React.FC<OrderItemProps> = ({ item, firebaseSkus, selector, onP
     );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
     container: {
         padding: 16,
         paddingBottom: 60,
     },
     card: {
-        backgroundColor: '#fff',
+        backgroundColor: theme.card,
         borderRadius: 12,
         padding: 16,
         marginBottom: 16,
@@ -344,6 +346,7 @@ const styles = StyleSheet.create({
     orderId: {
         fontWeight: 'bold',
         marginBottom: 8,
+        color: theme.textPrimary,
     },
     orderItem: {
         flexDirection: 'row',
@@ -362,14 +365,14 @@ const styles = StyleSheet.create({
     productName: {
         fontWeight: '600',
         fontSize: 14,
-        color: '#000',
+        color: theme.textPrimary,
     },
     amount: {
-        color: '#444',
+        color: theme.textSecondary,
     },
     profitBadge: {
         borderRadius: 100,
-        backgroundColor: AppColors.greenbg,
+        backgroundColor: theme.greenbg,
         height: 30,
         alignItems: 'center',
         justifyContent: 'center',
@@ -377,7 +380,7 @@ const styles = StyleSheet.create({
         marginTop: 4,
     },
     profitText: {
-        color: AppColors.green,
+        color: theme.green,
         fontFamily: FontFamilty.medium,
     },
     totalProfitContainer: {
@@ -385,7 +388,7 @@ const styles = StyleSheet.create({
         bottom: 10,
         left: 16,
         right: 16,
-        backgroundColor: AppColors.greenbg,
+        backgroundColor: theme.greenbg,
         borderRadius: 100,
         paddingVertical: 10,
         alignItems: 'center',
@@ -395,7 +398,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginTop: 50,
         fontSize: 16,
-        color: '#777',
+        color: theme.textSecondary,
     },
     modalOverlay: {
         flex: 1,
@@ -404,7 +407,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     modalContent: {
-        backgroundColor: '#fff',
+        backgroundColor: theme.card,
         borderRadius: 12,
         width: '90%',
         maxHeight: '80%',
@@ -416,15 +419,15 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        borderBottomColor: theme.border,
     },
     modalTitle: {
         fontWeight: 'bold',
-        color: '#000',
+        color: theme.textPrimary,
         fontFamily: FontFamilty.bold,
     },
     closeButton: {
-        color: '#666',
+        color: theme.textSecondary,
         fontWeight: 'bold',
     },
     modalBody: {
@@ -432,20 +435,20 @@ const styles = StyleSheet.create({
     },
     sectionTitle: {
         fontWeight: 'bold',
-        color: '#000',
+        color: theme.textPrimary,
         marginBottom: 8,
         fontFamily: FontFamilty.bold,
     },
     totalSection: {
         marginBottom: 16,
         padding: 12,
-        backgroundColor: '#f8f9fa',
+        backgroundColor: theme.bgcolor,
         borderRadius: 8,
     },
     summarySection: {
         marginBottom: 16,
         padding: 12,
-        backgroundColor: '#e8f5e8',
+        backgroundColor: theme.greenbg,
         borderRadius: 8,
     },
     transactionsSection: {
@@ -453,18 +456,18 @@ const styles = StyleSheet.create({
     },
     transactionItem: {
         padding: 12,
-        backgroundColor: '#f8f9fa',
+        backgroundColor: theme.bgcolor,
         borderRadius: 8,
         marginBottom: 8,
     },
     detailText: {
-        color: '#444',
+        color: theme.textSecondary,
         marginBottom: 4,
         fontFamily: FontFamilty.medium,
     },
     noDataText: {
         textAlign: 'center',
-        color: '#777',
+        color: theme.textSecondary,
         fontStyle: 'italic',
         fontFamily: FontFamilty.medium,
     },

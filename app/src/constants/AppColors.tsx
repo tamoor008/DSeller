@@ -1,3 +1,5 @@
+// Legacy export for backward compatibility
+// Components should use useTheme() hook instead
 export const AppColors = {
   primaryOrange: '#F85606',
   black: '#333333',

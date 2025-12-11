@@ -31,11 +31,36 @@ const swaggerDefinition = {
     title: "Daraz Helper API",
     version: "1.0.0",
     description:
-      "Proxy helpers for Daraz Open Platform. All routes here simply forward requests with the required Daraz signature logic.",
+      "Proxy helpers for Daraz Open Platform. All routes here simply forward requests with the required Daraz signature logic. This API handles authentication, order management, finance operations, and logistics for Daraz sellers.",
+    contact: {
+      name: "API Support",
+    },
   },
+  tags: [
+    {
+      name: "Auth",
+      description: "Authentication endpoints for Daraz OAuth token management",
+    },
+    {
+      name: "Orders",
+      description: "Order management endpoints for fetching and processing Daraz orders",
+    },
+    {
+      name: "Finance",
+      description: "Financial endpoints for payout status and transaction details",
+    },
+    {
+      name: "Practitioners",
+      description: "Practitioner management endpoints",
+    },
+    {
+      name: "Health",
+      description: "Health check and testing endpoints",
+    },
+  ],
   servers: [
     {
-      url: process.env.SWAGGER_SERVER_URL || "http://localhost:3000",
+      url: process.env.SWAGGER_SERVER_URL || "http://localhost:3001",
       description: "Local development",
     },
   ],
@@ -57,7 +82,55 @@ const swaggerDefinition = {
         properties: {
           error: { type: "string" },
           details: { type: "object" },
+          message: { type: "string", nullable: true },
+          darazError: {
+            type: "object",
+            nullable: true,
+            properties: {
+              code: { type: "string" },
+              type: { type: "string" },
+              message: { type: "string" },
+              request_id: { type: "string", nullable: true },
+              _trace_id_: { type: "string", nullable: true },
+            },
+          },
         },
+      },
+      Order: {
+        type: "object",
+        properties: {
+          order_id: { type: "string" },
+          order_no: { type: "string" },
+          status: { type: "string" },
+        },
+      },
+      OrderItem: {
+        type: "object",
+        properties: {
+          order_item_id: { type: "string" },
+          order_id: { type: "string" },
+          status: { type: "string" },
+        },
+      },
+      Practitioner: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          name: { type: "string" },
+          email: { type: "string" },
+          role: { type: "string" },
+          phoneNumber: { type: "string" },
+          createdAt: { type: "string" },
+          updatedAt: { type: "string" },
+        },
+      },
+    },
+    securitySchemes: {
+      BearerAuth: {
+        type: "http",
+        scheme: "bearer",
+        bearerFormat: "JWT",
+        description: "Daraz access token passed as query parameter (access_token)",
       },
     },
   },
@@ -214,35 +287,520 @@ const swaggerDefinition = {
       get: {
         tags: ["Orders"],
         summary: "Fetch orders plus item details",
+        description: "Combines orders/get and orders/items/get by chunking order IDs into batches of 50",
         parameters: [
           {
             in: "query",
             name: "access_token",
             required: true,
             schema: { type: "string" },
+            description: "Daraz access token",
           },
           {
             in: "query",
             name: "status",
             schema: { type: "string" },
+            description: "Order status filter",
           },
           {
             in: "query",
             name: "created_after",
             schema: { type: "string" },
+            description: "ISO timestamp to filter orders created after this date",
           },
           {
             in: "query",
             name: "update_after",
             schema: { type: "string" },
+            description: "ISO timestamp to filter orders updated after this date",
           },
         ],
         responses: {
-          200: { description: "Orders + items summary" },
+          200: {
+            description: "Orders + items summary",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    countTotal: { type: "integer" },
+                    orderItems: { type: "array", items: { type: "object" } },
+                  },
+                },
+              },
+            },
+          },
           400: { description: "Missing access token" },
           500: {
             description: "Daraz API error",
             content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
+        },
+      },
+    },
+    "/get-daraz-income-details": {
+      get: {
+        tags: ["Finance"],
+        summary: "Get unpaid payout statements",
+        description: "Fetches payout status from Daraz and filters for unpaid statements (paid === '0')",
+        parameters: [
+          {
+            in: "query",
+            name: "access_token",
+            required: true,
+            schema: { type: "string" },
+            description: "Daraz access token",
+          },
+          {
+            in: "query",
+            name: "storeName",
+            schema: { type: "string" },
+            description: "Store name to attach to each statement",
+          },
+          {
+            in: "query",
+            name: "created_after",
+            required: true,
+            schema: { type: "string" },
+            description: "ISO timestamp - mandatory parameter for payout status API",
+          },
+        ],
+        responses: {
+          200: {
+            description: "Unpaid payout statements",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    financeRespone: {
+                      type: "array",
+                      items: { type: "object" },
+                      description: "Array of unpaid statements with storeName attached",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: {
+            description: "Missing required parameters",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
+          500: {
+            description: "Daraz API error",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
+        },
+      },
+    },
+    "/get-daraz-query-income-details": {
+      get: {
+        tags: ["Finance"],
+        summary: "Get transaction details with order balances",
+        description: "Fetches transaction details and calculates order balances",
+        parameters: [
+          {
+            in: "query",
+            name: "access_token",
+            required: true,
+            schema: { type: "string" },
+            description: "Daraz access token",
+          },
+          {
+            in: "query",
+            name: "start_time",
+            schema: { type: "string" },
+            description: "Start time for transaction query",
+          },
+          {
+            in: "query",
+            name: "end_time",
+            schema: { type: "string" },
+            description: "End time for transaction query",
+          },
+          {
+            in: "query",
+            name: "trans_type",
+            schema: { type: "string" },
+            description: "Transaction type filter",
+          },
+          {
+            in: "query",
+            name: "trade_order_id",
+            schema: { type: "string" },
+            description: "Specific trade order ID",
+          },
+          {
+            in: "query",
+            name: "trade_order_line_id",
+            schema: { type: "string" },
+            description: "Specific trade order line ID",
+          },
+          {
+            in: "query",
+            name: "limit",
+            schema: { type: "integer" },
+            description: "Limit number of results",
+          },
+        ],
+        responses: {
+          200: {
+            description: "Transaction details with calculated balances",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    message: { type: "string" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        total: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              order_no: { type: "string" },
+                              total_amount: { type: "number" },
+                            },
+                          },
+                        },
+                        transactions: { type: "array", items: { type: "object" } },
+                        summary: {
+                          type: "object",
+                          properties: {
+                            totalTransactions: { type: "integer" },
+                            totalOrders: { type: "integer" },
+                            totalAmount: { type: "number" },
+                          },
+                        },
+                      },
+                    },
+                    error: { type: "string", nullable: true },
+                    statusCode: { type: "integer" },
+                  },
+                },
+              },
+            },
+          },
+          400: {
+            description: "Missing access token",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
+          500: {
+            description: "Failed to fetch transaction details",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
+        },
+      },
+    },
+    "/get-daraz-delivered-order-details": {
+      get: {
+        tags: ["Orders"],
+        summary: "Get delivered orders with filtered items",
+        description: "Fetches orders and their items, then filters items by status and injects access_token into each item",
+        parameters: [
+          {
+            in: "query",
+            name: "access_token",
+            required: true,
+            schema: { type: "string" },
+            description: "Daraz access token",
+          },
+          {
+            in: "query",
+            name: "status",
+            schema: { type: "string" },
+            description: "Order status filter (also used to filter order items)",
+          },
+          {
+            in: "query",
+            name: "created_after",
+            schema: { type: "string" },
+            description: "ISO timestamp to filter orders created after this date",
+          },
+          {
+            in: "query",
+            name: "update_after",
+            schema: { type: "string" },
+            description: "ISO timestamp to filter orders updated after this date",
+          },
+          {
+            in: "query",
+            name: "update_before",
+            schema: { type: "string" },
+            description: "ISO timestamp to filter orders updated before this date",
+          },
+        ],
+        responses: {
+          200: {
+            description: "Filtered orders with items matching the status",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    countTotal: { type: "integer" },
+                    orderItems: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        description: "Orders with filtered order_items array",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: {
+            description: "Missing access token",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
+          500: {
+            description: "Failed to fetch order details",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
+        },
+      },
+    },
+    "/get-daraz-order-logistics": {
+      get: {
+        tags: ["Orders"],
+        summary: "Get order logistics information",
+        description: "Fetches logistics information for a specific order and package",
+        parameters: [
+          {
+            in: "query",
+            name: "access_token",
+            required: true,
+            schema: { type: "string" },
+            description: "Daraz access token",
+          },
+          {
+            in: "query",
+            name: "order_id",
+            required: true,
+            schema: { type: "string" },
+            description: "Order ID",
+          },
+          {
+            in: "query",
+            name: "package_id_list",
+            required: true,
+            schema: { type: "string" },
+            description: "Package ID list",
+          },
+          {
+            in: "query",
+            name: "locale",
+            required: true,
+            schema: { type: "string" },
+            description: "Locale (e.g., 'en_US')",
+          },
+        ],
+        responses: {
+          200: {
+            description: "Logistics information from Daraz",
+            content: {
+              "application/json": {
+                schema: { type: "object" },
+              },
+            },
+          },
+          400: {
+            description: "Missing required parameters",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
+          500: {
+            description: "Failed to fetch logistics info",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
+        },
+      },
+    },
+    "/make-order-rts": {
+      post: {
+        tags: ["Orders"],
+        summary: "Mark order packages as Ready to Ship (RTS)",
+        description: "Marks one or more packages as ready to ship",
+        parameters: [
+          {
+            in: "query",
+            name: "access_token",
+            required: true,
+            schema: { type: "string" },
+            description: "Daraz access token",
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["packages"],
+                properties: {
+                  packages: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        package_id: { type: "string" },
+                      },
+                    },
+                    description: "Array of packages to mark as RTS",
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "RTS operation result from Daraz",
+            content: {
+              "application/json": {
+                schema: { type: "object" },
+              },
+            },
+          },
+          400: {
+            description: "Missing access token or invalid packages",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
+          500: {
+            description: "Failed to mark package(s) as RTS",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
+        },
+      },
+    },
+    "/make-order-pack-and-rts": {
+      post: {
+        tags: ["Orders"],
+        summary: "Pack orders and mark as Ready to Ship",
+        description: "First packs the orders, then automatically marks the resulting packages as RTS",
+        parameters: [
+          {
+            in: "query",
+            name: "access_token",
+            required: true,
+            schema: { type: "string" },
+            description: "Daraz access token",
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["pack_order_list"],
+                properties: {
+                  pack_order_list: {
+                    type: "array",
+                    items: { type: "object" },
+                    description: "Array of orders to pack",
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Combined pack and RTS results",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    message: { type: "string" },
+                    packResult: { type: "object" },
+                    rtsResult: { type: "object", nullable: true },
+                  },
+                },
+              },
+            },
+          },
+          400: {
+            description: "Missing access token or invalid pack_order_list",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
+          500: {
+            description: "Failed to pack orders and mark as RTS",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
+        },
+      },
+    },
+    "/get-practitioners": {
+      get: {
+        tags: ["Practitioners"],
+        summary: "Get list of practitioners",
+        description: "Returns a hardcoded list of practitioners",
+        responses: {
+          200: {
+            description: "List of practitioners",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    message: { type: "string" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        totalPractitioners: { type: "integer" },
+                        practitioners: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              id: { type: "string" },
+                              name: { type: "string" },
+                              email: { type: "string" },
+                              role: { type: "string" },
+                              phoneNumber: { type: "string" },
+                              createdAt: { type: "string" },
+                              updatedAt: { type: "string" },
+                            },
+                          },
+                        },
+                      },
+                    },
+                    error: { type: "string", nullable: true },
+                    statusCode: { type: "integer" },
+                  },
+                },
+              },
+            },
+          },
+          500: {
+            description: "Server error",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
+        },
+      },
+    },
+    "/test": {
+      get: {
+        tags: ["Health"],
+        summary: "Test endpoint",
+        description: "Simple health check endpoint to verify API is running",
+        responses: {
+          200: {
+            description: "API is working",
+            content: {
+              "text/plain": {
+                schema: {
+                  type: "string",
+                  example: "API is working fine and sound!",
+                },
+              },
+            },
           },
         },
       },

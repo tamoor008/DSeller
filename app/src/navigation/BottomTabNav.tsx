@@ -1,22 +1,25 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { AppColors } from '../constants/AppColors';
+import { useTheme } from '../context/ThemeContext';
 import HomeNav from './HomeNav';
 import OrdersScreen from '../ui/home/screens/OrdersScreen';
+import ProfitCalculatorScreen from '../ui/calculator/ProfitCalculatorScreen';
 
 const Tab = createBottomTabNavigator();
 
 const BottomTabNav = () => {
+    const { theme } = useTheme();
+    
     return (
         <Tab.Navigator
             screenOptions={{
                 headerShown: false,
-                tabBarActiveTintColor: AppColors.primaryOrange,
-                tabBarInactiveTintColor: AppColors.textSecondary,
+                tabBarActiveTintColor: theme.primaryOrange,
+                tabBarInactiveTintColor: theme.textSecondary,
                 tabBarStyle: {
-                    backgroundColor: AppColors.card,
-                    borderTopColor: AppColors.border,
+                    backgroundColor: theme.card,
+                    borderTopColor: theme.border,
                     borderTopWidth: 1,
                     paddingBottom: 5,
                     paddingTop: 5,
@@ -45,6 +48,16 @@ const BottomTabNav = () => {
                     tabBarLabel: 'Orders',
                     tabBarIcon: ({ color, size, focused }) => (
                         <Icon name={focused ? "list" : "list-outline"} size={size} color={color} />
+                    ),
+                }}
+            />
+            <Tab.Screen
+                name="Calculator"
+                component={ProfitCalculatorScreen}
+                options={{
+                    tabBarLabel: 'Calculator',
+                    tabBarIcon: ({ color, size, focused }) => (
+                        <Icon name={focused ? "calculator" : "calculator-outline"} size={size} color={color} />
                     ),
                 }}
             />

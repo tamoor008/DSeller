@@ -1,10 +1,13 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { AppColors } from '../../../constants/AppColors';
+import { useTheme } from '../../../context/ThemeContext';
 
 const statuses = ['failed', 'returning', 'returned'];
 
 const StatusTabs = ({ selectedStatus, onSelectStatus }) => {
+    const { theme } = useTheme();
+    const styles = getStyles(theme);
+
     return (
         <View style={styles.container}>
             {statuses.map((status) => (
@@ -30,12 +33,12 @@ const StatusTabs = ({ selectedStatus, onSelectStatus }) => {
     );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
     container: {
         flexDirection: 'row',
         marginVertical: 10,
         justifyContent: 'space-around',
-        backgroundColor: '#f2f2f2',
+        backgroundColor: theme.surface || theme.bgcolor,
         borderRadius: 10,
         padding: 4,
     },
@@ -46,15 +49,15 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     activeTab: {
-        backgroundColor: AppColors.primaryOrange, // your highlight color
+        backgroundColor: theme.primaryOrange,
     },
     tabText: {
-        color: '#555',
+        color: theme.textSecondary,
         fontSize: 14,
         fontWeight: '500',
     },
     activeTabText: {
-        color: '#fff',
+        color: theme.white,
         fontWeight: 'bold',
     },
 });

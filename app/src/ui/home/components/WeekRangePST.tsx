@@ -8,11 +8,14 @@ import {
   ScrollView,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useTheme } from '../../../context/ThemeContext';
 
 const WeekRangePST = ({ onWeekSelected }) => {
+  const { theme } = useTheme();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [weekDates, setWeekDates] = useState([]);
   const [showPicker, setShowPicker] = useState(false);
+  const styles = getStyles(theme);
 
   const formatDate = (d) =>
     `${d.getFullYear()}-${(d.getMonth() + 1)
@@ -75,7 +78,7 @@ const WeekRangePST = ({ onWeekSelected }) => {
       <View style={styles.header}>
         <Text style={styles.heading}>Select a Week (via Date)</Text>
         <TouchableOpacity onPress={() => setShowPicker(true)} style={styles.icon}>
-          <Text style={{ color: '#4A90E2', fontWeight: '600' }}>Calendar</Text>
+          <Text style={{ color: theme.primaryOrange, fontWeight: '600' }}>Calendar</Text>
         </TouchableOpacity>
       </View>
 
@@ -112,16 +115,16 @@ const WeekRangePST = ({ onWeekSelected }) => {
 
 export default WeekRangePST;
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     paddingHorizontal: 20,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: theme.bgcolor,
     paddingTop: 0,
   },
   heading: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#333',
+    color: theme.textPrimary,
   },
   header: {
     flexDirection: 'row',
@@ -136,7 +139,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   selectedBubble: {
-    backgroundColor: '#4A90E2',
+    backgroundColor: theme.primaryOrange,
     borderRadius: 4,
     marginRight: 10,
     width: 40,
@@ -145,7 +148,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   selectedBubbleText: {
-    color: '#fff',
+    color: theme.white,
     fontSize: 16,
     fontWeight: '500',
   },
@@ -153,7 +156,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     textAlign: 'center',
     fontSize: 16,
-    color: '#007aff',
+    color: theme.primaryOrange,
     fontWeight: '600',
   },
 });

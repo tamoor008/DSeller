@@ -22,3 +22,5 @@ export const AppColors = {
   statusBar: '#F9F9F9',
 } as const
 
+
+

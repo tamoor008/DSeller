@@ -10,14 +10,16 @@ const TotalBusinessComp: React.FC<TotalBusinessCompProps> = ({ businessValue }) 
   return (
     <div style={{
       backgroundColor: AppColors.primaryOrange,
+      background: `linear-gradient(135deg, ${AppColors.primaryOrange} 0%, #FF6B2B 100%)`,
       justifyContent: 'center',
       alignItems: 'center',
       width: '100%',
-      padding: '16px',
-      borderRadius: '8px',
+      padding: '24px',
+      borderRadius: '12px',
       display: 'flex',
       flexDirection: 'column',
-      gap: '8px'
+      gap: '8px',
+      boxShadow: '0 4px 6px -1px rgba(248, 86, 6, 0.3), 0 2px 4px -1px rgba(248, 86, 6, 0.2)'
     }}>
       <div style={{
         display: 'flex',
@@ -51,4 +53,6 @@ const TotalBusinessComp: React.FC<TotalBusinessCompProps> = ({ businessValue }) 
 }
 
 export default TotalBusinessComp
+
+
 

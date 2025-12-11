@@ -8,7 +8,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { AppColors } from '../../../constants/AppColors';
+import { useTheme } from '../../../context/ThemeContext';
 import HomeHeader from '../components/HomeHeader';
 import SelectStore from '../../components/SelectStore';
 import TotalBusinessComp from '../../components/TotalBusinessComp';
@@ -17,17 +17,17 @@ import { AppStrings } from '../../../constants/AppStrings';
 import { AppScreens } from '../../../constants/AppScreens';
 import { getAuth } from '@react-native-firebase/auth';
 import { useDispatch, useSelector } from 'react-redux';
-import database from '@react-native-firebase/database';
+import { getDatabase, ref } from '@react-native-firebase/database';
 import IndividualDataComp from '../../components/IndividualDataComp';
 import TextComp from '../../components/TextComp';
 import FontFamilty from '../../../constants/FontFamilty';
-import { getDarazDeliveredOrders } from '../../../utils/api/getDarazDeliveredOrders';
+import { getDarazDeliveredOrders, getDarazFailedOrders } from '../../../utils/api/getDarazDeliveredOrders';
 import { setTodayDeliveredOrders } from '../../../redux/AppReducer';
-import WeeklyReportComp from '../../components/WeeklyReportComp';
 import { getBaseUrl } from '../../../utils/api/baseUrl';
 
 
 const HomeScreen = ({ navigation }) => {
+    const { theme } = useTheme();
     const BASE_URL = getBaseUrl();
     console.log(BASE_URL,'BASE_URL');
     
@@ -56,8 +56,8 @@ const HomeScreen = ({ navigation }) => {
     const [shippedOrder, setShippedOrder] = useState([])
     const [failedOrder, setFailedOrder] = useState([])
     const [ITRSOrder, setITRSOrder] = useState([])
-    const skuRef = database().ref(`users/${currentUser.uid}/skusList`);
-    const productRef = database().ref(`users/${currentUser.uid}/products`);
+    const skuRef = ref(getDatabase(), `users/${currentUser.uid}/skusList`);
+    const productRef = ref(getDatabase(), `users/${currentUser.uid}/products`);
     const [failedDeliveries, setFailedDeliveries] = useState([])
     const [all_access_tokens, setAll_access_tokens] = useState([]);
     const [firebaseSkus, setFirebaseSkus] = useState([])
@@ -149,8 +149,9 @@ const HomeScreen = ({ navigation }) => {
         if (!firebaseDataLoaded || !all_access_tokens || (Array.isArray(all_access_tokens) && all_access_tokens.length === 0)) return;
 
         const fetchOrders = async () => {
-            console.log('FUCNTION IN HOMESCREEN');
-            
+            console.log('🏠 [HOME SCREEN] Starting to fetch orders...');
+            console.log('📊 [HOME SCREEN] Firebase data loaded:', firebaseDataLoaded);
+            console.log('🔑 [HOME SCREEN] Access tokens count:', Array.isArray(all_access_tokens) ? all_access_tokens.length : all_access_tokens ? 1 : 0);
 
             setFailedOrder([])
             setShippedOrder([])
@@ -158,31 +159,41 @@ const HomeScreen = ({ navigation }) => {
             setFailedOrders([])
             setDarazLoader(true)
 
-            const createdAfter = new Date(Date.now() - 1000 * 24 * 60 * 60 * 1000).toISOString(); // 7 days ago
+            const createdAfter = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days ago for shipped orders
+            
+            // For today's failed and delivered orders, use start of today
+            const startOfToday = new Date();
+            startOfToday.setHours(0, 0, 0, 0);
+            const todayISO = startOfToday.toISOString();
+            
+            console.log('📅 [HOME SCREEN] Date filters:');
+            console.log('  - Shipped orders (7 days):', createdAfter);
+            console.log('  - Failed orders (today):', todayISO);
+            console.log('  - Today start:', startOfToday.toLocaleString());
 
             let requests = [];
 
             if (Array.isArray(all_access_tokens)) {
+                console.log('🔄 [HOME SCREEN] Fetching for', all_access_tokens.length, 'stores');
                 requests = all_access_tokens.flatMap(item => [
                     getDarazOrders(item.access_token, createdAfter, 'shipped'),
-                    getDarazOrders(item.access_token, createdAfter, 'failed_delivery'),
-                    getDarazOrders(item.access_token, createdAfter, 'shipped_back'),
+                    getFailedOrders(item.access_token, todayISO, 'shipped_back_success'), // Today only - uses update_after
                 ]);
             } else if (all_access_tokens) {
-
+                console.log('🔄 [HOME SCREEN] Fetching for single store');
                 requests = [
                     getDarazOrders(all_access_tokens[0].access_token, createdAfter, 'shipped'),
-                    getDarazOrders(all_access_tokens[0].access_token, createdAfter, 'failed_delivery'),
-                    getDarazOrders(all_access_tokens[0].access_token, createdAfter, 'shipped_back'),
+                    getFailedOrders(all_access_tokens[0].access_token, todayISO, 'shipped_back_success'), // Today only - uses update_after
                 ];
             } else {
-
+                console.log('⚠️ [HOME SCREEN] No access tokens available');
             }
 
             try {
                 await Promise.all(requests); // Wait for all async tasks to complete
+                console.log('✅ [HOME SCREEN] All order fetches completed');
             } catch (error) {
-                console.error('Error while fetching orders:', error);
+                console.error('❌ [HOME SCREEN] Error while fetching orders:', error);
             } finally {
                 setDarazLoader(false)
                 setScreenloader(false)
@@ -191,6 +202,32 @@ const HomeScreen = ({ navigation }) => {
 
         fetchOrders();
     }, [all_access_tokens, firebaseDataLoaded, reloadScreen]);
+
+    // Log failed orders state whenever it changes
+    useEffect(() => {
+        console.log('📋 [FAILED ORDERS STATE] Current failed orders count:', failedOrders.length);
+        if (failedOrders.length > 0) {
+            console.log('📦 [FAILED ORDERS STATE] Failed orders details:');
+            failedOrders.forEach((order, index) => {
+                console.log(`  Failed Order ${index + 1}:`, {
+                    orderId: order.order_id || order.orderId || 'N/A',
+                    orderNumber: order.order_number || order.orderNumber || 'N/A',
+                    status: order.status || 'N/A',
+                    createdAt: order.created_at || order.createdAt || 'N/A',
+                    updatedAt: order.updated_at || order.updatedAt || 'N/A',
+                    orderItemsCount: order.order_items?.length || 0,
+                    skus: order.order_items?.map(item => ({
+                        sku: item.sku,
+                        name: item.name || item.product_name,
+                        quantity: item.quantity
+                    })) || []
+                });
+            });
+            console.log('📊 [FAILED ORDERS STATE] Full failed orders array:', JSON.stringify(failedOrders, null, 2));
+        } else {
+            console.log('ℹ️ [FAILED ORDERS STATE] No failed orders found');
+        }
+    }, [failedOrders]);
 
     useEffect(() => {
         const merged = mergeSkuCounts(failedOrder, ITRSOrder);
@@ -273,8 +310,6 @@ const HomeScreen = ({ navigation }) => {
 
     // this function get the orders from daraz api, orders with different statuses
     const getDarazOrders = async (access_token, createdAfterISO, status) => {
-
-
         try {
             const response = await fetch(`${BASE_URL}/get-daraz-order-details?access_token=${access_token}&created_after=${encodeURIComponent(createdAfterISO)}&status=${status}`);
 
@@ -284,20 +319,10 @@ const HomeScreen = ({ navigation }) => {
 
             const data = await response.json();
 
-
             if (status == 'shipped') {
                 setShippedOrder(prev => [...prev, ...countSkusFromOrders(data.orderItems)]);
-            } else {
-                if (status == 'shipped_back') {
-                    setFailedOrders(prev=>[...prev,...data.orderItems])
-                    const newFailedOrders = countSkusFromOrders(data.orderItems);
-                    setFailedOrder(prev => [...prev, ...newFailedOrders])
-                } else {
-                    setFailedOrders(prev=>[...prev,...data.orderItems])
-                    const newFailedOrders = countSkusFromOrders(data.orderItems);
-                    setITRSOrder(prev => [...prev, ...newFailedOrders])
-                }
             }
+
 
         } catch (error) {
             console.error("Error fetching Daraz orders: DARAZ ORDERS", error.message);
@@ -305,87 +330,75 @@ const HomeScreen = ({ navigation }) => {
         }
     };
 
-
-    ////INCOME PART
-    const [total, setTotal] = useState(0)
-
-    const [income, setIncome] = useState([
-
-    ]);
-
-
-    const getDarazIncome = async (access_token, storeName, createdAfterISO) => {
-
+    // Separate function for failed orders using update_after and update_before
+    const getFailedOrders = async (access_token, updateAfterISO, status) => {
         try {
-            const response = await fetch(`${BASE_URL}/get-daraz-income-details?access_token=${access_token}&created_after=${encodeURIComponent(createdAfterISO)}&storeName=${storeName}`);
+            // Calculate update_before as end of today (23:59:59.999)
+            const endOfToday = new Date();
+            endOfToday.setHours(23, 59, 59, 999);
+            const updateBeforeISO = endOfToday.toISOString();
 
-            if (!response.ok) {
-                throw new Error(`Server error: ${response.status}`);
+            const data = await getDarazFailedOrders(access_token, updateAfterISO, updateBeforeISO, status);
+            
+            if (!data || !data.orderItems || !data.orderItems.length) {
+                console.log('⚠️ [FAILED ORDERS] No data returned from API');
+                return;
             }
 
-            const data = await response.json();
-            setIncome(prev => [...prev, ...data.financeRespone])
-
-
-
-
+            if (status == 'shipped_back') {
+                console.log('🔄 [FAILED ORDERS - SHIPPED_BACK] Processing shipped_back orders...');
+                console.log('📦 [FAILED ORDERS - SHIPPED_BACK] Adding', data.orderItems?.length || 0, 'orders to failedOrders state');
+                setFailedOrders(prev => {
+                    const updated = [...prev, ...data.orderItems];
+                    console.log('✅ [FAILED ORDERS - SHIPPED_BACK] Total failed orders in state:', updated.length);
+                    return updated;
+                });
+                const newFailedOrders = countSkusFromOrders(data.orderItems);
+                console.log('📊 [FAILED ORDERS - SHIPPED_BACK] SKU counts:', newFailedOrders);
+                setFailedOrder(prev => {
+                    const updated = [...prev, ...newFailedOrders];
+                    console.log('✅ [FAILED ORDERS - SHIPPED_BACK] Total failed order SKUs:', updated.length);
+                    return updated;
+                });
+            } else if (status == 'failed_delivery') {
+                console.log('🔄 [FAILED ORDERS - FAILED_DELIVERY] Processing failed_delivery orders...');
+                console.log('📦 [FAILED ORDERS - FAILED_DELIVERY] Adding', data.orderItems?.length || 0, 'orders to failedOrders state');
+                setFailedOrders(prev => {
+                    const updated = [...prev, ...data.orderItems];
+                    console.log('✅ [FAILED ORDERS - FAILED_DELIVERY] Total failed orders in state:', updated.length);
+                    return updated;
+                });
+                const newFailedOrders = countSkusFromOrders(data.orderItems);
+                console.log('📊 [FAILED ORDERS - FAILED_DELIVERY] SKU counts:', newFailedOrders);
+                setITRSOrder(prev => {
+                    const updated = [...prev, ...newFailedOrders];
+                    console.log('✅ [FAILED ORDERS - FAILED_DELIVERY] Total ITRS order SKUs:', updated.length);
+                    return updated;
+                });
+            } else if (status == 'shipped_back_success') {
+                console.log('🔄 [FAILED ORDERS - SHIPPED_BACK_SUCCESS] Processing shipped_back_success orders...');
+                console.log('📦 [FAILED ORDERS - SHIPPED_BACK_SUCCESS] Adding', data.orderItems?.length || 0, 'orders to failedOrders state');
+                setFailedOrders(prev => {
+                    const updated = [...prev, ...data.orderItems];
+                    console.log('✅ [FAILED ORDERS - SHIPPED_BACK_SUCCESS] Total failed orders in state:', updated.length);
+                    return updated;
+                });
+                const newFailedOrders = countSkusFromOrders(data.orderItems);
+                console.log('📊 [FAILED ORDERS - SHIPPED_BACK_SUCCESS] SKU counts:', newFailedOrders);
+                setFailedOrder(prev => {
+                    const updated = [...prev, ...newFailedOrders];
+                    console.log('✅ [FAILED ORDERS - SHIPPED_BACK_SUCCESS] Total failed order SKUs:', updated.length);
+                    return updated;
+                });
+            }
         } catch (error) {
-            console.error("Error fetching Daraz orders: DARAZ INCOME", error.message);
-            return null;
+            console.error('❌ [FAILED ORDERS] Error processing failed orders:', error);
+            console.error('❌ [FAILED ORDERS] Error message:', error.message);
+            console.error('❌ [FAILED ORDERS] Status:', status);
         }
     };
 
-    useEffect(() => {
 
-
-        if (!all_access_tokens || (Array.isArray(all_access_tokens) && all_access_tokens.length === 0)) return;
-
-        const fetchOrders = async () => {
-            setIncome([])
-
-
-            const createdAfter = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
-
-            let requests = [];
-
-            if (Array.isArray(all_access_tokens)) {
-                requests = all_access_tokens.flatMap(item => [
-
-                    getDarazIncome(item.access_token, item.name, createdAfter),
-
-                ]);
-            } else if (all_access_tokens) {
-                requests = [
-                    getDarazIncome(all_access_tokens[0].access_token, all_access_tokens[0].name, createdAfter),
-                ];
-            }
-
-            try {
-                await Promise.all(requests); // Wait for all async tasks to complete
-            } catch (error) {
-                console.error('Error while fetching income:', error);
-            } finally {
-
-            }
-        };
-
-        fetchOrders();
-    }, [all_access_tokens, reloadScreen]);
-
-    useEffect(() => {
-        const totalIncome = income.reduce((sum, item) => {
-            return sum + parseFloat(item.payout.replace(' PKR', '') || 0);
-        }, 0);
-        setTotal(totalIncome)
-
-    }, [income]);
-
-    useEffect(() => {
-        if (income && allOrdersTotal != 0) {
-
-        }
-
-    }, [total, allOrdersTotal]);
 
 
 
@@ -553,10 +566,6 @@ const HomeScreen = ({ navigation }) => {
         navigation.navigate('FailedDeliveryOrders',{failedOrderss:failedOrders,firebaseSkus:firebaseSkus})
     }
 
-    const navigateWeeklyReport=()=>{
-        
-        navigation.navigate('WeekllyReport',{firebaseSkus:firebaseSkus})
-    }
 
 
     const navigatePendingOrders=()=>{
@@ -570,19 +579,19 @@ const HomeScreen = ({ navigation }) => {
     return (
         <ScrollView
             style={{ flex: 1}}
+            showsVerticalScrollIndicator={false}
             refreshControl={
             <RefreshControl refreshing={screenloader} onRefresh={() => {
                 setScreenloader(true)
                 setReloadScreen(!reloadScreen)
             }} />
         }
-            contentContainerStyle={styles.container}>
+            contentContainerStyle={HomeScreenStyles(theme).container}>
 
             <HomeHeader onOpenSettings={navigateSettings} />
             <SelectStore />
-            <TotalBusinessComp businessValue={'500,000'} />
             <View style={{ rowGap: 16 }}>
-                <TextComp size={16} style={{ fontFamily: FontFamilty.bold, color: AppColors.textPrimary }}>{AppStrings.darazDetails}</TextComp>
+                <TextComp size={16} style={{ fontFamily: FontFamilty.bold, color: theme.textPrimary }}>{AppStrings.darazDetails}</TextComp>
                 <View style={{ flexDirection: 'row', columnGap: 16, }}>
                     <IndividualDataComp onPress={navigatePendingOrders} loader={darazOrdersLoader}  data={pendingOrdersCount} label={AppStrings.pendingOrders} info={AppStrings.darazInfo} />
                     <IndividualDataComp onPress={navigateReadyToShipOrders} loader={darazOrdersLoader} data={readyToShipOrdersCount} label={AppStrings.readyToShipOrders} info={AppStrings.stockInfo} />
@@ -592,15 +601,12 @@ const HomeScreen = ({ navigation }) => {
                     <IndividualDataComp loader={false} onPress={navigatedeliveredOrders} data={darazDeliveredOrdersCount} label={AppStrings.deliveredOrdersToday} info={AppStrings.cashInfo} />
                     <IndividualDataComp loader={false} onPress={navigateFailedOrders} data={failedOrders.length} label={AppStrings.failedOrdersToday} info={AppStrings.cashInfo} />
                 </View>
-                <View style={{ flexDirection: 'row', columnGap: 16, }}>
-                <WeeklyReportComp onPress={navigateWeeklyReport} text={'check weekly report'} />
-                </View>
             </View>
             <View style={{ rowGap: 16 }}>
-                <TextComp size={16} style={{ fontFamily: FontFamilty.bold, color: AppColors.textPrimary }}>{AppStrings.businessDetails}</TextComp>
+                <TextComp size={16} style={{ fontFamily: FontFamilty.bold, color: theme.textPrimary }}>{AppStrings.businessDetails}</TextComp>
 
                 <View style={{ flexDirection: 'row', columnGap: 16, }}>
-                    <IndividualValueComp loader={darazLoader} onPress={navigateDaraz} amount={allOrdersTotal + total} label={AppStrings.daraz} info={AppStrings.darazInfo} />
+                    <IndividualValueComp loader={darazLoader} onPress={navigateDaraz} amount={allOrdersTotal} label={AppStrings.daraz} info={AppStrings.darazInfo} />
                     <IndividualValueComp loader={stockLoader} onPress={navigateStock} amount={totalPrice} label={AppStrings.stock} info={AppStrings.stockInfo} />
                 </View>
                 <View style={{ flexDirection: 'row', columnGap: 16, }}>
@@ -615,10 +621,10 @@ const HomeScreen = ({ navigation }) => {
     );
 }
 
-const styles = StyleSheet.create({
+const HomeScreenStyles = (theme) => StyleSheet.create({
     container: {
         padding: 16,
-        backgroundColor: AppColors.bgcolor,
+        backgroundColor: theme.bgcolor,
         rowGap: 16,
         flexGrow: 1,
     },

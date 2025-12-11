@@ -4,7 +4,7 @@ import {
     Text,
     View,
 } from 'react-native';
-import { AppColors } from '../../constants/AppColors';
+import { useTheme } from '../../context/ThemeContext';
 import Header from '../components/Header';
 import { AppStrings } from '../../constants/AppStrings';
 import StockTab from './components/StockTab';
@@ -12,9 +12,7 @@ import StockTab from './components/StockTab';
 
 
 const StockScreen = ({ navigation }) => {
-
-
-
+    const { theme } = useTheme();
 
     const [tabs, setTabs] = useState([
         {
@@ -43,6 +41,7 @@ const StockScreen = ({ navigation }) => {
         navigation.goBack()
     }
 
+    const styles = getStyles(theme);
 
     return (
         <View style={styles.container}>
@@ -52,15 +51,13 @@ const StockScreen = ({ navigation }) => {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
     container: {
         flex: 1,
         padding: 16,
-        backgroundColor: AppColors.bgcolor,
+        backgroundColor: theme.bgcolor,
         rowGap: 16,
-
     },
-
 });
 
 export default StockScreen;

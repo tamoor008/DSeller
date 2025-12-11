@@ -36,7 +36,9 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ onOpenSettings }) => {
       display: 'flex',
       alignItems: 'center',
       width: '100%',
-      justifyContent: 'space-between'
+      justifyContent: 'space-between',
+      paddingBottom: '8px',
+      marginBottom: '8px'
     }}>
       <div style={{
         fontSize: '24px',
@@ -56,10 +58,18 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ onOpenSettings }) => {
             background: 'none',
             border: 'none',
             cursor: 'pointer',
-            fontSize: '12px',
+            fontSize: '14px',
             fontWeight: 500,
             color: AppColors.primaryOrange,
-            padding: 0
+            padding: '6px 12px',
+            borderRadius: '6px',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#FFF4F0'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent'
           }}
         >
           {AppStrings.settings}
@@ -85,4 +95,6 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ onOpenSettings }) => {
 }
 
 export default HomeHeader
+
+
 

@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { getDatabase, ref, onValue, off } from 'firebase/database'
 import { database } from '../config/firebase'
 import { auth } from '../config/firebase'
-import { AppColors } from '../constants/colors'
+import { useTheme } from '../context/ThemeContext'
 import { AppStrings } from '../constants/strings'
 import HomeHeader from '../components/HomeHeader'
 import SelectStore from '../components/SelectStore'
@@ -18,6 +18,7 @@ const HomePage = () => {
   const navigate = useNavigate()
   const dispatch = useDispatch()
   const selector = useSelector((state: any) => state.AppReducer)
+  const { theme } = useTheme()
   const [reloadScreen, setReloadScreen] = useState(false)
   
   // Order counts
@@ -167,20 +168,23 @@ const HomePage = () => {
   return (
     <div style={{ 
       minHeight: '100vh',
-      backgroundColor: AppColors.bgcolor,
-      padding: '16px'
+      backgroundColor: theme.bgcolor,
+      padding: '20px',
+      maxWidth: '1200px',
+      margin: '0 auto'
     }}>
       <HomeHeader onOpenSettings={() => navigate('/settings')} />
-      <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <SelectStore />
         <TotalBusinessComp businessValue="500,000" />
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <h3 style={{
             margin: 0,
-            fontSize: '16px',
+            fontSize: '18px',
             fontWeight: 700,
-            color: AppColors.textPrimary
+            color: theme.textPrimary,
+            letterSpacing: '-0.02em'
           }}>
             {AppStrings.darazDetails}
           </h3>
@@ -219,9 +223,10 @@ const HomePage = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <h3 style={{
             margin: 0,
-            fontSize: '16px',
+            fontSize: '18px',
             fontWeight: 700,
-            color: AppColors.textPrimary
+            color: theme.textPrimary,
+            letterSpacing: '-0.02em'
           }}>
             {AppStrings.businessDetails}
           </h3>

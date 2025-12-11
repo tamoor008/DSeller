@@ -15,7 +15,7 @@ import { AppStrings } from '../../../constants/AppStrings';
 import FontFamilty from '../../../constants/FontFamilty';
 import TextComp from '../../components/TextComp';
 import TextInputComp from '../../components/TextInputComp';
-import database from '@react-native-firebase/database';
+import { getDatabase, ref } from '@react-native-firebase/database';
 import { getAuth } from '@react-native-firebase/auth';
 
 const EditPrice = ({ setIsvisible, product }) => {
@@ -32,7 +32,7 @@ const EditPrice = ({ setIsvisible, product }) => {
     const updatePrice = () => {
         if (!product || !product.id || !currentUser) return;
 
-        const productRef = database().ref(`users/${currentUser.uid}/products/${product.id}`);
+        const productRef = ref(getDatabase(), `users/${currentUser.uid}/products/${product.id}`);
         
         productRef
             .update({

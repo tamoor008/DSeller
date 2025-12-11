@@ -6,7 +6,9 @@ const ProfitCalculatorPage = () => {
     <div style={{ 
       minHeight: '100vh',
       backgroundColor: AppColors.bgcolor,
-      padding: '16px'
+      padding: '20px',
+      maxWidth: '1200px',
+      margin: '0 auto'
     }}>
       <div style={{ marginBottom: '24px' }}>
         <p style={{ 

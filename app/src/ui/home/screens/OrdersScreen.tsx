@@ -5,7 +5,7 @@ import {
     TouchableOpacity,
     ScrollView,
 } from 'react-native';
-import { AppColors } from '../../../constants/AppColors';
+import { useTheme } from '../../../context/ThemeContext';
 import TextComp from '../../components/TextComp';
 import FontFamilty from '../../../constants/FontFamilty';
 import Header from '../../components/Header';
@@ -20,6 +20,7 @@ interface OrdersScreenProps {
 type DateRange = 'today' | 'yesterday' | '7days' | '30days' | 'custom';
 
 const OrdersScreen: React.FC<OrdersScreenProps> = ({ navigation }) => {
+    const { theme } = useTheme();
     // Status and date range state
     const [selectedStatus, setSelectedStatus] = useState<OrderStatus>('pending');
     const [selectedRange, setSelectedRange] = useState<DateRange>('today');
@@ -31,6 +32,7 @@ const OrdersScreen: React.FC<OrdersScreenProps> = ({ navigation }) => {
         setCustomEndDate(endDate);
     };
 
+    const styles = getStyles(theme);
     return (
         <View style={styles.container}>
             <View style={styles.headerSection}>
@@ -108,19 +110,19 @@ const OrdersScreen: React.FC<OrdersScreenProps> = ({ navigation }) => {
     );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: AppColors.bgcolor,
+        backgroundColor: theme.bgcolor,
     },
     headerSection: {
         rowGap: 16,
         margin: 16,
     },
     dateFilterContainer: {
-        backgroundColor: AppColors.card,
+        backgroundColor: theme.card,
         borderBottomWidth: 1,
-        borderBottomColor: AppColors.border,
+        borderBottomColor: theme.border,
         paddingVertical: 12,
     },
     dateFilterScroll: {
@@ -131,18 +133,18 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
         paddingHorizontal: 12,
         borderRadius: 20,
-        backgroundColor: AppColors.surface,
+        backgroundColor: theme.surface,
         marginRight: 8,
     },
     selectedDateFilterOption: {
-        backgroundColor: AppColors.primaryOrange,
+        backgroundColor: theme.primaryOrange,
     },
     dateFilterText: {
-        color: AppColors.textSecondary,
+        color: theme.textSecondary,
         fontFamily: FontFamilty.medium,
     },
     selectedDateFilterText: {
-        color: AppColors.white,
+        color: theme.white,
         fontFamily: FontFamilty.bold,
     },
     emptyContainer: {
@@ -153,13 +155,13 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         textAlign: 'center',
-        color: AppColors.textPrimary,
+        color: theme.textPrimary,
         fontFamily: FontFamilty.medium,
         marginBottom: 8,
     },
     emptySubText: {
         textAlign: 'center',
-        color: AppColors.textSecondary,
+        color: theme.textSecondary,
         fontFamily: FontFamilty.regular,
     },
 });

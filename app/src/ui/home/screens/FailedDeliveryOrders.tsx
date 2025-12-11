@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
-import { AppColors } from '../../../constants/AppColors';
+import { useTheme } from '../../../context/ThemeContext';
 import TextComp from '../../components/TextComp';
 import FontFamilty from '../../../constants/FontFamilty';
 import OrderDurationHeader from '../components/OrderDurationHeader';
@@ -26,6 +26,7 @@ import { getBaseUrl } from '../../../utils/api/baseUrl';
 
 
 const FailedDeliveryOrders = ({ navigation }) => {
+    const { theme } = useTheme();
     const BASE_URL = getBaseUrl(); // instant access, no async
 
     const route = useRoute();
@@ -118,7 +119,7 @@ const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
 
     const renderOrder = (item, onProfitCalculated) => (
         <View style={styles.card}>
-            <TextComp style={styles.orderId}>Order ID: {item.order_id}</TextComp>
+            <TextComp size={16} style={styles.orderId} numberOfLines={1}>Order ID: {item.order_id}</TextComp>
             {item.order_items.map((orderItem) => (
                 <OrderItem
                     key={orderItem.order_item_id}
@@ -154,7 +155,7 @@ const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
 
     const [darazOrdersLoader, setDarazOrdersLoader] = useState(false)
 
-    const getfailedOrdersLocal = async (access_token, update_after, update_before, status, date) => {
+    const getfailedOrdersLocal = async (access_token: string, update_after: string, update_before: string, status: string, date: string, storeName?: string) => {
         try {
             const response = await fetch(
                 `${BASE_URL}/get-daraz-delivered-order-details?access_token=${access_token}&update_after=${encodeURIComponent(update_after)}&update_before=${encodeURIComponent(update_before)}&status=${status}`
@@ -170,69 +171,76 @@ const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
 
             if (!data?.orderItems?.length) return;
 
+            // Add store information to each order
+            const ordersWithStore = data.orderItems.map((order: any) => ({
+                ...order,
+                access_token,
+                storeName: storeName || 'Unknown Store',
+            }));
+
 
             if (selectedRange === 'today') {
                 if (status === 'failed_delivery') {
-                    setfailedOrders(prev => [...prev, ...data.orderItems]);
-                    setfailedOrdersCount(prev => prev + data.orderItems.length);
+                    setfailedOrders((prev: any[]) => [...prev, ...ordersWithStore]);
+                    setfailedOrdersCount(prev => prev + ordersWithStore.length);
                 } else if (status === 'shipped_back') {
-                    setReturningOrders(prev => [...prev, ...data.orderItems]);
-                    setReturningOrdersCount(prev => prev + data.orderItems.length);
+                    setReturningOrders((prev: any[]) => [...prev, ...ordersWithStore]);
+                    setReturningOrdersCount(prev => prev + ordersWithStore.length);
                 } else if (status === 'shipped_back_success') {
                     console.log(data,'Returned orders');
                     
-                    setReturnedOrders(prev => [...prev, ...data.orderItems]);
-                    setReturnedOrdersCount(prev => prev + data.orderItems.length);
+                    setReturnedOrders((prev: any[]) => [...prev, ...ordersWithStore]);
+                    setReturnedOrdersCount(prev => prev + ordersWithStore.length);
                 }
             } else if (selectedRange === 'yesterday') {
                 if (status === 'failed_delivery') {
-                    setfailedOrdersYesterday(prev => [...prev, ...data.orderItems]);
-                    setfailedOrdersYesterdayCount(prev => prev + data.orderItems.length);
+                    setfailedOrdersYesterday((prev: any[]) => [...prev, ...ordersWithStore]);
+                    setfailedOrdersYesterdayCount(prev => prev + ordersWithStore.length);
                 } else if (status === 'shipped_back') {
-                    setReturningOrdersYesterday(prev => [...prev, ...data.orderItems]);
-                    setReturningOrdersYesterdayCount(prev => prev + data.orderItems.length);
+                    setReturningOrdersYesterday((prev: any[]) => [...prev, ...ordersWithStore]);
+                    setReturningOrdersYesterdayCount(prev => prev + ordersWithStore.length);
                 } else if (status === 'shipped_back_success') {
-                    setReturnedOrdersYesterday(prev => [...prev, ...data.orderItems]);
-                    setReturnedOrdersYesterdayCount(prev => prev + data.orderItems.length);
+                    setReturnedOrdersYesterday((prev: any[]) => [...prev, ...ordersWithStore]);
+                    setReturnedOrdersYesterdayCount(prev => prev + ordersWithStore.length);
                 }
             } else if (selectedRange === '7days') {
                 if (status === 'failed_delivery') {
-                    setfailedOrdersSevenDays(prev => [...prev, ...data.orderItems]);
-                    setfailedOrdersSevenDaysCount(prev => prev + data.orderItems.length);
+                    setfailedOrdersSevenDays((prev: any[]) => [...prev, ...ordersWithStore]);
+                    setfailedOrdersSevenDaysCount(prev => prev + ordersWithStore.length);
                 } else if (status === 'shipped_back') {
-                    setReturningOrdersSevenDays(prev => [...prev, ...data.orderItems]);
-                    setReturningOrdersSevenDaysCount(prev => prev + data.orderItems.length);
+                    setReturningOrdersSevenDays((prev: any[]) => [...prev, ...ordersWithStore]);
+                    setReturningOrdersSevenDaysCount(prev => prev + ordersWithStore.length);
                 } else if (status === 'shipped_back_success') {
-                    setReturnedOrdersSevenDays(prev => [...prev, ...data.orderItems]);
-                    setReturnedOrdersSevenDaysCount(prev => prev + data.orderItems.length);
+                    setReturnedOrdersSevenDays((prev: any[]) => [...prev, ...ordersWithStore]);
+                    setReturnedOrdersSevenDaysCount(prev => prev + ordersWithStore.length);
                 }
             } else if (selectedRange === '30days') {
                 if (status === 'failed_delivery') {
-                    setfailedOrdersThirtyDays(prev => [...prev, ...data.orderItems]);
-                    setfailedOrdersThirtyDaysCount(prev => prev + data.orderItems.length);
+                    setfailedOrdersThirtyDays((prev: any[]) => [...prev, ...ordersWithStore]);
+                    setfailedOrdersThirtyDaysCount(prev => prev + ordersWithStore.length);
                 } else if (status === 'shipped_back') {
-                    setReturningOrdersThirtyDays(prev => [...prev, ...data.orderItems]);
-                    setReturningOrdersThirtyDaysCount(prev => prev + data.orderItems.length);
+                    setReturningOrdersThirtyDays((prev: any[]) => [...prev, ...ordersWithStore]);
+                    setReturningOrdersThirtyDaysCount(prev => prev + ordersWithStore.length);
                 } else if (status === 'shipped_back_success') {
-                    setReturnedOrdersThirtyDays(prev => [...prev, ...data.orderItems]);
-                    setReturnedOrdersThirtyDaysCount(prev => prev + data.orderItems.length);
+                    setReturnedOrdersThirtyDays((prev: any[]) => [...prev, ...ordersWithStore]);
+                    setReturnedOrdersThirtyDaysCount(prev => prev + ordersWithStore.length);
                 }
             } else if (selectedRange === 'custom') {
                 if (status === 'failed_delivery') {
-                    setfailedOrdersCustom(prev => [...prev, ...data.orderItems]);
-                    setfailedOrdersCustomCount(prev => prev + data.orderItems.length);
+                    setfailedOrdersCustom((prev: any[]) => [...prev, ...ordersWithStore]);
+                    setfailedOrdersCustomCount(prev => prev + ordersWithStore.length);
                 } else if (status === 'shipped_back') {
-                    setReturningOrdersCustom(prev => [...prev, ...data.orderItems]);
-                    setReturningOrdersCustomCount(prev => prev + data.orderItems.length);
+                    setReturningOrdersCustom((prev: any[]) => [...prev, ...ordersWithStore]);
+                    setReturningOrdersCustomCount(prev => prev + ordersWithStore.length);
                 } else if (status === 'shipped_back_success') {
-                    setReturnedOrdersCustom(prev => [...prev, ...data.orderItems]);
-                    setReturnedOrdersCustomCount(prev => prev + data.orderItems.length);
+                    setReturnedOrdersCustom((prev: any[]) => [...prev, ...ordersWithStore]);
+                    setReturnedOrdersCustomCount(prev => prev + ordersWithStore.length);
                 }
             }
             
 
-        } catch (error) {
-            console.error("Error fetching Daraz orders:", error.message);
+        } catch (error: any) {
+            console.error("Error fetching Daraz orders:", error?.message || 'Unknown error');
         }
     };
 
@@ -314,21 +322,20 @@ const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
             let requests = [];
 
             if (Array.isArray(all_access_tokens)) {
-                requests = all_access_tokens.flatMap(item => [
-                    getfailedOrdersLocal(item.access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'failed_delivery', selectedRange),
-                    getfailedOrdersLocal(item.access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'shipped_back', selectedRange),
-                    getfailedOrdersLocal(item.access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'shipped_back_success', selectedRange),
+                requests = all_access_tokens.flatMap((item: any) => [
+                    getfailedOrdersLocal(item.access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'failed_delivery', selectedRange, item.storeName),
+                    getfailedOrdersLocal(item.access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'shipped_back', selectedRange, item.storeName),
+                    getfailedOrdersLocal(item.access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'shipped_back_success', selectedRange, item.storeName),
                 ]);
-            } else if (all_access_tokens) {
+            } else if (all_access_tokens && Array.isArray(all_access_tokens) && all_access_tokens.length > 0) {
 
                 requests = [
-                    getfailedOrdersLocal(all_access_tokens[0].access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'failed_delivery', selectedRange),
-                    getfailedOrdersLocal(all_access_tokens[0].access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'shipped_back', selectedRange),
-                    getfailedOrdersLocal(all_access_tokens[0].access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'shipped_back_success', selectedRange),
-
-                    // getfailedOrdersLocal(all_access_tokens[0].access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'shipped_back', selectedRange),
+                    getfailedOrdersLocal(all_access_tokens[0].access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'failed_delivery', selectedRange, all_access_tokens[0].storeName),
+                    getfailedOrdersLocal(all_access_tokens[0].access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'shipped_back', selectedRange, all_access_tokens[0].storeName),
+                    getfailedOrdersLocal(all_access_tokens[0].access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'shipped_back_success', selectedRange, all_access_tokens[0].storeName),
                 ];
             } else {
+                requests = [];
             }
 
             try {
@@ -397,12 +404,13 @@ const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
 
     }, [failedOrders])
 
+    const styles = getStyles(theme);
     return (
-        <View style={{ flex: 1, backgroundColor: AppColors.bgcolor }}>
-            <View style={{ flex: 1, borderBottomWidth: 0, borderColor: 'white' }}>
+        <View style={{ flex: 1, backgroundColor: theme.bgcolor }}>
+            <View style={{ flex: 1, borderBottomWidth: 0, borderColor: theme.white }}>
 
                 <View style={{ rowGap: 16, margin: 16 }}>
-                    <Header title={AppStrings.FailedDeliveredOrders} goBack={goBack} />
+                    <Header title={AppStrings.FailedDeliveredOrders} goBack={goBack} info="" />
                     <SelectStore />
                 </View>
 
@@ -426,16 +434,16 @@ const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
 
                 {darazOrdersLoader ?
                     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                        <ActivityIndicator size={'large'} color={AppColors.primaryOrange}></ActivityIndicator>
+                        <ActivityIndicator size={'large'} color={theme.primaryOrange}></ActivityIndicator>
                     </View>
                     :
-                    <ScrollView>
+                    <ScrollView showsVerticalScrollIndicator={false}>
 
 
                         <FlatList
                             scrollEnabled={false}
                             ListHeaderComponent={
-                                <TextComp style={styles.headerComp}>
+                                <TextComp size={16} style={styles.headerComp} numberOfLines={1}>
                                     Total Orders: {getOrdersCountBySelectedRange()}
                                 </TextComp>
                             }
@@ -444,7 +452,7 @@ const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
                             renderItem={({ item }) => renderOrder(item, handleProfitCalculated)}
                             contentContainerStyle={styles.container}
                             ListEmptyComponent={
-                                <TextComp style={styles.emptyTextComp}>
+                                <TextComp size={16} style={styles.emptyTextComp} numberOfLines={1}>
                                     No Failed orders found.
                                 </TextComp>
                             }
@@ -453,8 +461,8 @@ const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
                     </ScrollView>
                 }
                 <View style={styles.totalProfitContainer}>
-                    <TextComp size={16} style={styles.profitText}>
-                        Total Profit: Rs. {parseFloat(totalProfit).toFixed(2)}
+                    <TextComp size={16} style={styles.profitText} numberOfLines={1}>
+                        Total Profit: Rs. {parseFloat(String(totalProfit)).toFixed(2)}
                     </TextComp>
                 </View>
             </View>
@@ -462,13 +470,13 @@ const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
     );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
     container: {
         padding: 16,
         flexGrow: 1
     },
     card: {
-        backgroundColor: '#fff',
+        backgroundColor: theme.card,
         borderRadius: 12,
         padding: 16,
         marginBottom: 16,
@@ -477,6 +485,7 @@ const styles = StyleSheet.create({
     orderId: {
         fontWeight: 'bold',
         marginBottom: 8,
+        color: theme.textPrimary,
     },
     orderItem: {
         flexDirection: 'row',
@@ -495,14 +504,14 @@ const styles = StyleSheet.create({
     productName: {
         fontWeight: '600',
         fontSize: 14,
-        color: '#000',
+        color: theme.textPrimary,
     },
     amount: {
-        color: '#444',
+        color: theme.textSecondary,
     },
     profitBadge: {
         borderRadius: 100,
-        backgroundColor: AppColors.greenbg,
+        backgroundColor: theme.greenbg,
         height: 30,
         alignItems: 'center',
         justifyContent: 'center',
@@ -510,14 +519,13 @@ const styles = StyleSheet.create({
         marginTop: 4,
     },
     profitText: {
-        color: AppColors.green,
+        color: theme.green,
         fontFamily: FontFamilty.medium,
     },
     totalProfitContainer: {
-
         position: 'absolute',
         bottom: 16,
-        backgroundColor: AppColors.greenbg,
+        backgroundColor: theme.greenbg,
         borderRadius: 100,
         paddingVertical: 10,
         alignItems: 'center',
@@ -528,13 +536,13 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginTop: 50,
         fontSize: 16,
-        color: '#777',
+        color: theme.textSecondary,
     },
     headerComp: {
         textAlign: 'center',
         marginTop: 8,
         fontSize: 16,
-        color: '#777',
+        color: theme.textSecondary,
     },
 });
 

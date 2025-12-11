@@ -12,30 +12,37 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 import { AppImages } from '../../constants/AppImages';
 import { AppStrings } from '../../constants/AppStrings';
 import FontFamilty from '../../constants/FontFamilty';
-import { AppColors } from '../../constants/AppColors';
 
 
 const SplashScreen = () => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
 
   return (
     <View style={styles.container}>
         <Image resizeMode='contain' style={{width:126,height:57}} source={AppImages.dsellerlogo}/>
-        <Text style={{fontFamily:FontFamilty.regular,fontSize:12,color:AppColors.black50}}>{AppStrings.punchline}</Text>
+        <Text style={styles.punchline}>{AppStrings.punchline}</Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
     alignItems:'center',
     justifyContent:'center',
-    backgroundColor:AppColors.white
+    backgroundColor: theme.bgcolor
   },
-
+  punchline: {
+    fontFamily: FontFamilty.regular,
+    fontSize: 12,
+    color: theme.textSecondary,
+    marginTop: 16,
+  },
 });
 
 export default SplashScreen;

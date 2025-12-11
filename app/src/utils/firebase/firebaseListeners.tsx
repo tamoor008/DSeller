@@ -1,16 +1,16 @@
 // utils/firebaseListener.js
-import database from '@react-native-firebase/database';
-import auth from '@react-native-firebase/auth';
+import { getDatabase, ref } from '@react-native-firebase/database';
+import { getAuth } from '@react-native-firebase/auth';
 import { setFirebaseProducts } from '../../redux/AppReducer';
 
 let isListenerActive = false;
 
 export const startFirebaseListener = (dispatch) => {
-  const currentUser = auth().currentUser;
+  const currentUser = getAuth().currentUser;
 
   if (!currentUser || isListenerActive) return;
 
-  const productRef = database().ref(`users/${currentUser.uid}/products`);
+  const productRef = ref(getDatabase(), `users/${currentUser.uid}/products`);
 
   // Mark listener as active
   isListenerActive = true;
@@ -24,10 +24,10 @@ export const startFirebaseListener = (dispatch) => {
 };
 
 export const stopFirebaseListener = () => {
-  const currentUser = auth().currentUser;
+  const currentUser = getAuth().currentUser;
   if (!currentUser) return;
 
-  const productRef = database().ref(`users/${currentUser.uid}/products`);
+  const productRef = ref(getDatabase(), `users/${currentUser.uid}/products`);
   productRef.off(); // Removes all listeners
 
   isListenerActive = false;

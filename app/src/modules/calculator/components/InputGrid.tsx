@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, TextInput, Switch, TouchableOpacity, StyleSheet, Modal, FlatList, Text } from 'react-native';
 import { CalculatorFormData } from '../types';
 import { COMMISSION_OPTIONS } from '../constants/commissions';
-import { AppColors } from '../../../constants/AppColors';
+import { useTheme } from '../../../context/ThemeContext';
 import TextComp from '../../../ui/components/TextComp';
 
 interface InputGridProps {
@@ -16,11 +16,7 @@ interface InputGridProps {
   selectedCategoryLabel: string;
 }
 
-const FIELD_CONFIG: Array<{
-  label: string;
-  field: keyof CalculatorFormData;
-  step?: string;
-}> = [
+const FIELD_CONFIG: Array<{ label: string; field: keyof CalculatorFormData; step?: string }> = [
   { label: 'Daraz Commission %', field: 'darazCommission', step: '0.1' },
   { label: 'Payment Handling Fee %', field: 'paymentHandlingFee', step: '0.01' },
   { label: 'Selling Price (Rs.)', field: 'sellingPrice', step: '0.01' },
@@ -71,6 +67,7 @@ export const InputGrid = ({
   onCalculate,
   selectedCategoryLabel,
 }: InputGridProps) => {
+  const { theme } = useTheme();
   const [categoryQuery, setCategoryQuery] = useState('');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [filteredCategories, setFilteredCategories] = useState(COMMISSION_OPTIONS);
@@ -112,21 +109,23 @@ export const InputGrid = ({
     setShowCategoryModal(false);
   };
 
+  const styles = getStyles(theme);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TextComp size={12} style={styles.eyebrow}>INPUTS</TextComp>
-        <TextComp size={20} style={styles.title}>Order Parameters</TextComp>
-        <TextComp size={14} style={styles.subtitle}>Fine-tune the assumptions for your Daraz listing.</TextComp>
+        <TextComp size={12} style={styles.eyebrow} numberOfLines={1}>INPUTS</TextComp>
+        <TextComp size={20} style={styles.title} numberOfLines={1}>Order Parameters</TextComp>
+        <TextComp size={14} style={styles.subtitle} numberOfLines={2}>Fine-tune the assumptions for your Daraz listing.</TextComp>
       </View>
 
       <View style={styles.categorySelect}>
-        <TextComp size={14} style={styles.label}>Category</TextComp>
+        <TextComp size={14} style={styles.label} numberOfLines={1}>Category</TextComp>
         <TouchableOpacity
           style={styles.categoryInput}
           onPress={() => setShowCategoryModal(true)}
         >
-          <TextComp size={16} style={styles.categoryText}>
+          <TextComp size={16} style={styles.categoryText} numberOfLines={1}>
             {selectedCategoryLabel || 'Select category...'}
           </TextComp>
         </TouchableOpacity>
@@ -141,14 +140,15 @@ export const InputGrid = ({
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <TextComp size={18} style={styles.modalTitle}>Select Category</TextComp>
+              <TextComp size={18} style={styles.modalTitle} numberOfLines={1}>Select Category</TextComp>
               <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
-                <TextComp size={16} style={styles.closeButton}>Close</TextComp>
+                <TextComp size={16} style={styles.closeButton} numberOfLines={1}>Close</TextComp>
               </TouchableOpacity>
             </View>
             <TextInput
               style={styles.searchInput}
               placeholder="Search category..."
+              placeholderTextColor={theme.textSecondary}
               value={categoryQuery}
               onChangeText={setCategoryQuery}
             />
@@ -160,8 +160,8 @@ export const InputGrid = ({
                   style={styles.categoryItem}
                   onPress={() => handleCategorySelect(item)}
                 >
-                  <TextComp size={14} style={styles.categoryItemLabel}>{item.pathLabel}</TextComp>
-                  <TextComp size={12} style={styles.categoryItemCommission}>
+                  <TextComp size={14} style={styles.categoryItemLabel} numberOfLines={2}>{item.pathLabel}</TextComp>
+                  <TextComp size={12} style={styles.categoryItemCommission} numberOfLines={1}>
                     {item.commission}%
                   </TextComp>
                 </TouchableOpacity>
@@ -172,15 +172,20 @@ export const InputGrid = ({
       </Modal>
 
       <View style={styles.formGrid}>
-        {FIELD_CONFIG.map(({ label, field }) => (
-          <View key={field} style={styles.formControl}>
-            <TextComp size={14} style={styles.label}>{label}</TextComp>
+        {FIELD_CONFIG.map(({ label, field }, index) => (
+          <View key={field} style={[
+            styles.formControl,
+            index % 2 === 0 && styles.formControlLeft,
+            index % 2 === 1 && styles.formControlRight,
+          ]}>
+            <TextComp size={14} style={styles.label} numberOfLines={1}>{label}</TextComp>
             <TextInput
               style={styles.input}
               value={formData[field]?.toString() || ''}
               onChangeText={handleNumberChange(field)}
               keyboardType="numeric"
               placeholder="0"
+              placeholderTextColor={theme.textSecondary}
             />
           </View>
         ))}
@@ -190,16 +195,16 @@ export const InputGrid = ({
         {SWITCH_CONFIG.map(({ label, field, helper, impact }) => (
           <View key={field} style={[styles.switchControl, { marginBottom: 12 }]}>
             <View style={styles.switchInfo}>
-              <TextComp size={14} style={styles.switchLabel}>{label}</TextComp>
-              <TextComp size={12} style={styles.switchHelper}>{helper}</TextComp>
+              <TextComp size={14} style={styles.switchLabel} numberOfLines={1}>{label}</TextComp>
+              <TextComp size={12} style={styles.switchHelper} numberOfLines={2}>{helper}</TextComp>
             </View>
             <View style={styles.switchAction}>
-              <TextComp size={14} style={styles.impact}>{impact}</TextComp>
+              <TextComp size={14} style={styles.impact} numberOfLines={1}>{impact}</TextComp>
               <Switch
                 value={formData[field]}
                 onValueChange={() => handleToggle(field)}
-                trackColor={{ false: '#cbd5f5', true: '#4f46e5' }}
-                thumbColor={formData[field] ? '#fff' : '#f4f3f4'}
+                trackColor={{ false: theme.border, true: theme.primaryOrange }}
+                thumbColor={theme.white}
               />
             </View>
           </View>
@@ -207,15 +212,15 @@ export const InputGrid = ({
       </View>
 
       <TouchableOpacity style={styles.calculateButton} onPress={onCalculate}>
-        <TextComp size={16} style={styles.calculateButtonText}>Calculate Profit</TextComp>
+        <TextComp size={16} style={styles.calculateButtonText} numberOfLines={1}>Calculate Profit</TextComp>
       </TouchableOpacity>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
-    backgroundColor: AppColors.card,
+    backgroundColor: theme.card,
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
@@ -226,34 +231,34 @@ const styles = StyleSheet.create({
   eyebrow: {
     textTransform: 'uppercase',
     letterSpacing: 1,
-    color: AppColors.textSecondary,
+    color: theme.textSecondary,
     marginBottom: 4,
   },
   title: {
     fontWeight: '700',
-    color: AppColors.textPrimary,
+    color: theme.textPrimary,
     marginBottom: 4,
   },
   subtitle: {
-    color: AppColors.textSecondary,
+    color: theme.textSecondary,
   },
   categorySelect: {
     marginBottom: 16,
   },
   label: {
     fontWeight: '500',
-    color: AppColors.textPrimary,
+    color: theme.textPrimary,
     marginBottom: 8,
   },
   categoryInput: {
     borderWidth: 1,
-    borderColor: AppColors.border,
+    borderColor: theme.border,
     borderRadius: 8,
     padding: 12,
-    backgroundColor: AppColors.white,
+    backgroundColor: theme.card,
   },
   categoryText: {
-    color: AppColors.textPrimary,
+    color: theme.textPrimary,
   },
   modalOverlay: {
     flex: 1,
@@ -261,7 +266,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: AppColors.white,
+    backgroundColor: theme.card,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '80%',
@@ -275,19 +280,21 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontWeight: '700',
-    color: AppColors.textPrimary,
+    color: theme.textPrimary,
   },
   closeButton: {
-    color: AppColors.primaryOrange,
+    color: theme.primaryOrange,
     fontWeight: '600',
   },
   searchInput: {
     borderWidth: 1,
-    borderColor: AppColors.border,
+    borderColor: theme.border,
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
     fontSize: 16,
+    color: theme.textPrimary,
+    backgroundColor: theme.bgcolor,
   },
   categoryItem: {
     flexDirection: 'row',
@@ -295,30 +302,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: AppColors.border,
+    borderBottomColor: theme.border,
   },
   categoryItemLabel: {
     flex: 1,
-    color: AppColors.textPrimary,
+    color: theme.textPrimary,
   },
   categoryItemCommission: {
-    color: AppColors.textSecondary,
+    color: theme.textSecondary,
     fontWeight: '600',
   },
   formGrid: {
-    gap: 12,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -6,
   },
   formControl: {
+    width: '50%',
+    paddingHorizontal: 6,
     marginBottom: 12,
+  },
+  formControlLeft: {
+    paddingRight: 3,
+  },
+  formControlRight: {
+    paddingLeft: 3,
   },
   input: {
     borderWidth: 1,
-    borderColor: AppColors.border,
+    borderColor: theme.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    color: AppColors.textPrimary,
-    backgroundColor: AppColors.white,
+    color: theme.textPrimary,
+    backgroundColor: theme.bgcolor,
   },
   switchGrid: {
     marginTop: 16,
@@ -328,9 +345,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: AppColors.border,
+    borderColor: theme.border,
     borderRadius: 12,
     padding: 12,
+    backgroundColor: theme.bgcolor,
   },
   switchInfo: {
     flex: 1,
@@ -338,11 +356,11 @@ const styles = StyleSheet.create({
   },
   switchLabel: {
     fontWeight: '600',
-    color: AppColors.textPrimary,
+    color: theme.textPrimary,
     marginBottom: 4,
   },
   switchHelper: {
-    color: AppColors.textSecondary,
+    color: theme.textSecondary,
   },
   switchAction: {
     flexDirection: 'row',
@@ -351,18 +369,18 @@ const styles = StyleSheet.create({
   },
   impact: {
     fontWeight: '600',
-    color: AppColors.textPrimary,
+    color: theme.textPrimary,
   },
   calculateButton: {
     width: '100%',
     marginTop: 16,
     padding: 16,
     borderRadius: 12,
-    backgroundColor: '#4338ca',
+    backgroundColor: theme.primaryOrange,
     alignItems: 'center',
   },
   calculateButtonText: {
-    color: AppColors.white,
+    color: theme.white,
     fontWeight: '600',
   },
 });

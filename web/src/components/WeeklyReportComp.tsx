@@ -11,14 +11,29 @@ const WeeklyReportComp: React.FC<WeeklyReportCompProps> = ({ onPress, text }) =>
     <div
       style={{
         backgroundColor: AppColors.card,
-        borderRadius: '8px',
+        borderRadius: '12px',
         padding: '16px',
         cursor: onPress ? 'pointer' : 'default',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        border: `1px solid ${AppColors.border}`,
+        transition: 'all 0.2s ease'
       }}
       onClick={onPress}
+      onMouseEnter={(e) => {
+        if (onPress) {
+          e.currentTarget.style.transform = 'translateY(-1px)'
+          e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (onPress) {
+          e.currentTarget.style.transform = 'translateY(0)'
+          e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+        }
+      }}
     >
       <span style={{
         fontSize: '14px',
@@ -37,4 +52,6 @@ const WeeklyReportComp: React.FC<WeeklyReportCompProps> = ({ onPress, text }) =>
 }
 
 export default WeeklyReportComp
+
+
 

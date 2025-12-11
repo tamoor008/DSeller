@@ -23,12 +23,14 @@ const IndividualDataComp: React.FC<IndividualDataCompProps> = ({
     return (
       <div style={{
         backgroundColor: AppColors.card,
-        borderRadius: '8px',
-        padding: '16px',
+        borderRadius: '12px',
+        padding: '20px',
         minHeight: '120px',
         display: 'flex',
         justifyContent: 'center',
-        alignItems: 'center'
+        alignItems: 'center',
+        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        border: `1px solid ${AppColors.border}`
       }}>
         <div style={{
           width: '24px',
@@ -47,15 +49,30 @@ const IndividualDataComp: React.FC<IndividualDataCompProps> = ({
       <div
         style={{
           backgroundColor: AppColors.card,
-          borderRadius: '8px',
-          padding: '16px',
+          borderRadius: '12px',
+          padding: '20px',
           minHeight: '120px',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          cursor: onPress ? 'pointer' : 'default'
+          cursor: onPress ? 'pointer' : 'default',
+          boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+          transition: 'all 0.2s ease',
+          border: `1px solid ${AppColors.border}`
         }}
         onClick={onPress}
+        onMouseEnter={(e) => {
+          if (onPress) {
+            e.currentTarget.style.transform = 'translateY(-2px)'
+            e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (onPress) {
+            e.currentTarget.style.transform = 'translateY(0)'
+            e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+          }
+        }}
       >
         <div style={{
           display: 'flex',
@@ -97,4 +114,6 @@ const IndividualDataComp: React.FC<IndividualDataCompProps> = ({
 }
 
 export default IndividualDataComp
+
+
 

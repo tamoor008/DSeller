@@ -8,7 +8,7 @@ import {
   Text,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { AppColors } from '../../../constants/AppColors';
+import { useTheme } from '../../../context/ThemeContext';
 import FontFamilty from '../../../constants/FontFamilty';
 import TextComp from '../../components/TextComp';
 
@@ -22,8 +22,10 @@ const OPTIONS = [
 ];
 
 const OrderDurationHeader = ({ selectedRange, onChange, customDate }) => {
+  const { theme } = useTheme();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempDate, setTempDate] = useState(customDate || new Date());
+  const styles = getStyles(theme);
 
   const handleDateChange = (event, selectedDate) => {
     if (Platform.OS === 'android') {
@@ -122,31 +124,31 @@ const OrderDurationHeader = ({ selectedRange, onChange, customDate }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     padding: 12,
     flexWrap: 'wrap',
     rowGap: 16,
     columnGap: 16,
-    borderBottomColor: '#ddd',
+    borderBottomColor: theme.border,
     borderBottomWidth: 1,
   },
   option: {
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 20,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: theme.surface || theme.bgcolor,
   },
   selectedOption: {
-    backgroundColor: AppColors.greenbg,
+    backgroundColor: theme.greenbg,
   },
   optionText: {
     fontFamily: FontFamilty.medium,
-    color: '#555',
+    color: theme.textSecondary,
   },
   selectedText: {
-    color: AppColors.green,
+    color: theme.green,
     fontWeight: 'bold',
   },
   customDateView: {
@@ -154,12 +156,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   customDateText: {
-    color: '#444',
+    color: theme.textPrimary,
     fontSize: 14,
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#00000077',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -167,29 +169,29 @@ const styles = StyleSheet.create({
     width: '90%',
     padding: 20,
     borderRadius: 12,
-    backgroundColor: 'white',
+    backgroundColor: theme.card,
     alignItems: 'center',
   },
   confirmButton: {
     marginTop: 16,
-    backgroundColor: AppColors.green,
+    backgroundColor: theme.green,
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 10,
   },
   confirmButtonText: {
-    color: '#fff',
+    color: theme.white,
     fontWeight: '600',
   },
   cancelButton: {
     marginTop: 10,
-    backgroundColor: '#999',
+    backgroundColor: theme.border,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 10,
   },
   cancelButtonText: {
-    color: '#fff',
+    color: theme.white,
   },
 });
 

@@ -2,15 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Animated,
-    Image,
     ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from 'react-native';
-import { AppImages } from '../../../constants/AppImages';
-import { AppColors } from '../../../constants/AppColors';
+import Icon from 'react-native-vector-icons/Ionicons';
+import { useTheme } from '../../../context/ThemeContext';
 import { AppStrings } from '../../../constants/AppStrings';
 import FontFamilty from '../../../constants/FontFamilty';
 import TextComp from '../../components/TextComp';
@@ -19,15 +18,16 @@ import AddNewItem from './AddNewItem';
 import UpdateStock from './UpdateStock';
 import EditPrice from './EditPrice';
 
-import database from '@react-native-firebase/database';
+import { getDatabase, ref } from '@react-native-firebase/database';
 import { getAuth } from '@react-native-firebase/auth';
 
 
 const StockTab = ({ }) => {
+    const { theme } = useTheme();
     const auth = getAuth()
     const currentUser = auth.currentUser
     const [products, setProducts] = useState([]);
-    const productRef = database().ref(`users/${currentUser.uid}/products`);
+    const productRef = ref(getDatabase(), `users/${currentUser.uid}/products`);
     const [totalPrice, setTotalPrice] = useState(0)
     const [loader, setLoader] = useState(false)
     const [isVisible, setIsvisible] = useState(false)
@@ -133,7 +133,7 @@ const StockTab = ({ }) => {
 
     return (
 
-        <View style={{ rowGap: 16, flex: 1 }}>
+        <View style={{ rowGap: 16, flex: 1, backgroundColor: theme.bgcolor }}>
 
             <View style={styles.container}>
 
@@ -143,24 +143,24 @@ const StockTab = ({ }) => {
 
 
             {loader ?
-                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                    <ActivityIndicator color={AppColors.primaryOrange} size={'large'}></ActivityIndicator>
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.bgcolor }}>
+                    <ActivityIndicator color={theme.primaryOrange} size={'large'}></ActivityIndicator>
                 </View>
                 :
-                <View style={{ flex: 1 }}>
+                <View style={{ flex: 1, backgroundColor: theme.bgcolor }}>
                     {products.length > 0 ?
-                        <View style={{ backgroundColor: AppColors.white, elevation: 0, borderRadius: 4, zIndex: 0, borderLeftWidth: 1, borderRightWidth: 1, borderColor: AppColors.black25, flex: 1 }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, paddingVertical: 8, backgroundColor: AppColors.primaryOrange, borderTopEndRadius: 4, borderTopLeftRadius: 4 }}>
-                                <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2, }}>{AppStrings.name}</TextComp>
-                                <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 1, textAlign: 'center' }}>{AppStrings.up}</TextComp>
-                                <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 1, textAlign: 'center' }}>{AppStrings.quantity}</TextComp>
-                                <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 1, textAlign: 'center' }}>{AppStrings.total}</TextComp>
+                        <View style={{ backgroundColor: theme.card, elevation: 0, borderRadius: 4, zIndex: 0, borderLeftWidth: 1, borderRightWidth: 1, borderColor: theme.border, flex: 1 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, paddingVertical: 8, backgroundColor: theme.primaryOrange, borderTopEndRadius: 4, borderTopLeftRadius: 4 }}>
+                                <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: theme.white, flex: 2, }}>{AppStrings.name}</TextComp>
+                                <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: theme.white, flex: 1, textAlign: 'center' }}>{AppStrings.up}</TextComp>
+                                <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: theme.white, flex: 1, textAlign: 'center' }}>{AppStrings.quantity}</TextComp>
+                                <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: theme.white, flex: 1, textAlign: 'center' }}>{AppStrings.total}</TextComp>
                             </View>
 
-                            <ScrollView contentContainerStyle={{ paddingBottom: 32 }} style={{ paddingVertical: 8, paddingHorizontal: 16, flex: 1 }}>
-                                {products?.map((item, index) => <View style={{ flexDirection: 'row', alignItems: 'center', borderBottomWidth: index === products.length - 1 ? 0 : 1, borderColor: AppColors.black25, paddingVertical: 16 }} key={index}>
+                            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }} style={{ paddingVertical: 8, paddingHorizontal: 16, flex: 1 }}>
+                                {products?.map((item, index) => <View style={{ flexDirection: 'row', alignItems: 'center', borderBottomWidth: index === products.length - 1 ? 0 : 1, borderColor: theme.border, paddingVertical: 16 }} key={index}>
                                     <View style={{ flex: 2, flexDirection: 'row', alignItems: 'center', borderRadius: 100 }}>
-                                        <TextComp size={12} style={{ fontFamily: FontFamilty.medium, color: AppColors.black }}>{item.productName}</TextComp>
+                                        <TextComp size={12} style={{ fontFamily: FontFamilty.medium, color: theme.textPrimary }}>{item.productName}</TextComp>
                                     </View>
                                     <TouchableOpacity 
                                         onPress={() => {
@@ -170,28 +170,28 @@ const StockTab = ({ }) => {
                                         activeOpacity={0.7}
                                         style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', columnGap: 4 }}
                                     >
-                                        <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black, textAlign: 'center' }}>{'Rs ' + formatPrice(item.price)+'/'+item.unit}</TextComp>
-                                        <Image style={{ width: 14, height: 14, tintColor: AppColors.primaryOrange }} source={AppImages.updatestock} />
+                                        <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: theme.textPrimary, textAlign: 'center' }}>{'Rs ' + formatPrice(item.price)+'/'+item.unit}</TextComp>
+                                        <Icon name="create-outline" size={14} color={theme.primaryOrange} />
                                     </TouchableOpacity>
-                                    <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black, flex: 1, textAlign: 'center' }}>{item.quantity}</TextComp>
+                                    <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: theme.textPrimary, flex: 1, textAlign: 'center' }}>{item.quantity}</TextComp>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-start' }}>
-                                        <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.black80, textAlign: 'right' }}>{'Rs'}</TextComp>
-                                        <TextComp size={12} style={{ fontFamily: FontFamilty.semibold, color: AppColors.black, textAlign: 'right' }}>  {formatPrice(item.price * item.quantity)}</TextComp>
+                                        <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: theme.textSecondary, textAlign: 'right' }}>{'Rs'}</TextComp>
+                                        <TextComp size={12} style={{ fontFamily: FontFamilty.semibold, color: theme.textPrimary, textAlign: 'right' }}>  {formatPrice(item.price * item.quantity)}</TextComp>
                                     </View>
 
                                 </View>)}
                             </ScrollView>
 
-                            <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, paddingVertical: 8, backgroundColor: AppColors.primaryOrange, borderBottomEndRadius: 4, borderBottomLeftRadius: 4 }}>
-                                <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: AppColors.white, flex: 2, }}>{AppStrings.total}</TextComp>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, paddingVertical: 8, backgroundColor: theme.primaryOrange, borderBottomEndRadius: 4, borderBottomLeftRadius: 4 }}>
+                                <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: theme.white, flex: 2, }}>{AppStrings.total}</TextComp>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
-                                    <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: AppColors.white80, textAlign: 'right' }}>{'Rs '}</TextComp>
-                                    <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: AppColors.white, textAlign: 'right' }}>{formatPrice(totalPrice)}</TextComp>
+                                    <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: theme.white80, textAlign: 'right' }}>{'Rs '}</TextComp>
+                                    <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: theme.white, textAlign: 'right' }}>{formatPrice(totalPrice)}</TextComp>
                                 </View>
                             </View>
                         </View> :
-                        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                            <TextComp size={16} style={{ fontFamily: FontFamilty.semibold,textAlign:'center' }}>{AppStrings.therearenoproductsaddnewproductstoseethemhere}</TextComp>
+                        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.bgcolor }}>
+                            <TextComp size={16} numberOfLines={1} style={{ fontFamily: FontFamilty.semibold, textAlign:'center', color: theme.textPrimary }}>{AppStrings.therearenoproductsaddnewproductstoseethemhere}</TextComp>
 
                         </View>}
                 </View>
@@ -208,7 +208,7 @@ const StockTab = ({ }) => {
                             alignItems: 'flex-end',
                             justifyContent: 'flex-end',
                             rowGap: 16,
-                            backgroundColor: AppColors.bgcolor,
+                            backgroundColor: theme.bgcolor,
 
                             shadowColor: 'transparent'
 
@@ -216,17 +216,17 @@ const StockTab = ({ }) => {
                         }}
                     >
                         <TouchableOpacity onPress={() => setUpdateStock(true)} activeOpacity={0.9} style={{ flexDirection: 'row', alignItems: 'center', columnGap: 8, marginEnd: 16 }}>
-                            <TextComp numberOfLines={1} size={14} style={{ fontFamily: FontFamilty.semibold }}>{AppStrings.updatestock}</TextComp>
-                            <View style={{ backgroundColor: AppColors.orange20, borderRadius: 100, width: 48, height: 48, alignItems: 'center', justifyContent: 'center', }}>
-                                <Image style={{ width: 24, height: 24 }} source={AppImages.updatestock} />
+                            <TextComp numberOfLines={1} size={14} style={{ fontFamily: FontFamilty.semibold, color: theme.textPrimary }}>{AppStrings.updatestock}</TextComp>
+                            <View style={{ backgroundColor: theme.orange20, borderRadius: 100, width: 48, height: 48, alignItems: 'center', justifyContent: 'center', }}>
+                                <Icon name="create-outline" size={24} color={theme.primaryOrange} />
                             </View>
                         </TouchableOpacity>
 
 
                         <TouchableOpacity onPress={() => setIsvisible(true)} activeOpacity={0.9} style={{ flexDirection: 'row', alignItems: 'center', columnGap: 8, marginEnd: 16 }}>
-                            <TextComp numberOfLines={1} size={14} style={{ fontFamily: FontFamilty.semibold }}>{AppStrings.addnewproduct}</TextComp>
-                            <View style={{ backgroundColor: AppColors.orange20, borderRadius: 100, width: 48, height: 48, alignItems: 'center', justifyContent: 'center', }}>
-                                <Image style={{ width: 24, height: 24 }} source={AppImages.addproduct} />
+                            <TextComp numberOfLines={1} size={14} style={{ fontFamily: FontFamilty.semibold, color: theme.textPrimary }}>{AppStrings.addnewproduct}</TextComp>
+                            <View style={{ backgroundColor: theme.orange20, borderRadius: 100, width: 48, height: 48, alignItems: 'center', justifyContent: 'center', }}>
+                                <Icon name="add-circle-outline" size={24} color={theme.primaryOrange} />
                             </View>
                         </TouchableOpacity>
 
@@ -234,15 +234,14 @@ const StockTab = ({ }) => {
                 )}
 
 
-                <TouchableOpacity activeOpacity={0.9} onPress={toggleOptions} style={{ backgroundColor: AppColors.primaryOrange, borderRadius: 100, width: 75, height: 75, alignItems: 'center', justifyContent: 'center' }}>
-                    <Animated.Image
-                        source={AppImages.plus}
+                <TouchableOpacity activeOpacity={0.9} onPress={toggleOptions} style={{ backgroundColor: theme.primaryOrange, borderRadius: 100, width: 75, height: 75, alignItems: 'center', justifyContent: 'center' }}>
+                    <Animated.View
                         style={{
-                            width: 25,
-                            height: 25,
                             transform: [{ rotate: rotateInterpolate }],
                         }}
-                    />
+                    >
+                        <Icon name="add" size={25} color={theme.white} />
+                    </Animated.View>
                 </TouchableOpacity>
 
             </View>

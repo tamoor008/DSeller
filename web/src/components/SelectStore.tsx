@@ -61,9 +61,11 @@ const SelectStore: React.FC = () => {
     return (
       <div style={{
         backgroundColor: AppColors.card,
-        borderRadius: '8px',
-        padding: '16px',
-        marginBottom: '16px'
+        borderRadius: '12px',
+        padding: '20px',
+        marginBottom: '16px',
+        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        border: `1px solid ${AppColors.border}`
       }}>
         <p style={{
           margin: 0,
@@ -79,11 +81,13 @@ const SelectStore: React.FC = () => {
             backgroundColor: AppColors.primaryOrange,
             color: AppColors.white,
             border: 'none',
-            borderRadius: '4px',
-            padding: '8px 16px',
+            borderRadius: '8px',
+            padding: '10px 20px',
             fontSize: '14px',
-            fontWeight: 500,
-            cursor: 'pointer'
+            fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            boxShadow: '0 2px 4px rgba(248, 86, 6, 0.2)'
           }}
         >
           {AppStrings.addaccount}
@@ -92,13 +96,15 @@ const SelectStore: React.FC = () => {
     )
   }
 
-  return (
-    <div style={{
-      backgroundColor: AppColors.card,
-      borderRadius: '8px',
-      padding: '16px',
-      marginBottom: '16px'
-    }}>
+    return (
+      <div style={{
+        backgroundColor: AppColors.card,
+        borderRadius: '12px',
+        padding: '20px',
+        marginBottom: '16px',
+        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        border: `1px solid ${AppColors.border}`
+      }}>
       <div style={{
         display: 'flex',
         gap: '8px',
@@ -106,16 +112,18 @@ const SelectStore: React.FC = () => {
       }}>
         <button
           onClick={() => dispatch(setSelectedStore({}))}
-          style={{
-            backgroundColor: !selector.selectedStore?.id ? AppColors.primaryOrange : AppColors.surface,
-            color: !selector.selectedStore?.id ? AppColors.white : AppColors.textPrimary,
-            border: 'none',
-            borderRadius: '4px',
-            padding: '8px 16px',
-            fontSize: '14px',
-            fontWeight: 500,
-            cursor: 'pointer'
-          }}
+            style={{
+              backgroundColor: !selector.selectedStore?.id ? AppColors.primaryOrange : AppColors.surface,
+              color: !selector.selectedStore?.id ? AppColors.white : AppColors.textPrimary,
+              border: 'none',
+              borderRadius: '8px',
+              padding: '10px 16px',
+              fontSize: '14px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: !selector.selectedStore?.id ? '0 2px 4px rgba(248, 86, 6, 0.2)' : 'none'
+            }}
         >
           {AppStrings.allstores}
         </button>
@@ -127,11 +135,13 @@ const SelectStore: React.FC = () => {
               backgroundColor: selector.selectedStore?.id === store.id ? AppColors.primaryOrange : AppColors.surface,
               color: selector.selectedStore?.id === store.id ? AppColors.white : AppColors.textPrimary,
               border: 'none',
-              borderRadius: '4px',
-              padding: '8px 16px',
+              borderRadius: '8px',
+              padding: '10px 16px',
               fontSize: '14px',
               fontWeight: 500,
-              cursor: 'pointer'
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: selector.selectedStore?.id === store.id ? '0 2px 4px rgba(248, 86, 6, 0.2)' : 'none'
             }}
           >
             {store.user?.seller?.data?.name || `Store ${store.id}`}
@@ -143,11 +153,12 @@ const SelectStore: React.FC = () => {
             backgroundColor: AppColors.surface,
             color: AppColors.textPrimary,
             border: `1px solid ${AppColors.border}`,
-            borderRadius: '4px',
-            padding: '8px 16px',
+            borderRadius: '8px',
+            padding: '10px 16px',
             fontSize: '14px',
             fontWeight: 500,
-            cursor: 'pointer'
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
           }}
         >
           + {AppStrings.addaccount}
@@ -158,4 +169,6 @@ const SelectStore: React.FC = () => {
 }
 
 export default SelectStore
+
+
 

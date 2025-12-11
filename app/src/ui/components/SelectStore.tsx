@@ -9,13 +9,14 @@ import {
     View,
     SafeAreaView
 } from 'react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
+import { useTheme } from '../../context/ThemeContext';
 import { AppImages } from '../../constants/AppImages';
 import { AppStrings } from '../../constants/AppStrings';
 import FontFamilty from '../../constants/FontFamilty';
-import { AppColors } from '../../constants/AppColors';
 import TextComp from './TextComp';
 import { getAuth } from '@react-native-firebase/auth';
-import database from '@react-native-firebase/database';
+import { getDatabase, ref } from '@react-native-firebase/database';
 import WebView from 'react-native-webview';
 import { setAccessToken, setAccessTokens, setSelectedStore } from '../../redux/AppReducer';
 import { useDispatch, useSelector } from 'react-redux';
@@ -23,6 +24,7 @@ import { getBaseUrl } from '../../utils/api/baseUrl';
 
 
 const SelectStore = () => {
+    const { theme } = useTheme();
     const BASE_URL = getBaseUrl(); // instant access, no async
 
     const auth = getAuth()
@@ -99,7 +101,7 @@ const SelectStore = () => {
             console.log('🏪 [Firebase] Seller ID:', sellerId);
             console.log('📦 [Firebase] User Data Keys:', Object.keys(user));
 
-            const sellerRef = database().ref(firebasePath);
+            const sellerRef = ref(getDatabase(), firebasePath);
 
             console.log('🔍 [Firebase] Checking if seller already exists...');
             const snapshot = await sellerRef.once('value');
@@ -141,9 +143,9 @@ const SelectStore = () => {
             return;
         }
 
-        const ref = database().ref(`/users/${currentUser.uid}/stores`);
+        const storesRef = ref(getDatabase(), `users/${currentUser.uid}/stores`);
 
-        const onValueChange = ref.on('value', snapshot => {
+        const onValueChange = storesRef.on('value', snapshot => {
             const data = snapshot.val();
             // console.log('User stores (real-time):', data);
 
@@ -168,7 +170,7 @@ const SelectStore = () => {
         });
 
         // Return a cleanup function to remove the listener
-        return () => ref.off('value', onValueChange);
+        return () => storesRef.off('value', onValueChange);
     };
 
     const deleteSeller = async (sellerId) => {
@@ -189,7 +191,7 @@ const SelectStore = () => {
                         text: "Delete",
                         onPress: async () => {
                             try {
-                                const sellerRef = database().ref(`/users/${currentUser.uid}/stores/${sellerId}`);
+                                const sellerRef = ref(getDatabase(), `users/${currentUser.uid}/stores/${sellerId}`);
                                 const snapshot = await sellerRef.once('value');
 
                                 if (!snapshot.exists()) {
@@ -327,9 +329,9 @@ const SelectStore = () => {
         <View style={styles.container}>
             {stores.length <= 0 ?
                 <View>
-                    <TextComp size={14} style={{ fontFamily: FontFamilty.medium, color: AppColors.black50 }}>{AppStrings.youhavenoconnecteddarazstoreatthemoment}</TextComp>
+                    <TextComp size={14} numberOfLines={1} style={{ fontFamily: FontFamilty.medium, color: theme.textSecondary }}>{AppStrings.youhavenoconnecteddarazstoreatthemoment}</TextComp>
                     <TouchableOpacity onPress={() => setDarazOAuth(true)}>
-                        <TextComp size={16} style={{ fontFamily: FontFamilty.medium, color: AppColors.primaryOrange }}>{AppStrings.addaccount}</TextComp>
+                        <TextComp size={16} numberOfLines={1} style={{ fontFamily: FontFamilty.medium, color: theme.primaryOrange }}>{AppStrings.addaccount}</TextComp>
                     </TouchableOpacity>
                 </View>
                 :
@@ -337,16 +339,16 @@ const SelectStore = () => {
                     {selector.selectedStore.id ?
 
                         <TouchableOpacity onPress={() => setExpandedSellers(!expandedSellers)} activeOpacity={0.9} style={{ flexDirection: 'row', alignItems: 'center', columnGap: 5 }}>
-                            <TextComp size={16} style={{ fontFamily: FontFamilty.medium, color: AppColors.black }}>{selector.selectedStore?.user?.seller?.data?.name}</TextComp>
-                            <Image resizeMode='contain' style={{ width: 10, height: 10 }} source={AppImages.dropdown} />
+                            <TextComp size={16} numberOfLines={1} style={{ fontFamily: FontFamilty.medium, color: theme.textPrimary }}>{selector.selectedStore?.user?.seller?.data?.name}</TextComp>
+                            <Icon name="chevron-down" size={16} color={theme.textPrimary} />
                         </TouchableOpacity> :
                         <TouchableOpacity onPress={() => setExpandedSellers(!expandedSellers)} activeOpacity={0.9} style={{ flexDirection: 'row', alignItems: 'center', columnGap: 5 }}>
-                            <TextComp size={16} style={{ fontFamily: FontFamilty.medium, color: AppColors.black }}>{AppStrings.allstores}</TextComp>
-                            <Image resizeMode='contain' style={{ width: 10, height: 10 }} source={AppImages.dropdown} />
+                            <TextComp size={16} numberOfLines={1} style={{ fontFamily: FontFamilty.medium, color: theme.textPrimary }}>{AppStrings.allstores}</TextComp>
+                            <Icon name="chevron-down" size={16} color={theme.textPrimary} />
                         </TouchableOpacity>
                     }
                     {expandedSellers && (
-                        <View style={{ backgroundColor: AppColors.bgcolor, elevation: 10, borderRadius: 16, padding: 16, rowGap: 16, marginVertical: 16 }}>
+                        <View style={{ backgroundColor: theme.card, elevation: 10, borderRadius: 16, padding: 16, rowGap: 16, marginVertical: 16 }}>
                             {stores.map((item, index) => {
                                 // Replace 'EXCLUDE123' with the ID you want to skip
                                 if (item?.user?.seller?.data?.short_code === selector.selectedStore.id) return null;
@@ -354,17 +356,17 @@ const SelectStore = () => {
                                 return (
                                     <View key={index} style={{ paddingBottom: 8, flexDirection: 'row', alignItems: 'center' }}>
                                         <View style={{ flex: 1 }}>
-                                            <TextComp size={16} style={{ color: AppColors.black, fontFamily: FontFamilty.medium,}}>
+                                            <TextComp size={16} numberOfLines={1} style={{ color: theme.textPrimary, fontFamily: FontFamilty.medium,}}>
                                                 {item?.user?.seller?.data?.name}
                                             </TextComp>
                                             <TouchableOpacity style={{ }} onPress={() => setStore(item)}>
-                                                <TextComp size={12} style={{ color: AppColors.primaryOrange, fontFamily: FontFamilty.medium, }}>
+                                                <TextComp size={12} numberOfLines={1} style={{ color: theme.primaryOrange, fontFamily: FontFamilty.medium, }}>
                                                     {AppStrings.watchdetailsonlyforthisstore}
                                                 </TextComp>
                                             </TouchableOpacity>
                                         </View>
                                         <TouchableOpacity onPress={() => deleteSeller(item?.user?.seller?.data?.short_code)}>
-                                            <Image style={{ width: 32, height: 32 }} source={AppImages.bin} />
+                                            <Icon name="trash-outline" size={24} color={theme.red} />
                                         </TouchableOpacity>
                                     </View>
                                 );
@@ -372,7 +374,7 @@ const SelectStore = () => {
 
                             {selector.selectedStore.id && (
                                 <TouchableOpacity onPress={() => setStore('')} style={{}}>
-                                    <TextComp size={12} style={{ color: AppColors.primaryOrange, fontFamily: FontFamilty.medium, }}>
+                                    <TextComp size={12} numberOfLines={1} style={{ color: theme.primaryOrange, fontFamily: FontFamilty.medium, }}>
                                         {AppStrings.watchdetailsofallstore}
                                     </TextComp>
                                 </TouchableOpacity>
@@ -380,9 +382,9 @@ const SelectStore = () => {
                             )}
                         </View>
                     )}
-                    <TextComp size={12} style={{ fontFamily: FontFamilty.medium, color: AppColors.black50 }}>{AppStrings.total + ' : ' + stores.length}</TextComp>
+                    <TextComp size={12} numberOfLines={1} style={{ fontFamily: FontFamilty.medium, color: theme.textSecondary }}>{AppStrings.total + ' : ' + stores.length}</TextComp>
                     <TouchableOpacity onPress={() => setDarazOAuth(true)}>
-                        <TextComp size={16} style={{ fontFamily: FontFamilty.medium, color: AppColors.primaryOrange }}>{AppStrings.addaccount}</TextComp>
+                        <TextComp size={16} numberOfLines={1} style={{ fontFamily: FontFamilty.medium, color: theme.primaryOrange }}>{AppStrings.addaccount}</TextComp>
                     </TouchableOpacity>
                 </View>
             }
@@ -394,10 +396,10 @@ const SelectStore = () => {
                     presentationStyle="fullScreen"
                     onRequestClose={() => setDarazOAuth(false)}
                 >
-                    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+                    <SafeAreaView style={{ flex: 1, backgroundColor: theme.bgcolor }}>
                         <View style={{ alignItems: 'flex-end', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8 }}>
                             <TouchableOpacity onPress={() => setDarazOAuth(false)}>
-                                <Image style={{ width: 24, height: 24 }} source={AppImages.cross} />
+                                <Icon name="close" size={24} color={theme.textPrimary} />
                             </TouchableOpacity>
                         </View>
                         <WebView

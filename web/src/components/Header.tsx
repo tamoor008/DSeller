@@ -27,7 +27,9 @@ const Header: React.FC<HeaderProps> = ({ goBack, info, title }) => {
         display: 'flex',
         alignItems: 'center',
         width: '100%',
-        gap: '8px'
+        gap: '12px',
+        padding: '16px 0',
+        marginBottom: '8px'
       }}>
         {goBack !== undefined && (
           <button
@@ -36,9 +38,17 @@ const Header: React.FC<HeaderProps> = ({ goBack, info, title }) => {
               background: 'none',
               border: 'none',
               cursor: 'pointer',
-              padding: '4px',
+              padding: '6px',
               display: 'flex',
-              alignItems: 'center'
+              alignItems: 'center',
+              borderRadius: '6px',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#F9F9F9'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent'
             }}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={AppColors.textPrimary} strokeWidth="2">
@@ -50,7 +60,7 @@ const Header: React.FC<HeaderProps> = ({ goBack, info, title }) => {
           flex: 1,
           margin: 0,
           fontSize: '20px',
-          fontWeight: 400,
+          fontWeight: 600,
           color: AppColors.textPrimary
         }}>
           {title}
@@ -62,9 +72,17 @@ const Header: React.FC<HeaderProps> = ({ goBack, info, title }) => {
               background: 'none',
               border: 'none',
               cursor: 'pointer',
-              padding: '4px',
+              padding: '6px',
               display: 'flex',
-              alignItems: 'center'
+              alignItems: 'center',
+              borderRadius: '6px',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#F9F9F9'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent'
             }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={AppColors.textPrimary} strokeWidth="2">
@@ -82,4 +100,6 @@ const Header: React.FC<HeaderProps> = ({ goBack, info, title }) => {
 }
 
 export default Header
+
+
 

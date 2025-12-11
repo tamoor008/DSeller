@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
-import { AppColors } from '../../../constants/AppColors';
+import { useTheme } from '../../../context/ThemeContext';
 import TextComp from '../../components/TextComp';
 import FontFamilty from '../../../constants/FontFamilty';
 import OrderDurationHeader from '../components/OrderDurationHeader';
@@ -27,6 +27,7 @@ import { getBaseUrl } from '../../../utils/api/baseUrl';
 
 
 const DeliveredOrders = ({ navigation }) => {
+    const { theme } = useTheme();
     const BASE_URL = getBaseUrl(); // instant access, no async
 
     const route = useRoute();
@@ -100,9 +101,11 @@ const DeliveredOrders = ({ navigation }) => {
 
 
 
+    const styles = getStyles(theme);
+
     const renderOrder = (item, onProfitCalculated,) => (
         <View style={styles.card}>
-            <TextComp style={styles.orderId}>Order ID: {item.order_id}</TextComp>
+            <TextComp size={16} style={styles.orderId} numberOfLines={1}>Order ID: {item.order_id}</TextComp>
             {item.order_items.map((orderItem) => (
                 <OrderItem
                     failed={false}
@@ -360,8 +363,8 @@ const DeliveredOrders = ({ navigation }) => {
 
 
     return (
-        <View style={{ flex: 1, backgroundColor: AppColors.bgcolor }}>
-            <View style={{ flex: 1, borderBottomWidth: 0, borderColor: 'white' }}>
+        <View style={{ flex: 1, backgroundColor: theme.bgcolor }}>
+            <View style={{ flex: 1, borderBottomWidth: 0, borderColor: theme.white }}>
 
                 <View style={{ rowGap: 16, margin: 16 }}>
                     <Header title={AppStrings.DeliveredOrders} goBack={goBack} />
@@ -385,16 +388,16 @@ const DeliveredOrders = ({ navigation }) => {
                 {selectedRange == 'By Week' && <WeekRangePST onWeekSelected={onWeekSelected} />}
                 {darazOrdersLoader ?
                     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                        <ActivityIndicator size={'large'} color={AppColors.primaryOrange}></ActivityIndicator>
+                        <ActivityIndicator size={'large'} color={theme.primaryOrange}></ActivityIndicator>
                     </View>
                     :
-                    <ScrollView>
+                    <ScrollView showsVerticalScrollIndicator={false}>
 
 
                         <FlatList
                             scrollEnabled={false}
                             ListHeaderComponent={
-                                <TextComp style={styles.headerComp}>
+                                <TextComp size={16} style={styles.headerComp} numberOfLines={1}>
                                     Total Orders: {getOrdersCountBySelectedRange()}
                                 </TextComp>
                             }
@@ -403,7 +406,7 @@ const DeliveredOrders = ({ navigation }) => {
                             renderItem={({ item }) => renderOrder(item, handleProfitCalculated)}
                             contentContainerStyle={styles.container}
                             ListEmptyComponent={
-                                <TextComp style={styles.emptyTextComp}>
+                                <TextComp size={16} style={styles.emptyTextComp} numberOfLines={1}>
                                     No delivered orders found.
                                 </TextComp>
                             }
@@ -412,10 +415,10 @@ const DeliveredOrders = ({ navigation }) => {
                     </ScrollView>
                 }
                 <View style={styles.totalProfitContainer}>
-                    <TextComp size={16} style={styles.profitText}>
+                    <TextComp size={16} style={styles.profitText} numberOfLines={1}>
                         Total Profit: Rs. {parseFloat(totalProfit).toFixed(2)}
                     </TextComp>
-                    <TextComp size={16} style={styles.profitText}>
+                    <TextComp size={16} style={styles.profitText} numberOfLines={1}>
                         Total Amount Received: Rs. {parseFloat(amountReceived).toFixed(2)}
                     </TextComp>
                 </View>
@@ -424,13 +427,13 @@ const DeliveredOrders = ({ navigation }) => {
     );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
     container: {
         padding: 16,
         flexGrow: 1
     },
     card: {
-        backgroundColor: '#fff',
+        backgroundColor: theme.card,
         borderRadius: 12,
         padding: 16,
         marginBottom: 16,
@@ -439,6 +442,7 @@ const styles = StyleSheet.create({
     orderId: {
         fontWeight: 'bold',
         marginBottom: 8,
+        color: theme.textPrimary,
     },
     orderItem: {
         flexDirection: 'row',
@@ -457,14 +461,14 @@ const styles = StyleSheet.create({
     productName: {
         fontWeight: '600',
         fontSize: 14,
-        color: '#000',
+        color: theme.textPrimary,
     },
     amount: {
-        color: '#444',
+        color: theme.textSecondary,
     },
     profitBadge: {
         borderRadius: 100,
-        backgroundColor: AppColors.greenbg,
+        backgroundColor: theme.greenbg,
         height: 30,
         alignItems: 'center',
         justifyContent: 'center',
@@ -472,14 +476,13 @@ const styles = StyleSheet.create({
         marginTop: 4,
     },
     profitText: {
-        color: AppColors.green,
+        color: theme.green,
         fontFamily: FontFamilty.medium,
     },
     totalProfitContainer: {
-
         position: 'absolute',
         bottom: 16,
-        backgroundColor: AppColors.greenbg,
+        backgroundColor: theme.greenbg,
         borderRadius: 100,
         paddingVertical: 10,
         alignItems: 'center',
@@ -490,13 +493,13 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginTop: 50,
         fontSize: 16,
-        color: '#777',
+        color: theme.textSecondary,
     },
     headerComp: {
         textAlign: 'center',
         marginTop: 8,
         fontSize: 16,
-        color: '#777',
+        color: theme.textSecondary,
     },
 });
 

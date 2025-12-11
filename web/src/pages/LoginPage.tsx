@@ -36,11 +36,12 @@ const LoginPage = () => {
     }}>
       <div style={{
         backgroundColor: AppColors.card,
-        padding: '2rem',
-        borderRadius: '8px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        padding: '2.5rem',
+        borderRadius: '16px',
+        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
         width: '100%',
-        maxWidth: '400px'
+        maxWidth: '420px',
+        border: `1px solid ${AppColors.border}`
       }}>
         <h1 style={{ 
           marginBottom: '1.5rem', 
@@ -73,10 +74,11 @@ const LoginPage = () => {
                 width: '100%',
                 padding: '0.75rem',
                 border: `1px solid ${AppColors.border}`,
-                borderRadius: '4px',
+                borderRadius: '8px',
                 fontSize: '1rem',
                 backgroundColor: AppColors.white,
-                color: AppColors.textPrimary
+                color: AppColors.textPrimary,
+                transition: 'all 0.2s ease'
               }}
             />
           </div>
@@ -102,10 +104,11 @@ const LoginPage = () => {
                 width: '100%',
                 padding: '0.75rem',
                 border: `1px solid ${AppColors.border}`,
-                borderRadius: '4px',
+                borderRadius: '8px',
                 fontSize: '1rem',
                 backgroundColor: AppColors.white,
-                color: AppColors.textPrimary
+                color: AppColors.textPrimary,
+                transition: 'all 0.2s ease'
               }}
             />
           </div>
@@ -126,15 +129,17 @@ const LoginPage = () => {
             disabled={loading}
             style={{
               width: '100%',
-              padding: '0.75rem',
+              padding: '0.875rem',
               backgroundColor: AppColors.primaryOrange,
               color: AppColors.white,
               border: 'none',
-              borderRadius: '4px',
+              borderRadius: '8px',
               fontSize: '1rem',
               cursor: loading ? 'not-allowed' : 'pointer',
               opacity: loading ? 0.6 : 1,
-              fontWeight: 500
+              fontWeight: 600,
+              boxShadow: '0 4px 6px -1px rgba(248, 86, 6, 0.3), 0 2px 4px -1px rgba(248, 86, 6, 0.2)',
+              transition: 'all 0.2s ease'
             }}
           >
             {loading ? 'Signing in...' : 'Sign In'}

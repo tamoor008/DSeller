@@ -6,21 +6,22 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useTheme } from '../../../context/ThemeContext';
 import TextComp from '../../components/TextComp';
 import FontFamilty from '../../../constants/FontFamilty';
-import { AppColors } from '../../../constants/AppColors';
 
 
 
 const DarazTabs = ({ tabs,toggleTabs }) => {
+    const { theme } = useTheme();
 
     return (
         <View style={styles.container}>
             {tabs.map((item, index) => (
                 <TouchableOpacity onPress={()=>{toggleTabs(index)}} activeOpacity={0.9} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }} key={index}>
-                    <TextComp size={16} style={{ fontFamily: FontFamilty.medium, color: item.selected ? AppColors.primaryOrange : AppColors.black50 }}>{item.title}</TextComp>
+                    <TextComp size={16} style={{ fontFamily: FontFamilty.medium, color: item.selected ? theme.primaryOrange : theme.black50 }}>{item.title}</TextComp>
                     {item.selected ? (
-                        <View style={{ height: 2, backgroundColor: AppColors.primaryOrange, width: '100%' }}></View>
+                        <View style={{ height: 2, backgroundColor: theme.primaryOrange, width: '100%' }}></View>
                     ):(
                         <View style={{ height: 2, width: '100%' }}></View>
                     )}

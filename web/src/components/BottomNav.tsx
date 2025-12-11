@@ -9,11 +9,15 @@ const BottomNav = () => {
   const tabs = [
     { path: '/', label: 'Home', icon: 'home' },
     { path: '/orders', label: 'Orders', icon: 'list' },
+    { path: '/profit-calculator', label: 'Calculator', icon: 'calculator' },
   ]
 
   const isActive = (path: string) => {
     if (path === '/') {
       return location.pathname === '/'
+    }
+    if (path === '/profit-calculator') {
+      return location.pathname === '/profit-calculator'
     }
     return location.pathname.startsWith(path)
   }
@@ -29,9 +33,11 @@ const BottomNav = () => {
       display: 'flex',
       justifyContent: 'space-around',
       alignItems: 'center',
-      padding: '8px 0',
+      padding: '12px 0 calc(12px + env(safe-area-inset-bottom))',
       zIndex: 1000,
-      boxShadow: '0 -2px 8px rgba(0,0,0,0.1)'
+      boxShadow: '0 -4px 6px -1px rgba(0, 0, 0, 0.1), 0 -2px 4px -1px rgba(0, 0, 0, 0.06)',
+      backdropFilter: 'blur(10px)',
+      WebkitBackdropFilter: 'blur(10px)'
     }}>
       {tabs.map((tab) => {
         const active = isActive(tab.path)
@@ -47,10 +53,22 @@ const BottomNav = () => {
               flexDirection: 'column',
               alignItems: 'center',
               gap: '4px',
-              padding: '8px 16px',
+              padding: '8px 20px',
               color: active ? AppColors.primaryOrange : AppColors.textSecondary,
               fontSize: '12px',
-              fontWeight: active ? 600 : 500
+              fontWeight: active ? 600 : 500,
+              transition: 'all 0.2s ease',
+              borderRadius: '8px'
+            }}
+            onMouseEnter={(e) => {
+              if (!active) {
+                e.currentTarget.style.backgroundColor = '#FFF4F0'
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!active) {
+                e.currentTarget.style.backgroundColor = 'transparent'
+              }
             }}
           >
             <svg
@@ -63,6 +81,8 @@ const BottomNav = () => {
             >
               {tab.icon === 'home' ? (
                 <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              ) : tab.icon === 'calculator' ? (
+                <path d="M4 2h16a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm3 4v2h2V6H7zm0 4v2h2v-2H7zm0 4v2h2v-2H7zm4-8v2h8V6h-8zm0 4v2h8v-2h-8zm0 4v2h8v-2h-8z" />
               ) : (
                 <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
               )}
@@ -76,4 +96,5 @@ const BottomNav = () => {
 }
 
 export default BottomNav
+
 

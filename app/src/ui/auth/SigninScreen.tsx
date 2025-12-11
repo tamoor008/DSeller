@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, ActivityIndicator, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { AppColors } from '../../constants/AppColors';
+import { useTheme } from '../../context/ThemeContext';
 import { setAccessToken, setGlobalUser, setisLoggedin } from '../../redux/AppReducer';
 import { useDispatch } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -13,6 +13,7 @@ import TextComp from '../components/TextComp';
 import { getAuth, signInWithEmailAndPassword } from '@react-native-firebase/auth';
 
 const SigninScreen = ({ navigation }) => {
+    const { theme } = useTheme();
 
     const [loader, setLoader] = useState(false)
     const [error, setError] = useState('')
@@ -60,16 +61,16 @@ const SigninScreen = ({ navigation }) => {
         }
     };
     return (
-        <View style={{ flex: 1, padding: 16, backgroundColor: AppColors.bgcolor }}>
+        <View style={{ flex: 1, padding: 16, backgroundColor: theme.bgcolor }}>
             {loader ? (
-                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: AppColors.bgcolor }}>
-                    <ActivityIndicator size={'large'} color={AppColors.primaryOrange}></ActivityIndicator>
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.bgcolor }}>
+                    <ActivityIndicator size={'large'} color={theme.primaryOrange}></ActivityIndicator>
                 </View>
             ) :
                 <View style={{ flex: 1, rowGap: 32 }}>
                     <AuthHeader heading={AppStrings.welcomeback} description={AppStrings.wereallymissedyou} />
 
-                    <ScrollView contentContainerStyle={{ rowGap: 32, flex: 1 }} style={{ flex: 1 }}>
+                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ rowGap: 32, flex: 1 }} style={{ flex: 1 }}>
                         <View style={{ rowGap: 8, flex: 1, }}>
                             <View style={{ rowGap: 16 }}>
                                 <TextInputComp keyboardType='email-address' size={16} placeHolder={AppStrings.email} text={email} setText={setEmail} />
@@ -78,13 +79,13 @@ const SigninScreen = ({ navigation }) => {
                             {/* <TextComp size={16} style={{ fontFamily: FontFamilty.medium, color: AppColors.primaryOrange, width: '100%', textAlign: 'right' }} >{AppStrings.forgotpassword}</TextComp> */}
                         </View>
                         <View style={{ rowGap: 8 }}>
-                            <TouchableOpacity onPress={handleSignin} activeOpacity={0.9} style={{ backgroundColor: AppColors.primaryOrange, height: 50, borderRadius: 100, alignItems: 'center', justifyContent: 'center', }}>
-                                <TextComp size={16} style={{ fontFamily: FontFamilty.black, color: AppColors.white }} >{AppStrings.signin}</TextComp>
+                            <TouchableOpacity onPress={handleSignin} activeOpacity={0.9} style={{ backgroundColor: theme.primaryOrange, height: 50, borderRadius: 100, alignItems: 'center', justifyContent: 'center', }}>
+                                <TextComp size={16} style={{ fontFamily: FontFamilty.black, color: theme.white }} numberOfLines={1}>{AppStrings.signin}</TextComp>
 
                             </TouchableOpacity>
                             <View style={{ flexDirection: 'row', columnGap: 8, justifyContent: 'center' }}>
-                                <TextComp size={16} style={{ fontFamily: FontFamilty.medium, color: AppColors.black }} >{AppStrings.donthaveanaccount}</TextComp>
-                                <Text onPress={navigateSignup} style={{ fontSize: 16, fontFamily: FontFamilty.black, color: AppColors.primaryOrange, includeFontPadding: false }} >{AppStrings.signup}</Text>
+                                <TextComp size={16} style={{ fontFamily: FontFamilty.medium, color: theme.textPrimary }} numberOfLines={1}>{AppStrings.donthaveanaccount}</TextComp>
+                                <Text onPress={navigateSignup} style={{ fontSize: 16, fontFamily: FontFamilty.black, color: theme.primaryOrange, includeFontPadding: false }} >{AppStrings.signup}</Text>
 
                             </View>
 

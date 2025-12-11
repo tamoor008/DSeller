@@ -84,3 +84,5 @@ const InfoModal: React.FC<InfoModalProps> = ({ setIsVisible, info }) => {
 
 export default InfoModal
 
+
+

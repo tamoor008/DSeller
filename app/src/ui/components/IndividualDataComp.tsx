@@ -1,30 +1,31 @@
 import React, { useState } from 'react';
 import {
     ActivityIndicator,
-    Image,
     Modal,
     StyleSheet,
     TouchableOpacity,
     View,
 } from 'react-native';
-import { AppImages } from '../../constants/AppImages';
+import Icon from 'react-native-vector-icons/Ionicons';
+import { useTheme } from '../../context/ThemeContext';
 import { AppStrings } from '../../constants/AppStrings';
 import FontFamilty from '../../constants/FontFamilty';
-import { AppColors } from '../../constants/AppColors';
 import TextComp from './TextComp';
 import InfoModal from './InfoModal';
 
 
 const IndividualDataComp = ({ data, label, onPress, info, loader }) => {
+    const { theme } = useTheme();
     const [isVisible, setIsvisible] = useState(false)
     const onInfoPress = () => {
         setIsvisible(true)
     }
+    const styles = getStyles(theme);
     return (
         <View style={styles.card}>
             {loader ?
                 <View style={{ justifyContent: 'center', alignItems: 'center', flex: 1 }}>
-                    <ActivityIndicator color={AppColors.primaryOrange}></ActivityIndicator>
+                    <ActivityIndicator color={theme.primaryOrange}></ActivityIndicator>
                 </View>
                 :
                 <View style={styles.card2}>
@@ -32,7 +33,7 @@ const IndividualDataComp = ({ data, label, onPress, info, loader }) => {
                     <View style={styles.topRow}>
                         <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
                             {/* <TextComp style={styles.currency}>Rs</TextComp> */}
-                            <TextComp style={styles.data}>{Math.floor(data)}</TextComp>
+                            <TextComp size={20} style={styles.data} numberOfLines={undefined}>{Math.floor(data)}</TextComp>
                         </View>
 
                         {/* <TouchableOpacity onPress={onInfoPress}>
@@ -42,17 +43,13 @@ const IndividualDataComp = ({ data, label, onPress, info, loader }) => {
 
                     <View style={styles.bottomRow}>
                         <View style={{ flex: 1 }}>
-                            <TextComp style={styles.label}>
+                            <TextComp size={16} style={styles.label} numberOfLines={undefined}>
                                 {label}
                             </TextComp>
                         </View>
                         {onPress && (
                             <TouchableOpacity style={styles.arrowButton} onPress={onPress}>
-                                <Image
-                                    resizeMode="contain"
-                                    style={{ width: 12, height: 12 }}
-                                    source={AppImages.arrow}
-                                />
+                                <Icon name="chevron-forward" size={12} color={theme.white} />
                             </TouchableOpacity>
                         )}
                     </View>
@@ -67,9 +64,9 @@ const IndividualDataComp = ({ data, label, onPress, info, loader }) => {
 
 
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
     card: {
-        backgroundColor: '#fff',
+        backgroundColor: theme.card,
         borderRadius: 12,
         padding: 12,
         flex: 1,
@@ -87,12 +84,12 @@ const styles = StyleSheet.create({
     currency: {
         fontSize: 14,
         fontFamily: 'Poppins-Regular',
-        color: '#666',
+        color: theme.textSecondary,
     },
     data: {
         fontSize: 20,
         fontFamily: 'Poppins-Bold',
-        color: '#000',
+        color: theme.textPrimary,
         marginHorizontal: 4,
     },
     bottomRow: {
@@ -104,9 +101,10 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 16,
         fontFamily: 'Poppins-Medium',
+        color: theme.textPrimary,
     },
     arrowButton: {
-        backgroundColor: '#f4511e',
+        backgroundColor: theme.primaryOrange,
         borderRadius: 16,
         padding: 6,
         alignItems: 'center',
