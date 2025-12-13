@@ -311,21 +311,42 @@ const HomeScreen = ({ navigation }) => {
     // this function get the orders from daraz api, orders with different statuses
     const getDarazOrders = async (access_token, createdAfterISO, status) => {
         try {
+            // Validate access token before making request
+            if (!access_token) {
+                console.warn("Missing access token for Daraz orders fetch");
+                return null;
+            }
+
             const response = await fetch(`${BASE_URL}/get-daraz-order-details?access_token=${access_token}&created_after=${encodeURIComponent(createdAfterISO)}&status=${status}`);
 
             if (!response.ok) {
-                throw new Error(`Server error: ${response.status}`);
+                const errorData = await response.json().catch(() => ({}));
+                console.warn(`Server error ${response.status}:`, errorData.error || errorData.message || 'Unknown error');
+                return null;
             }
 
             const data = await response.json();
+
+            // Check if response contains an error
+            if (data.error) {
+                console.warn("API returned error:", data.error, data.details || '');
+                return null;
+            }
+
+            // Ensure orderItems exists and is an array
+            if (!data.orderItems || !Array.isArray(data.orderItems)) {
+                console.warn("Invalid response format: orderItems missing or not an array");
+                return null;
+            }
 
             if (status == 'shipped') {
                 setShippedOrder(prev => [...prev, ...countSkusFromOrders(data.orderItems)]);
             }
 
-
+            return data;
         } catch (error) {
-            console.error("Error fetching Daraz orders: DARAZ ORDERS", error.message);
+            // Silently handle errors without showing notifications
+            console.warn("Error fetching Daraz orders:", error.message);
             return null;
         }
     };
@@ -466,38 +487,52 @@ const HomeScreen = ({ navigation }) => {
 
     // this function get the orders from daraz api, orders with different statuses
     const getDarazPendingOrders = async (access_token, createdAfterISO, status) => {
-
-
         try {
+            // Validate access token before making request
+            if (!access_token) {
+                console.warn("Missing access token for Daraz pending orders fetch");
+                return null;
+            }
+
             const response = await fetch(`${BASE_URL}/get-daraz-order-details?access_token=${access_token}&created_after=${encodeURIComponent(createdAfterISO)}&status=${status}`);
 
             if (!response.ok) {
-                throw new Error(`Server error: ${response.status}`);
+                const errorData = await response.json().catch(() => ({}));
+                console.warn(`Server error ${response.status}:`, errorData.error || errorData.message || 'Unknown error');
+                return null;
             }
 
             const data = await response.json();
 
+            // Check if response contains an error
+            if (data.error) {
+                console.warn("API returned error:", data.error, data.details || '');
+                return null;
+            }
+
+            // Ensure orderItems exists and is an array
+            if (!data.orderItems || !Array.isArray(data.orderItems)) {
+                console.warn("Invalid response format: orderItems missing or not an array");
+                return null;
+            }
 
             if (status == 'pending') {
-                setPendingOrdersCount(prev => prev + data.countTotal)
-                setPendingOrders(prev => [...prev, ...data.orderItems])
-
+                setPendingOrdersCount(prev => prev + (data.countTotal || 0))
+                setPendingOrders(prev => [...prev, ...(data.orderItems || [])])
             } else if (status == 'ready_to_ship') {
-                setReadyToShipOrdersCount(prev => prev + data.countTotal)
-                setReadyToShipOrders(prev => [...prev, ...data.orderItems])
-
+                setReadyToShipOrdersCount(prev => prev + (data.countTotal || 0))
+                setReadyToShipOrders(prev => [...prev, ...(data.orderItems || [])])
             } else {
                 if(status=='delivered'){                    
-                    setDarazDeliveredOrders(prev => [...prev, ...countSkusFromOrders(data.orderItems)])
-                    setDarazDeliveredOrdersCount(prev=>prev+data?.orderItems?.length)
+                    setDarazDeliveredOrders(prev => [...prev, ...countSkusFromOrders(data.orderItems || [])])
+                    setDarazDeliveredOrdersCount(prev=>prev+(data?.orderItems?.length || 0))
                 }
             }
 
-
-
-
+            return data;
         } catch (error) {
-            console.error("Error fetching Daraz orders PENDING ORDERS:", error.message);
+            // Silently handle errors without showing notifications
+            console.warn("Error fetching Daraz pending orders:", error.message);
             return null;
         }
     };

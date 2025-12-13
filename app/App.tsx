@@ -1,7 +1,8 @@
 import { NavigationContainer } from '@react-navigation/native';
 import React, { useEffect, useMemo, useState } from 'react';
-import { SafeAreaView, StatusBar, StyleSheet, View } from 'react-native';
+import { Platform, StatusBar, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 import { getAuth, onAuthStateChanged } from '@react-native-firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -93,10 +94,10 @@ const AppContent = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.bgcolor }}>
-    <SafeAreaView></SafeAreaView>
       <StatusBar
         barStyle={isDark ? "light-content" : "dark-content"}
         backgroundColor={theme.statusBar}
+        translucent={Platform.OS === 'ios'}
       />
       {splash ? (
         <SplashScreen />
@@ -110,11 +111,13 @@ const AppContent = () => {
 };
 
 const App = () => (
-  <GestureHandlerRootView style={{ flex: 1 }}>
-    <ThemeProvider>
-      <AppContent />
-    </ThemeProvider>
-  </GestureHandlerRootView>
+  <SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
+    </GestureHandlerRootView>
+  </SafeAreaProvider>
 );
 
 const styles = StyleSheet.create({

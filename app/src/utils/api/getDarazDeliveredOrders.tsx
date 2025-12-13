@@ -6,22 +6,44 @@ export const getDarazDeliveredOrders = async (access_token, createdAfterISO, sta
     const BASE_URL = getBaseUrl(); // instant access, no async
 
     try {
+        // Validate access token before making request
+        if (!access_token) {
+            console.warn("Missing access token for Daraz delivered orders fetch");
+            return [];
+        }
+
         const response = await fetch(
             `${BASE_URL}/get-daraz-delivered-order-details?access_token=${access_token}&update_after=${encodeURIComponent(createdAfterISO)}&status=${status}`
         );
 
         if (!response.ok) {
-            throw new Error(`Server error: ${response.status}`);
+            const errorData = await response.json().catch(() => ({}));
+            console.warn(`Server error ${response.status}:`, errorData.error || errorData.message || 'Unknown error');
+            return [];
         }
 
         const data = await response.json();
 
+        // Check if response contains an error
+        if (data.error) {
+            console.warn("API returned error:", data.error, data.details || '');
+            return [];
+        }
+
+        // Ensure orderItems exists and is an array
+        if (!data.orderItems || !Array.isArray(data.orderItems)) {
+            console.warn("Invalid response format: orderItems missing or not an array");
+            return [];
+        }
+
         // ✅ Get fresh state directly from the store
         const existingOrders = store.getState().AppReducer?.todayDeliveredOrders || [];
-        const newOrders = data?.orderItems || [];
+        const newOrders = data.orderItems;
         dispatch(setTodayDeliveredOrders([...existingOrders, ...newOrders]));
+        return newOrders;
     } catch (error) {
-        console.error("Error fetching Daraz orders:", error.message);
+        // Silently handle errors without showing notifications
+        console.warn("Error fetching Daraz delivered orders:", error.message);
         return [];
     }
 };
@@ -71,8 +93,8 @@ export const getDarazFailedOrders = async (access_token, update_after, update_be
 
         return data;
     } catch (error) {
-        console.error('❌ [FAILED ORDERS API] Error fetching failed orders:', error);
-        console.error('❌ [FAILED ORDERS API] Error message:', error.message);
+        // Silently handle errors without showing notifications
+        console.warn('❌ [FAILED ORDERS API] Error fetching failed orders:', error.message);
         return { orderItems: [], countTotal: 0 };
     }
 };

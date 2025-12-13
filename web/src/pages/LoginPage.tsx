@@ -3,6 +3,7 @@ import { signInWithEmailAndPassword } from 'firebase/auth'
 import { useNavigate, Link } from 'react-router-dom'
 import { auth } from '../config/firebase'
 import { AppColors } from '../constants/colors'
+import { AppStrings } from '../constants/strings'
 
 const LoginPage = () => {
   const [email, setEmail] = useState('')

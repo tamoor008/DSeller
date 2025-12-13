@@ -26,12 +26,24 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     reactNativeFactory = factory
 
     window = UIWindow(frame: UIScreen.main.bounds)
+    window?.backgroundColor = UIColor.white
 
     factory.startReactNative(
       withModuleName: "DSeller",
       in: window,
       launchOptions: launchOptions
     )
+    
+    // Ensure root view controller extends to full screen
+    if let rootViewController = window?.rootViewController {
+      rootViewController.view.frame = UIScreen.main.bounds
+      if #available(iOS 11.0, *) {
+        rootViewController.view.insetsLayoutMarginsFromSafeArea = false
+      }
+      rootViewController.edgesForExtendedLayout = .all
+    }
+    
+    window?.makeKeyAndVisible()
 
     return true
   }

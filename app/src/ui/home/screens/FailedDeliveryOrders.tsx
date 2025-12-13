@@ -259,22 +259,42 @@ const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
                 case 'today':
                     setfailedOrders([]);
                     setfailedOrdersCount(0);
+                    setReturningOrders([]);
+                    setReturningOrdersCount(0);
+                    setReturnedOrders([]);
+                    setReturnedOrdersCount(0);
                     break;
                 case 'yesterday':
                     setfailedOrdersYesterday([]);
                     setfailedOrdersYesterdayCount(0);
+                    setReturningOrdersYesterday([]);
+                    setReturningOrdersYesterdayCount(0);
+                    setReturnedOrdersYesterday([]);
+                    setReturnedOrdersYesterdayCount(0);
                     break;
                 case '7days':
                     setfailedOrdersSevenDays([]);
                     setfailedOrdersSevenDaysCount(0);
+                    setReturningOrdersSevenDays([]);
+                    setReturningOrdersSevenDaysCount(0);
+                    setReturnedOrdersSevenDays([]);
+                    setReturnedOrdersSevenDaysCount(0);
                     break;
                 case '30days':
                     setfailedOrdersThirtyDays([]);
                     setfailedOrdersThirtyDaysCount(0);
+                    setReturningOrdersThirtyDays([]);
+                    setReturningOrdersThirtyDaysCount(0);
+                    setReturnedOrdersThirtyDays([]);
+                    setReturnedOrdersThirtyDaysCount(0);
                     break;
                 case 'custom':
                     setfailedOrdersCustom([]);
                     setfailedOrdersCustomCount(0);
+                    setReturningOrdersCustom([]);
+                    setReturningOrdersCustomCount(0);
+                    setReturnedOrdersCustom([]);
+                    setReturnedOrdersCustomCount(0);
                     break;
             }
 
@@ -348,7 +368,7 @@ const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
         };
 
         fetchOrders();
-    }, [selectedRange]);
+    }, [selectedRange, all_access_tokens, customDate]);
 
 
 
