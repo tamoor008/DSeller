@@ -90,14 +90,15 @@ const OrderItem: React.FC<OrderItemProps> = ({ item, firebaseSkus, selector, onP
                 } else {
                     onProfitCalculated(localProfit, received);
                 }
-            } catch (error: any) {
-                console.error('Error fetching Income Detail of order:', error.message);
-                // Set default values on error
-                setDarazAmount(0);
-                setProductPrice(0);
-                setProfit(0);
-                onProfitCalculated(0, 0);
-            }
+        } catch (error: any) {
+            const errorMessage = error?.message || 'Unknown error occurred';
+            console.warn('⚠️ [OrderItem] Error fetching Income Detail of order:', errorMessage);
+            // Set default values on error - don't show alert as this happens for each item
+            setDarazAmount(0);
+            setProductPrice(0);
+            setProfit(0);
+            onProfitCalculated(0, 0);
+        }
         };
 
         fetchData();
@@ -143,8 +144,9 @@ const OrderItem: React.FC<OrderItemProps> = ({ item, firebaseSkus, selector, onP
             setIncomeModalVisible(true);
             console.log('Modal visibility set to true, incomeDetails:', data);
         } catch (error: any) {
-            console.error('Error fetching income details:', error.message);
-            Alert.alert('Error', 'Failed to fetch income details');
+            const errorMessage = error?.message || 'Unknown error occurred';
+            console.warn('⚠️ [OrderItem] Error fetching income details:', errorMessage);
+            Alert.alert('Error', 'Failed to fetch income details. Please try again.', [{ text: 'OK' }]);
         } finally {
             setIncomeLoading(false);
         }

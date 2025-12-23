@@ -15,9 +15,9 @@ import { AppStrings } from '../../../constants/AppStrings';
 import FontFamilty from '../../../constants/FontFamilty';
 import TextComp from '../../components/TextComp';
 import TextInputComp from '../../components/TextInputComp';
-import { ref, get, set, push } from 'firebase/database';
-import { auth, database } from '../../../../firebase';
+import { auth } from '../../../../firebase';
 import DropDownPicker from 'react-native-dropdown-picker';
+import { getBaseUrl } from '../../../utils/api/baseUrl';
 
 
 const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boolean) => void; selectedSku: any }) => {
@@ -27,16 +27,16 @@ const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boo
     const [productDescription, setProductDescription] = useState('')
     const [quantity, setQuantity] = useState('')
     const [price, setPrice] = useState('')
-    const updateSKUref = ref(database, `users/${currentUser?.uid}/skusList/${selectedSku.sku}`);
-    const productRef = ref(database, `users/${currentUser?.uid}/products`);
+    const [calculatedPrice, setCalculatedPrice] = useState<number>(0);
+    const BASE_URL = getBaseUrl();
 
     const [selectedProduct, setSelectedProduct] = useState<any>({})
     const [open, setOpen] = useState(false);
     const [value, setValue] = useState<string | null>(null);
     const [items, setItems] = useState<any[]>([]);
 
-    // Define fetchProduct using useCallback to ensure it's stable
-    const fetchProduct = useCallback((id: string) => {
+    // Define fetchProduct using useCallback to fetch from backend API
+    const fetchProduct = useCallback(async (id: string) => {
         console.log('[SkuLinking] 🔍 fetchProduct CALLED with id:', id);
         console.log('[SkuLinking] 🔍 Current user:', { uid: currentUser?.uid, hasUser: !!currentUser });
 
@@ -45,59 +45,43 @@ const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boo
             return;
         }
         
-        const firebasePath = `users/${currentUser.uid}/products/${id}`;
-        console.log('[SkuLinking] 🔍 Fetching from Firebase path:', firebasePath);
-        
-        const childRef = ref(database, firebasePath);
-        get(childRef)
-            .then(snapshot => {
-                const data = snapshot.val();
-                console.log('[SkuLinking] Product data received from Firebase:', {
-                    hasData: !!data,
-                    raw: data,
-                    priceType: typeof data?.price,
-                    priceValue: data?.price,
-                    productName: data?.productName,
-                    unit: data?.unit
-                });
-                
-                if (!data) {
-                    console.warn('[SkuLinking] No product data found for ID:', id);
-                    setSelectedProduct({});
-                    return;
-                }
-                
-                // Normalize price to number - handle both string and number formats
-                const priceValue = data.price;
-                let normalizedPrice = 0;
-                
-                if (typeof priceValue === 'string') {
-                    normalizedPrice = parseFloat(priceValue) || 0;
-                } else if (typeof priceValue === 'number') {
-                    normalizedPrice = priceValue;
-                } else {
-                    normalizedPrice = parseFloat(String(priceValue || '0')) || 0;
-                }
-                
-                const normalizedProduct = {
-                    ...data,
-                    price: normalizedPrice
-                };
-                
-                console.log('[SkuLinking] Normalized product:', {
-                    productName: normalizedProduct.productName,
-                    price: normalizedProduct.price,
-                    priceType: typeof normalizedProduct.price,
-                    unit: normalizedProduct.unit
-                });
-                
-                setSelectedProduct(normalizedProduct);
-            })
-            .catch(error => {
-                console.error('[SkuLinking] Error fetching product data:', error);
+        try {
+            const response = await fetch(`${BASE_URL}/api/products/${currentUser.uid}/${id}`);
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.warn('[SkuLinking] ❌ API error:', errorData.error || 'Unknown error');
                 setSelectedProduct({});
+                return;
+            }
+
+            const result = await response.json();
+            
+            if (result.error) {
+                console.warn('[SkuLinking] ❌ API returned error:', result.error);
+                setSelectedProduct({});
+                return;
+            }
+
+            const product = result.data;
+            console.log('[SkuLinking] ✅ Product data received from backend:', {
+                productName: product.productName,
+                price: product.price,
+                priceType: typeof product.price,
+                unit: product.unit
             });
-    }, [currentUser]);
+            
+            setSelectedProduct(product);
+            
+            // Recalculate price when product changes
+            if (quantity) {
+                calculateSkuPrice(product.price, quantity);
+            }
+        } catch (error: any) {
+            console.error('[SkuLinking] ❌ Error fetching product data:', error.message);
+            setSelectedProduct({});
+        }
+    }, [currentUser, BASE_URL]);
 
     // Initialize quantity and pre-select product if selectedSku has productId
     useEffect(() => {
@@ -126,10 +110,7 @@ const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boo
         
         if (value && currentUser) {
             console.log('[SkuLinking] ✅ Conditions met, calling fetchProduct:', value);
-            // Use setTimeout to ensure state is updated
-            setTimeout(() => {
-                fetchProduct(value);
-            }, 0);
+            fetchProduct(value);
         } else {
             console.log('[SkuLinking] ❌ Cannot fetch - missing value or currentUser:', { 
                 value, 
@@ -140,75 +121,129 @@ const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boo
         }
     }, [value, currentUser, fetchProduct]);
 
+    // Calculate SKU price using backend API
+    const calculateSkuPrice = useCallback(async (unitPrice: number, qty: string) => {
+        if (!unitPrice || !qty) {
+            setCalculatedPrice(0);
+            return;
+        }
+
+        try {
+            const response = await fetch(`${BASE_URL}/api/skus/calculate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    quantity: qty,
+                    unitPrice: unitPrice,
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.warn('[SkuLinking] Error calculating price:', errorData.error || 'Unknown error');
+                return;
+            }
+
+            const result = await response.json();
+            
+            if (result.error) {
+                console.warn('[SkuLinking] API returned error:', result.error);
+                return;
+            }
+
+            setCalculatedPrice(result.data.totalPrice);
+        } catch (error: any) {
+            console.error('[SkuLinking] Error calculating SKU price:', error.message);
+        }
+    }, [BASE_URL]);
+
+    // Recalculate price when quantity or product price changes
+    useEffect(() => {
+        if (selectedProduct?.price && quantity) {
+            calculateSkuPrice(selectedProduct.price, quantity);
+        } else {
+            setCalculatedPrice(0);
+        }
+    }, [quantity, selectedProduct?.price, calculateSkuPrice]);
+
+    // Fetch products list from backend API
     useEffect(() => {
         if (!currentUser) return;
         
-        get(productRef)
-            .then(snapshot => {
-
-                const data = snapshot.val();
-                // console.log(data,'firebase data about skus');
-
-
-                if (data) {
-                    const array = Object.entries(data).map(([id, value]: [string, any]) => ({
-                        id,
-                        ...value,
-                    }));
-                    // console.log(array,'firebase incominng array');
-
-                    setItems(array);
+        const fetchProducts = async () => {
+            try {
+                const response = await fetch(`${BASE_URL}/api/products/${currentUser.uid}`);
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('[SkuLinking] Error fetching products:', errorData.error || 'Unknown error');
+                    return;
                 }
 
-            })
-            .catch(error => {
-                console.error('Error fetching data:', error);
-            });
-    }, [])
+                const result = await response.json();
+                
+                if (result.error) {
+                    console.error('[SkuLinking] API returned error:', result.error);
+                    return;
+                }
 
-    const updateSku = () => {
-        if (!value) {
-            console.warn('[SkuLinking] Cannot update SKU: no product selected');
+                if (result.data && Array.isArray(result.data)) {
+                    setItems(result.data);
+                }
+            } catch (error: any) {
+                console.error('[SkuLinking] Error fetching products:', error.message);
+            }
+        };
+
+        fetchProducts();
+    }, [currentUser, BASE_URL]);
+
+    const updateSku = async () => {
+        if (!value || !currentUser) {
+            console.warn('[SkuLinking] Cannot update SKU: no product selected or no user');
             return;
         }
         
-        // Parse quantity and price to numbers
-        const quantityNum = parseFloat(quantity || selectedSku.productQuantity || '0') || 0;
-        const price = selectedProduct?.price;
-        let priceNum = 0;
-        if (price !== undefined && price !== null) {
-            priceNum = typeof price === 'number' ? price : parseFloat(String(price)) || 0;
-        }
-        const calculatedPrice = quantityNum * priceNum;
+        const quantityNum = quantity || selectedSku.productQuantity || '0';
         
-        console.log('[SkuLinking] updateSku calculation:', {
-            quantity: quantityNum,
-            price: priceNum,
-            calculatedPrice: calculatedPrice,
-            productId: value
-        });
-      
-        const updates = {
-          price: calculatedPrice,
-          productId: value,
-          productQuantity: quantityNum.toString(),
-          productName: (selectedProduct as any)?.productName || '',
-          sku: selectedSku.sku
-        };
-        
-        console.log('[SkuLinking] Updates to save:', updates);
-      
-        set(updateSKUref, updates)
-          .then(() => {
-            console.log('[SkuLinking] SKU updated successfully');
+        try {
+            // Use backend API to calculate and update SKU (handles all calculations server-side)
+            const response = await fetch(`${BASE_URL}/api/skus/${currentUser.uid}/${selectedSku.sku}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    productId: value,
+                    quantity: quantityNum,
+                    productName: (selectedProduct as any)?.productName || '',
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('[SkuLinking] Error updating SKU:', errorData.error || 'Unknown error');
+                return;
+            }
+
+            const result = await response.json();
+            
+            if (result.error) {
+                console.error('[SkuLinking] API returned error:', result.error);
+                return;
+            }
+
+            console.log('[SkuLinking] ✅ SKU updated successfully via backend:', result.data);
             setValue(null);
             setQuantity('');
-            setIsvisible(false)
-          })
-          .catch(error => {
-            console.error('[SkuLinking] Error updating SKU:', error);
-          });
-      };
+            setCalculatedPrice(0);
+            setIsvisible(false);
+        } catch (error: any) {
+            console.error('[SkuLinking] ❌ Error updating SKU:', error.message);
+        }
+    };
 
 
     const isFormValid = value && quantity 
@@ -269,7 +304,12 @@ const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boo
                                     size={16} 
                                     placeHolder={'Quantity'} 
                                     text={quantity || (selectedSku.productQuantity ? selectedSku.productQuantity.toString() : '')} 
-                                    setText={setQuantity}
+                                    setText={(text: string) => {
+                                        setQuantity(text);
+                                        if (selectedProduct?.price) {
+                                            calculateSkuPrice(selectedProduct.price, text);
+                                        }
+                                    }}
                                     secureTextEntry={false}
                                 />
                                 <TextComp size={12} style={{ fontFamily: FontFamilty.medium, color: theme.textSecondary }} numberOfLines={1}>{((selectedProduct as any)?.unit || '') + ' / sku'}</TextComp>
@@ -303,17 +343,7 @@ const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boo
                         <View style={{ flexDirection: 'row', columnGap: 8, alignItems: 'center' }}>
                             <TextComp size={16} style={{ fontFamily: FontFamilty.medium, color: theme.textPrimary }} numberOfLines={1}>{'SKU Price'}</TextComp>
                             <TextComp size={16} style={{ fontFamily: FontFamilty.medium, color: theme.primaryOrange }} numberOfLines={1}>
-                                {(() => {
-                                    const qty = parseFloat(quantity || selectedSku.productQuantity || '0') || 0;
-                                    const price = selectedProduct?.price;
-                                    let prc = 0;
-                                    if (price !== undefined && price !== null) {
-                                        prc = typeof price === 'number' ? price : parseFloat(String(price)) || 0;
-                                    }
-                                    const total = qty * prc;
-                                    console.log('[SkuLinking] SKU Price calculation:', { qty, prc, total, price, selectedProduct });
-                                    return isNaN(total) ? '0.00' : total.toFixed(2);
-                                })()}
+                                {calculatedPrice > 0 ? calculatedPrice.toFixed(2) : '0.00'}
                             </TextComp>
 </View>
                         <View style={{ flexDirection: 'row', alignItems: 'center', columnGap: 16 }}>

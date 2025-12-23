@@ -18,15 +18,15 @@ import AddNewItem from './AddNewItem';
 import UpdateStock from './UpdateStock';
 import EditPrice from './EditPrice';
 
-import { ref, onValue, off, get } from 'firebase/database';
-import { auth, database } from '../../../../firebase';
+import { auth } from '../../../../firebase';
+import { getBaseUrl } from '../../../utils/api/baseUrl';
 
 
 const StockTab = ({ }) => {
     const { theme } = useTheme();
     const currentUser = auth.currentUser
+    const BASE_URL = getBaseUrl();
     const [products, setProducts] = useState([]);
-    const productRef = ref(database, `users/${currentUser?.uid}/products`);
     const [totalPrice, setTotalPrice] = useState(0)
     const [loader, setLoader] = useState(false)
     const [isVisible, setIsvisible] = useState(false)
@@ -37,43 +37,84 @@ const StockTab = ({ }) => {
     useEffect(() => {
         if (!currentUser) return;
         
-        setLoader(true)
-        get(productRef)
-            .then(snapshot => {
-                console.log('User data: ', snapshot.val());
-
-                const data = snapshot.val();
-
-                if (data) {
-                    const array = Object.entries(data).map(([id, value]: [string, any]) => ({
-                        id,
-                        ...value,
-                    }));
-                    console.log('User data array: ', array);
-                    setProducts(array);
-                } else {
-                    console.log('No product data found.');
-                    setProducts([]); // Optional: clear products if nothing is found
+        const fetchProducts = async () => {
+            try {
+                setLoader(true);
+                const response = await fetch(`${BASE_URL}/api/products/${currentUser.uid}`);
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('Error fetching products:', errorData.error || 'Unknown error');
+                    setProducts([]);
+                    setLoader(false);
+                    return;
                 }
 
+                const result = await response.json();
+                if (result.error) {
+                    console.error('API returned error:', result.error);
+                    setProducts([]);
+                    setLoader(false);
+                    return;
+                }
+
+                console.log('Products fetched:', result.data);
+                setProducts(result.data || []);
                 setLoader(false);
-            })
-            .catch(error => {
-                console.error('Error fetching data:', error);
-                setLoader(false); // ensure loader stops even on error
+            } catch (error: any) {
+                console.error('Error fetching products:', error.message);
+                setProducts([]);
+                setLoader(false);
+            }
+        };
+
+        fetchProducts();
+    }, [isVisible, updatestock, editPriceVisible, currentUser, BASE_URL])
+
+
+
+    // Calculate stock total using backend API
+    const calculateTotalPrice = async (productsList: any[]) => {
+        if (!productsList || productsList.length === 0) {
+            setTotalPrice(0);
+            return;
+        }
+
+        try {
+            const BASE_URL = getBaseUrl();
+            
+            const response = await fetch(`${BASE_URL}/api/stock/calculate-total`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    products: productsList.map(item => ({
+                        price: item.price,
+                        quantity: item.quantity,
+                        ...item,
+                    })),
+                }),
             });
-    }, [isVisible, updatestock, editPriceVisible, currentUser])
 
+            if (response.ok) {
+                const result = await response.json();
+                if (!result.error && result.data?.summary) {
+                    setTotalPrice(result.data.summary.totalStockValue);
+                    return;
+                }
+            }
+        } catch (error: any) {
+            console.error('[StockTab] Error calculating stock total:', error.message);
+        }
 
-
-    const calculateTotalPrice = (products) => {
-        return products?.reduce((total, item) => {
-            return total + item.price * item.quantity;
-        }, 0);
+        // If API fails, set to 0 (no client-side fallback)
+        setTotalPrice(0);
     };
 
     useEffect(() => {
-        setTotalPrice(calculateTotalPrice(products));
+        calculateTotalPrice(products);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [products]);
 
     const rotation = useRef(new Animated.Value(0)).current;
@@ -176,7 +217,7 @@ const StockTab = ({ }) => {
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: theme.textPrimary, flex: 1, textAlign: 'center' }}>{item.quantity}</TextComp>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-start' }}>
                                         <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: theme.textSecondary, textAlign: 'right' }}>{'Rs'}</TextComp>
-                                        <TextComp size={12} style={{ fontFamily: FontFamilty.semibold, color: theme.textPrimary, textAlign: 'right' }}>  {formatPrice(item.price * item.quantity)}</TextComp>
+                                        <TextComp size={12} style={{ fontFamily: FontFamilty.semibold, color: theme.textPrimary, textAlign: 'right' }}>  {formatPrice(item.totalValue || 0)}</TextComp>
                                     </View>
 
                                 </View>)}

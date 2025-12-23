@@ -1,7 +1,5 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getDatabase, Database } from 'firebase/database';
-import { getRemoteConfig, RemoteConfig, setConfigSettings } from 'firebase/remote-config';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -25,11 +23,6 @@ if (getApps().length === 0) {
 
 // Initialize Firebase services
 export const auth: Auth = getAuth(app);
-export const database: Database = getDatabase(app);
-export const remoteConfig: RemoteConfig = getRemoteConfig(app);
-
-// Configure remote config settings
-remoteConfig.settings.minimumFetchIntervalMillis = 0; // For development
 
 export default app;
 

@@ -9,8 +9,7 @@ import TextInputComp from '../components/TextInputComp';
 import FontFamilty from '../../constants/FontFamilty';
 import TextComp from '../components/TextComp';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { ref, set } from 'firebase/database';
-import { auth, database } from '../../../firebase';
+import { auth } from '../../../firebase';
 
 const SignupScreen = ({ navigation }) => {
     const { theme } = useTheme();
@@ -53,13 +52,32 @@ const SignupScreen = ({ navigation }) => {
               displayName: name,
             });
         
-            // Save user data to Realtime Database
-            await set(ref(database, 'users/' + user.uid+'/personalInformation'), {
-              fullName: name,
-              email: email,
-              uid: user.uid,
-              createdAt: new Date().toISOString(),
+            // Save user data via backend API
+            const { getBaseUrl } = require('../../utils/api/baseUrl');
+            const BASE_URL = getBaseUrl();
+            const response = await fetch(`${BASE_URL}/api/personal-info/${user.uid}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    fullName: name,
+                    email: email,
+                    uid: user.uid,
+                    createdAt: new Date().toISOString(),
+                }),
             });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('Error saving personal information:', errorData.error || 'Unknown error');
+                // Don't throw - account creation succeeded even if personal info save fails
+            } else {
+                const result = await response.json();
+                if (result.error) {
+                    console.error('API returned error:', result.error);
+                }
+            }
         
             console.log('User signed up and data saved!');
             setLoader(false);

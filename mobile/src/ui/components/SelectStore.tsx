@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
     Alert,
+    ActivityIndicator,
     Image,
     Modal,
     StyleSheet,
@@ -15,8 +16,7 @@ import { AppImages } from '../../constants/AppImages';
 import { AppStrings } from '../../constants/AppStrings';
 import FontFamilty from '../../constants/FontFamilty';
 import TextComp from './TextComp';
-import { ref } from 'firebase/database';
-import { auth, database } from '../../../firebase';
+import { auth } from '../../../firebase';
 import WebView from 'react-native-webview';
 import { setAccessToken, setAccessTokens, setSelectedStore } from '../../redux/AppReducer';
 import { useDispatch, useSelector } from 'react-redux';
@@ -33,6 +33,7 @@ const SelectStore = () => {
     const selector = useSelector(state => state.AppReducer);
     const dispatch = useDispatch()
     const [loading, setLoading] = useState(false);
+    const [storesLoading, setStoresLoading] = useState(true); // Loading state for stores
     const [code, setCode] = useState('CODE')
 
     const CLIENT_ID = '503646';
@@ -92,51 +93,71 @@ const SelectStore = () => {
     const addAccessToken = async (user) => {
         try {
             const sellerId = user.seller_id || user.user?.seller?.data?.short_code;
-            const firebasePath = `/users/${currentUser.uid}/stores/${sellerId}`;
             
-            console.log('💾 [Firebase] Starting addAccessToken operation...');
-            console.log('📍 [Firebase] Firebase Path:', firebasePath);
-            console.log('👤 [Firebase] User UID:', currentUser.uid);
-            console.log('🏪 [Firebase] Seller ID:', sellerId);
-            console.log('📦 [Firebase] User Data Keys:', Object.keys(user));
+            console.log('💾 [Backend] Starting addAccessToken operation...');
+            console.log('👤 [Backend] User UID:', currentUser.uid);
+            console.log('🏪 [Backend] Seller ID:', sellerId);
+            console.log('📦 [Backend] User Data Keys:', Object.keys(user));
 
-            const sellerRef = ref(database, firebasePath);
+            console.log('🔍 [Backend] Checking if seller already exists...');
+            
+            // Add store via backend API
+            const response = await fetch(`${BASE_URL}/api/stores/${currentUser.uid}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    storeId: sellerId,
+                    storeData: { user }
+                }),
+            });
 
-            console.log('🔍 [Firebase] Checking if seller already exists...');
-            const { get } = require('firebase/database');
-            const snapshot = await get(sellerRef);
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.error || 'Unknown error';
+                console.warn('⚠️ [SelectStore] Error adding store:', errorMessage);
+                throw new Error(errorMessage);
+            }
 
-            if (snapshot.exists()) {
-                console.log('⚠️ [Firebase] Seller already connected:', sellerId);
-                console.log('📥 [Firebase] Existing Data:', JSON.stringify(snapshot.val(), null, 2));
+            const result = await response.json();
+            if (result.error) {
+                throw new Error(result.error);
+            }
+
+            if (!result.data.added) {
+                console.log('⚠️ [Backend] Store already connected:', sellerId);
                 return { added: false, reason: 'already_exists' };
             }
 
-            console.log('💾 [Firebase] Saving seller data to Firebase...');
-            console.log('📤 [Firebase] Data to save:', JSON.stringify(user, null, 2));
+            console.log('✅ [Backend] Seller added successfully!');
+            console.log('✅ [Backend] Seller ID:', sellerId);
             
-            const { set } = require('firebase/database');
-            await set(sellerRef, { user });
-
-            console.log('✅ [Firebase] Seller added successfully!');
-            console.log('✅ [Firebase] Seller ID:', sellerId);
-            console.log('✅ [Firebase] Firebase Path:', firebasePath);
+            // Refresh stores list after adding
+            if (fetchStoresRef.current) {
+                console.log('🔄 [SelectStore] Refreshing stores list after adding new store...');
+                setTimeout(() => {
+                    fetchStoresRef.current?.();
+                }, 500); // Small delay to ensure backend has processed the addition
+            }
             
             return { added: true, sellerId };
 
         } catch (error) {
-            console.error('❌ [Firebase] Error saving seller data');
-            console.error('❌ [Firebase] Error Type:', error instanceof Error ? error.constructor.name : typeof error);
-            console.error('❌ [Firebase] Error Message:', error instanceof Error ? error.message : String(error));
-            console.error('❌ [Firebase] Full Error:', error);
-            
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const errorType = error instanceof Error ? error.constructor.name : typeof error;
+            console.warn('⚠️ [SelectStore] Error saving seller data:', errorMessage);
+            console.warn('⚠️ [SelectStore] Error Type:', errorType);
             if (error instanceof Error && error.stack) {
-                console.error('❌ [Firebase] Stack Trace:', error.stack);
+                console.warn('⚠️ [SelectStore] Stack Trace:', error.stack);
             }
-            
+            Alert.alert('Error', 'Failed to save store data. Please try again.', [{ text: 'OK' }]);
             throw error;
         }
     };
+
+    // Store the fetch function reference so we can call it manually when needed
+    const fetchStoresRef = useRef<(() => Promise<void>) | null>(null);
 
     const listenToStores = (currentUser, setStores) => {
         if (!currentUser || !currentUser.uid) {
@@ -144,35 +165,87 @@ const SelectStore = () => {
             return;
         }
 
-        const storesRef = ref(database, `users/${currentUser.uid}/stores`);
+        const fetchStores = async () => {
+            try {
+                setStoresLoading(true); // Start loading
+                const requestUrl = `${BASE_URL}/api/stores/${currentUser.uid}`;
+                console.log('📤 [SELECT STORE] Fetching stores...');
+                console.log('📤 [SELECT STORE] Request URL:', requestUrl);
+                console.log('📤 [SELECT STORE] User ID:', currentUser.uid);
+                
+                const response = await fetch(requestUrl);
+                
+                console.log('📥 [SELECT STORE] Response status:', response.status, response.statusText);
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    const errorMessage = errorData.error || errorData.message || 'Unknown error';
+                    console.warn('⚠️ [SELECT STORE] HTTP Error:', response.status);
+                    console.warn('⚠️ [SELECT STORE] Error message:', errorMessage);
+                    Alert.alert('Error', 'Failed to load stores. Please try again.', [{ text: 'OK' }]);
+                    setStores([]);
+                    setStoresLoading(false); // Stop loading
+                    return;
+                }
 
-        const { onValue } = require('firebase/database');
-        const unsubscribe = onValue(storesRef, (snapshot) => {
-            const data = snapshot.val();
-            // console.log('User stores (real-time):', data);
+                const result = await response.json();
+                console.log('✅ [SELECT STORE] Response received');
+                console.log('📊 [SELECT STORE] Response data:', JSON.stringify(result, null, 2));
+                
+                if (result.error) {
+                    const errorMessage = result.error || 'Unknown error';
+                    console.warn('⚠️ [SELECT STORE] API returned error:', errorMessage);
+                    console.warn('⚠️ [SELECT STORE] Error message:', result.message || 'No message');
+                    Alert.alert('Error', result.message || 'Failed to load stores. Please try again.', [{ text: 'OK' }]);
+                    setStores([]);
+                    setStoresLoading(false); // Stop loading
+                    return;
+                }
 
-            const dataset = data
-                ? Object.entries(data).map(([key, value]: [string, any]) => ({
-                    id: key,
-                    ...value,
-                }))
-                : [];
+                const dataset = result.data || [];
+                console.log('📦 [SELECT STORE] Stores count:', dataset.length);
+                
+                const access_tokens = dataset.map((item: any) => ({
+                    access_token: item.user?.token?.access_token,
+                    name: item.user?.seller?.data?.name,
+                }));
+                
+                console.log('🔑 [SELECT STORE] Access tokens extracted:', access_tokens.length);
+                console.log('🔑 [SELECT STORE] Access tokens:', access_tokens.map((t: any) => ({
+                    name: t.name,
+                    token_preview: t.access_token ? t.access_token.substring(0, 10) + '...' : 'N/A'
+                })));
+                
+                dispatch(setAccessTokens(access_tokens));
+                setStores(dataset);
+                console.log('✅ [SELECT STORE] Stores state updated successfully');
+                setStoresLoading(false); // Stop loading
+            } catch (error: any) {
+                const errorMessage = error?.message || 'Unknown error occurred';
+                console.warn('⚠️ [SELECT STORE] Exception:', errorMessage);
+                console.warn('⚠️ [SELECT STORE] Error type:', error?.name || 'Unknown');
+                if (error?.stack) {
+                    console.warn('⚠️ [SELECT STORE] Stack:', error.stack);
+                }
+                Alert.alert('Error', 'Failed to load stores. Please check your connection and try again.', [{ text: 'OK' }]);
+                setStores([]);
+                setStoresLoading(false); // Stop loading on error
+            }
+        };
 
+        // Store the fetch function so it can be called manually
+        fetchStoresRef.current = fetchStores;
 
-                const access_tokens = dataset.map((item) => ({
-                    access_token: item.user.token.access_token,
-                    name: item.user.seller.data.name,               // example: add name
-                  }));
-            // console.log(access_tokens, 'All Access Tokens');
-            // console.log(access_tokens[0], 'First Access Token');
-            dispatch(setAccessTokens(access_tokens))
+        // Initial fetch only - no polling needed
+        // Stores are only fetched when:
+        // 1. Component mounts
+        // 2. User manually adds/deletes a store (which will call fetchStoresRef.current())
+        fetchStores();
 
-
-            setStores(dataset);
-        });
-
-        // Return a cleanup function to remove the listener
-        return () => unsubscribe();
+        // No cleanup needed since we're not using intervals
+        return () => {
+            fetchStoresRef.current = null;
+        };
     };
 
     const deleteSeller = async (sellerId) => {
@@ -193,21 +266,40 @@ const SelectStore = () => {
                         text: "Delete",
                         onPress: async () => {
                             try {
-                                const sellerRef = ref(database, `users/${currentUser.uid}/stores/${sellerId}`);
-                                const { get, remove } = require('firebase/database');
-                                const snapshot = await get(sellerRef);
+                                // Delete store via backend API
+                                const response = await fetch(`${BASE_URL}/api/stores/${currentUser.uid}/${sellerId}`, {
+                                    method: 'DELETE',
+                                });
 
-                                if (!snapshot.exists()) {
+                                if (!response.ok) {
+                                    const errorData = await response.json().catch(() => ({}));
+                                    if (response.status === 404) {
                                     console.log(`Seller with ID ${sellerId} does not exist.`);
                                     resolve({ success: false, message: "Seller not found" });
                                     return;
+                                    }
+                                    throw new Error(errorData.error || 'Failed to delete store');
                                 }
 
-                                await remove(sellerRef);
+                                const result = await response.json();
+                                if (result.error) {
+                                    throw new Error(result.error);
+                                }
                                 console.log(`Seller with ID ${sellerId} has been deleted.`);
+                                
+                                // Refresh stores list after deleting
+                                if (fetchStoresRef.current) {
+                                    console.log('🔄 [SelectStore] Refreshing stores list after deleting store...');
+                                    setTimeout(() => {
+                                        fetchStoresRef.current?.();
+                                    }, 500); // Small delay to ensure backend has processed the deletion
+                                }
+                                
                                 resolve({ success: true });
-                            } catch (error) {
-                                console.error('Error deleting seller:', error);
+                            } catch (error: any) {
+                                const errorMessage = error?.message || 'Unknown error occurred';
+                                console.warn('⚠️ [SelectStore] Error deleting seller:', errorMessage);
+                                Alert.alert('Error', 'Failed to delete store. Please try again.', [{ text: 'OK' }]);
                                 reject(error);
                             }
                         },
@@ -262,7 +354,7 @@ const SelectStore = () => {
 
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error('❌ [API Response] Error Response Body:', errorText);
+                console.warn('⚠️ [SelectStore] Error Response Body:', errorText);
                 throw new Error(`Server error: ${response.status} - ${errorText}`);
             }
 
@@ -283,23 +375,23 @@ const SelectStore = () => {
             }
 
             // Call addAccessToken with logging
-            console.log('💾 [Firebase] Starting to add access token to Firebase...');
+            console.log('💾 [Backend] Starting to add access token...');
             await addAccessToken(data);
-            console.log('✅ [Firebase] Access token added successfully');
+            console.log('✅ [Backend] Access token added successfully');
             
             setDarazOAuth(false);
             console.log('✅ [UI] Modal closed after successful token retrieval');
 
             return data;
         } catch (err) {
-            console.error('❌ [API Error] Failed to fetch Daraz token');
-            console.error('❌ [API Error] Error Type:', err instanceof Error ? err.constructor.name : typeof err);
-            console.error('❌ [API Error] Error Message:', err instanceof Error ? err.message : String(err));
-            console.error('❌ [API Error] Full Error:', err);
-            
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            const errorType = err instanceof Error ? err.constructor.name : typeof err;
+            console.warn('⚠️ [SelectStore] Failed to fetch Daraz token:', errorMessage);
+            console.warn('⚠️ [SelectStore] Error Type:', errorType);
             if (err instanceof Error && err.stack) {
-                console.error('❌ [API Error] Stack Trace:', err.stack);
+                console.warn('⚠️ [SelectStore] Stack Trace:', err.stack);
             }
+            Alert.alert('Error', 'Failed to authenticate with Daraz. Please try again.', [{ text: 'OK' }]);
         }
     };
 
@@ -330,14 +422,21 @@ const SelectStore = () => {
 
     return (
         <View style={styles.container}>
-            {stores.length <= 0 ?
+            {storesLoading ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <ActivityIndicator size="small" color={theme.primaryOrange} />
+                    <TextComp size={14} numberOfLines={1} style={{ fontFamily: FontFamilty.medium, color: theme.textSecondary }}>
+                        Loading stores...
+                    </TextComp>
+                </View>
+            ) : stores.length <= 0 ? (
                 <View>
                     <TextComp size={14} numberOfLines={1} style={{ fontFamily: FontFamilty.medium, color: theme.textSecondary }}>{AppStrings.youhavenoconnecteddarazstoreatthemoment}</TextComp>
                     <TouchableOpacity onPress={() => setDarazOAuth(true)}>
                         <TextComp size={16} numberOfLines={1} style={{ fontFamily: FontFamilty.medium, color: theme.primaryOrange }}>{AppStrings.addaccount}</TextComp>
                     </TouchableOpacity>
                 </View>
-                :
+            ) : (
                 <View>
                     {selector.selectedStore.id ?
 
@@ -390,7 +489,7 @@ const SelectStore = () => {
                         <TextComp size={16} numberOfLines={1} style={{ fontFamily: FontFamilty.medium, color: theme.primaryOrange }}>{AppStrings.addaccount}</TextComp>
                     </TouchableOpacity>
                 </View>
-            }
+            )}
 
             {darazOAuth && (
                 <Modal
@@ -411,6 +510,16 @@ const SelectStore = () => {
                             source={{ uri: AUTH_URL }} // ← Correct URL to start OAuth
                             onLoadEnd={() => setLoading(false)}
                             onNavigationStateChange={handleNavigationStateChange}
+                            onShouldStartLoadWithRequest={(request) => {
+                                // Prevent opening in external apps, force web view
+                                const url = request.url;
+                                // Allow navigation within the same domain or to redirect URI
+                                if (url.startsWith('https://api.daraz.pk') || url.startsWith(REDIRECT_URI)) {
+                                    return true;
+                                }
+                                // Block other URLs to prevent app opening
+                                return false;
+                            }}
                         />
                     </SafeAreaView>
                 </Modal>

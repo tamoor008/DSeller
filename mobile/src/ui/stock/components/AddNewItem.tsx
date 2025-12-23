@@ -14,8 +14,8 @@ import { AppStrings } from '../../../constants/AppStrings';
 import FontFamilty from '../../../constants/FontFamilty';
 import TextComp from '../../components/TextComp';
 import TextInputComp from '../../components/TextInputComp';
-import { ref, push } from 'firebase/database';
-import { auth, database } from '../../../../firebase';
+import { auth } from '../../../../firebase';
+import { getBaseUrl } from '../../../utils/api/baseUrl';
 import DropDownPicker from 'react-native-dropdown-picker';
 //heheh
 
@@ -26,28 +26,49 @@ const AddNewItem = ({ setIsvisible }) => {
     const [productDescription, setProductDescription] = useState('')
     const [quantity, setQuantity] = useState('')
     const [price, setPrice] = useState('')
-    const addProductRef = ref(database, `users/${currentUser?.uid}/products`);
+    const BASE_URL = getBaseUrl();
 
-
-    const addItem = () => {
+    const addItem = async () => {
         if (!currentUser) return;
 
         console.log('ADD ITEM');
 
-        push(addProductRef, {
-            productName: productName,
-            productDescription: productDescription,
-            quantity: quantity,
-            price: price,
-            unit:value
-        }).then(() => {
+        try {
+            const response = await fetch(`${BASE_URL}/api/products/${currentUser.uid}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    productName: productName,
+                    productDescription: productDescription,
+                    quantity: quantity,
+                    price: price,
+                    unit: value
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('Error adding product:', errorData.error || 'Unknown error');
+                return;
+            }
+
+            const result = await response.json();
+            if (result.error) {
+                console.error('API returned error:', result.error);
+                return;
+            }
+
+            console.log('Product added successfully:', result.data);
             setProductName('')
             setProductDescription('')
             setQuantity('')
             setPrice('')
             setValue(null)
-
-        });
+        } catch (error: any) {
+            console.error('Error adding product:', error.message);
+        }
     }
 
     const [open, setOpen] = useState(false);

@@ -3,14 +3,12 @@ import {
     View,
     FlatList,
     StyleSheet,
-    Image,
-    TouchableOpacity,
-    Alert,
     ActivityIndicator,
     ScrollView,
+    RefreshControl,
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { useTheme } from '../../../context/ThemeContext';
 import TextComp from '../../components/TextComp';
 import FontFamilty from '../../../constants/FontFamilty';
@@ -19,7 +17,6 @@ import OrderItem from '../components/OrderItem';
 import SelectStore from '../../components/SelectStore';
 import { AppStrings } from '../../../constants/AppStrings';
 import Header from '../../components/Header';
-import { setTodayDeliveredOrders } from '../../../redux/AppReducer';
 import StatusTabs from '../components/StatusTabs';
 import { getBaseUrl } from '../../../utils/api/baseUrl';
 
@@ -35,7 +32,6 @@ const FailedDeliveryOrders = ({ navigation }) => {
     const [failedOrders, setfailedOrders] = useState([])
     const [failedOrdersCount, setfailedOrdersCount] = useState(0)
     const [all_access_tokens, setAll_access_tokens] = useState([]);
-    const dispatch = useDispatch()
 
     const [failedOrdersYesterday, setfailedOrdersYesterday] = useState([]);
     const [failedOrdersSevenDays, setfailedOrdersSevenDays] = useState([]);
@@ -135,25 +131,17 @@ const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
 
 
 
-    const onChange = () => {
-
-    }
-
     const [selectedRange, setSelectedRange] = useState('today');
     const [customDate, setCustomDate] = useState(null);
 
 
-
-    // useEffect(() => {
-    //     setfailedOrders();
-    //     setfailedOrdersCount(selector.todayDeliveredOrders?.length || 0);
-    // }, [selector.todayDeliveredOrders]);
 
     const goBack = () => {
         navigation.goBack()
     }
 
     const [darazOrdersLoader, setDarazOrdersLoader] = useState(false)
+    const [refreshing, setRefreshing] = useState(false)
 
     const getfailedOrdersLocal = async (access_token: string, update_after: string, update_before: string, status: string, date: string, storeName?: string) => {
         try {
@@ -166,7 +154,6 @@ const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
             }
 
             const data = await response.json();
-            // console.log(data.orderItems,'data');
 
 
             if (!data?.orderItems?.length) return;
@@ -187,8 +174,6 @@ const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
                     setReturningOrders((prev: any[]) => [...prev, ...ordersWithStore]);
                     setReturningOrdersCount(prev => prev + ordersWithStore.length);
                 } else if (status === 'shipped_back_success') {
-                    console.log(data,'Returned orders');
-                    
                     setReturnedOrders((prev: any[]) => [...prev, ...ordersWithStore]);
                     setReturnedOrdersCount(prev => prev + ordersWithStore.length);
                 }
@@ -370,7 +355,109 @@ const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
         fetchOrders();
     }, [selectedRange, all_access_tokens, customDate]);
 
+    const onRefresh = async () => {
+        setRefreshing(true);
+        try {
+            // Reset states based on selected range
+            switch (selectedRange) {
+                case 'today':
+                    setfailedOrders([]);
+                    setfailedOrdersCount(0);
+                    setReturningOrders([]);
+                    setReturningOrdersCount(0);
+                    setReturnedOrders([]);
+                    setReturnedOrdersCount(0);
+                    break;
+                case 'yesterday':
+                    setfailedOrdersYesterday([]);
+                    setfailedOrdersYesterdayCount(0);
+                    setReturningOrdersYesterday([]);
+                    setReturningOrdersYesterdayCount(0);
+                    setReturnedOrdersYesterday([]);
+                    setReturnedOrdersYesterdayCount(0);
+                    break;
+                case '7days':
+                    setfailedOrdersSevenDays([]);
+                    setfailedOrdersSevenDaysCount(0);
+                    setReturningOrdersSevenDays([]);
+                    setReturningOrdersSevenDaysCount(0);
+                    setReturnedOrdersSevenDays([]);
+                    setReturnedOrdersSevenDaysCount(0);
+                    break;
+                case '30days':
+                    setfailedOrdersThirtyDays([]);
+                    setfailedOrdersThirtyDaysCount(0);
+                    setReturningOrdersThirtyDays([]);
+                    setReturningOrdersThirtyDaysCount(0);
+                    setReturnedOrdersThirtyDays([]);
+                    setReturnedOrdersThirtyDaysCount(0);
+                    break;
+                case 'custom':
+                    setfailedOrdersCustom([]);
+                    setfailedOrdersCustomCount(0);
+                    setReturningOrdersCustom([]);
+                    setReturningOrdersCustomCount(0);
+                    setReturnedOrdersCustom([]);
+                    setReturnedOrdersCustomCount(0);
+                    break;
+            }
 
+            setTotalProfit(0);
+            setProcessedItemIds(new Set());
+
+            // Calculate update_after and update_before based on selectedRange
+            const now = new Date();
+            const updateAfter = new Date();
+            const updateBefore = new Date();
+
+            switch (selectedRange) {
+                case 'today':
+                    updateAfter.setHours(0, 0, 0, 0);
+                    break;
+                case 'yesterday':
+                    updateAfter.setDate(updateAfter.getDate() - 1);
+                    updateAfter.setHours(0, 0, 0, 0);
+                    updateBefore.setHours(0, 0, 0, 0);
+                    break;
+                case '7days':
+                    updateAfter.setDate(updateAfter.getDate() - 7);
+                    updateAfter.setHours(0, 0, 0, 0);
+                    break;
+                case '30days':
+                    updateAfter.setDate(updateAfter.getDate() - 30);
+                    updateAfter.setHours(0, 0, 0, 0);
+                    break;
+                case 'custom':
+                    if (customDate) {
+                        updateAfter.setTime(new Date(customDate).setHours(0, 0, 0, 0));
+                        updateBefore.setTime(new Date(customDate).setHours(23, 59, 59, 999));
+                    }
+                    break;
+            }
+
+            // Fetch fresh data
+            if (all_access_tokens && Array.isArray(all_access_tokens) && all_access_tokens.length > 0) {
+                const requests = all_access_tokens.flatMap((item: any) => {
+                    if (item && item.access_token) {
+                        return [
+                            getfailedOrdersLocal(item.access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'failed_delivery', selectedRange, item.storeName),
+                            getfailedOrdersLocal(item.access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'shipped_back', selectedRange, item.storeName),
+                            getfailedOrdersLocal(item.access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'shipped_back_success', selectedRange, item.storeName),
+                        ];
+                    }
+                    return [];
+                });
+                
+                if (requests.length > 0) {
+                    await Promise.all(requests);
+                }
+            }
+        } catch (error) {
+            console.error('Error refreshing orders:', error);
+        } finally {
+            setRefreshing(false);
+        }
+    };
 
     //This function gets the price of any sku
 
@@ -419,11 +506,6 @@ const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
     };
     const [selectedStatus, setSelectedStatus] = useState('failed');
 
-    useEffect(() => {
-
-
-    }, [failedOrders])
-
     const styles = getStyles(theme);
     return (
         <View style={{ flex: 1, backgroundColor: theme.bgcolor }}>
@@ -457,7 +539,17 @@ const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
                         <ActivityIndicator size={'large'} color={theme.primaryOrange}></ActivityIndicator>
                     </View>
                     :
-                    <ScrollView showsVerticalScrollIndicator={false}>
+                    <ScrollView 
+                        showsVerticalScrollIndicator={false}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={refreshing}
+                                onRefresh={onRefresh}
+                                colors={[theme.primaryOrange]}
+                                tintColor={theme.primaryOrange}
+                            />
+                        }
+                    >
 
 
                         <FlatList

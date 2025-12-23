@@ -23,7 +23,6 @@ import { auth } from '../../../firebase';
 const SettingsScreen = ({ navigation }) => {
   const { theme, themeMode, isDark, setThemeMode, toggleTheme } = useTheme();
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [currentPlan, setCurrentPlan] = useState('Free'); // Free, Basic, Pro
 
   const handleLogout = () => {
     Alert.alert(
@@ -137,26 +136,6 @@ const SettingsScreen = ({ navigation }) => {
     }
   };
 
-  const handlePlanUpgrade = (planName: string) => {
-    Alert.alert(
-      'Upgrade Plan',
-      `Are you sure you want to upgrade to ${planName} plan?`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Upgrade',
-          onPress: () => {
-            // Handle plan upgrade logic here
-            setCurrentPlan(planName);
-            Alert.alert('Success', `You have successfully upgraded to ${planName} plan!`);
-          },
-        },
-      ]
-    );
-  };
 
   const SettingItem = ({ 
     icon, 
@@ -189,7 +168,11 @@ const SettingsScreen = ({ navigation }) => {
         </View>
       </View>
       <View style={styles.settingItemRight}>
-        {rightComponent}
+        {rightComponent && (
+          <View style={styles.switchContainer}>
+            {rightComponent}
+          </View>
+        )}
         {showArrow && (
           <Icon name="chevron-forward" size={20} color={theme.textSecondary} />
         )}
@@ -197,69 +180,6 @@ const SettingsScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
-  const PlanCard = ({ planName, price, features, isCurrent, isPopular }) => (
-    <TouchableOpacity
-      style={[
-        styles.planCard,
-        { backgroundColor: theme.card, borderColor: theme.border },
-        isCurrent && { borderColor: theme.primaryOrange, backgroundColor: theme.orange20 },
-        isPopular && { borderColor: theme.primaryOrange },
-      ]}
-      onPress={() => !isCurrent && handlePlanUpgrade(planName)}
-      activeOpacity={0.8}
-    >
-      {isPopular && (
-        <View style={[styles.popularBadge, { backgroundColor: theme.primaryOrange }]}>
-          <TextComp size={10} style={{ fontFamily: FontFamilty.bold, color: theme.white }}>
-            POPULAR
-          </TextComp>
-        </View>
-      )}
-      {isCurrent && (
-        <View style={[styles.currentBadge, { backgroundColor: theme.green }]}>
-          <TextComp size={10} style={{ fontFamily: FontFamilty.bold, color: theme.white }}>
-            CURRENT
-          </TextComp>
-        </View>
-      )}
-      <View style={styles.planHeader}>
-        <TextComp size={20} style={{ fontFamily: FontFamilty.bold, color: theme.textPrimary }}>
-          {planName}
-        </TextComp>
-        <View style={styles.planPrice}>
-          <TextComp size={24} style={{ fontFamily: FontFamilty.bold, color: theme.primaryOrange }}>
-            {price}
-          </TextComp>
-          {price !== 'Free' && (
-            <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: theme.textSecondary, marginLeft: 4 }}>
-              /month
-            </TextComp>
-          )}
-        </View>
-      </View>
-      <View style={styles.planFeatures}>
-        {features.map((feature, index) => (
-          <View key={index} style={styles.planFeature}>
-            <Icon name="checkmark-circle" size={16} color={theme.green} />
-            <TextComp size={14} style={{ fontFamily: FontFamilty.regular, color: theme.textPrimary, marginLeft: 8 }}>
-              {feature}
-            </TextComp>
-          </View>
-        ))}
-      </View>
-      {!isCurrent && (
-        <TouchableOpacity
-          style={[styles.upgradeButton, { backgroundColor: theme.primaryOrange }]}
-          onPress={() => handlePlanUpgrade(planName)}
-          activeOpacity={0.8}
-        >
-          <TextComp size={14} style={{ fontFamily: FontFamilty.semibold, color: theme.white }}>
-            {price === 'Free' ? 'Select Plan' : 'Upgrade Now'}
-          </TextComp>
-        </TouchableOpacity>
-      )}
-    </TouchableOpacity>
-  );
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.bgcolor }]}>
@@ -279,13 +199,6 @@ const SettingsScreen = ({ navigation }) => {
               ACCOUNT
             </TextComp>
             <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
-              <SettingItem
-                icon="person-outline"
-                title="Profile"
-                subtitle="Manage your account information"
-                onPress={() => navigation.navigate('ProfileScreen')}
-              />
-              <View style={[styles.divider, { backgroundColor: theme.border }]} />
               <SettingItem
                 icon="lock-closed-outline"
                 title="Security"
@@ -342,55 +255,59 @@ const SettingsScreen = ({ navigation }) => {
             </View>
           </View>
 
-          {/* Payment Plans Section */}
+          {/* Plan Section */}
           <View style={styles.section}>
             <TextComp size={14} style={{ fontFamily: FontFamilty.semibold, color: theme.textSecondary, marginBottom: 12 }}>
-              PAYMENT PLAN
+              PLAN
             </TextComp>
-            <View style={styles.planSection}>
-              <TextComp size={16} style={{ fontFamily: FontFamilty.medium, color: theme.textPrimary, marginBottom: 16 }}>
-                Current Plan: {currentPlan}
-              </TextComp>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.plansContainer}
-              >
-                <PlanCard
-                  planName="Free"
-                  price="Free"
-                  features={[
-                    'Basic order tracking',
-                    'Up to 1 store',
-                    'Basic reports',
-                  ]}
-                  isCurrent={currentPlan === 'Free'}
-                />
-                <PlanCard
-                  planName="Basic"
-                  price="Rs. 999"
-                  features={[
-                    'All Free features',
-                    'Up to 3 stores',
-                    'Advanced reports',
-                    'Email support',
-                  ]}
-                  isCurrent={currentPlan === 'Basic'}
-                  isPopular={true}
-                />
-                <PlanCard
-                  planName="Pro"
-                  price="Rs. 2,499"
-                  features={[
-                    'All Basic features',
-                    'Unlimited stores',
-                    'Real-time analytics',
-                    'Priority support',
-                    'API access',
-                  ]}
-                  isCurrent={currentPlan === 'Pro'}
-                />
-              </ScrollView>
+            <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+              <View style={styles.planInfo}>
+                <View style={styles.planHeader}>
+                  <TextComp size={20} style={{ fontFamily: FontFamilty.bold, color: theme.textPrimary }}>
+                    Free Plan
+                  </TextComp>
+                  <View style={[styles.currentBadge, { backgroundColor: theme.green }]}>
+                    <TextComp size={10} style={{ fontFamily: FontFamilty.bold, color: theme.white }}>
+                      ACTIVE
+                    </TextComp>
+                  </View>
+                </View>
+                <TextComp size={14} style={{ fontFamily: FontFamilty.regular, color: theme.textSecondary, marginTop: 8 }}>
+                  All features are available with the free plan
+                </TextComp>
+                <View style={styles.planFeatures}>
+                  <View style={styles.planFeature}>
+                    <Icon name="checkmark-circle" size={16} color={theme.green} />
+                    <TextComp size={14} style={{ fontFamily: FontFamilty.regular, color: theme.textPrimary, marginLeft: 8 }}>
+                      Unlimited order tracking
+                    </TextComp>
+                  </View>
+                  <View style={styles.planFeature}>
+                    <Icon name="checkmark-circle" size={16} color={theme.green} />
+                    <TextComp size={14} style={{ fontFamily: FontFamilty.regular, color: theme.textPrimary, marginLeft: 8 }}>
+                      Unlimited stores
+                    </TextComp>
+                  </View>
+                  <View style={styles.planFeature}>
+                    <Icon name="checkmark-circle" size={16} color={theme.green} />
+                    <TextComp size={14} style={{ fontFamily: FontFamilty.regular, color: theme.textPrimary, marginLeft: 8 }}>
+                      Advanced reports & analytics
+                    </TextComp>
+                  </View>
+                  <View style={styles.planFeature}>
+                    <Icon name="checkmark-circle" size={16} color={theme.green} />
+                    <TextComp size={14} style={{ fontFamily: FontFamilty.regular, color: theme.textPrimary, marginLeft: 8 }}>
+                      Real-time order updates
+                    </TextComp>
+                  </View>
+                  <View style={styles.planFeature}>
+                    <Icon name="checkmark-circle" size={16} color={theme.green} />
+                    <TextComp size={14} style={{ fontFamily: FontFamilty.regular, color: theme.textPrimary, marginLeft: 8 }}>
+                      Full access to all features
+                    </TextComp>
+                  </View>
+                </View>
+              </View>
             </View>
           </View>
 
@@ -493,63 +410,41 @@ const styles = StyleSheet.create({
   settingItemRight: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'flex-end',
     columnGap: 8,
+    minWidth: 60,
+  },
+  switchContainer: {
+    width: 51,
+    height: 31,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   divider: {
     height: 1,
     marginLeft: 52,
   },
-  planSection: {
-    marginTop: 8,
-  },
-  plansContainer: {
-    paddingVertical: 8,
-    columnGap: 16,
-  },
-  planCard: {
-    width: 280,
-    borderRadius: 12,
-    borderWidth: 2,
-    padding: 20,
-    position: 'relative',
-  },
-  popularBadge: {
-    position: 'absolute',
-    top: -10,
-    right: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  currentBadge: {
-    position: 'absolute',
-    top: -10,
-    right: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+  planInfo: {
+    padding: 4,
   },
   planHeader: {
-    marginBottom: 16,
-  },
-  planPrice: {
     flexDirection: 'row',
-    alignItems: 'baseline',
-    marginTop: 8,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  currentBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   planFeatures: {
-    marginBottom: 20,
+    marginTop: 16,
   },
   planFeature: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
-  },
-  upgradeButton: {
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   logoutButton: {
     flexDirection: 'row',

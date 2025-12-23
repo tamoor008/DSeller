@@ -15,11 +15,12 @@ import { AppStrings } from '../../../constants/AppStrings';
 import FontFamilty from '../../../constants/FontFamilty';
 import TextComp from '../../components/TextComp';
 import TextInputComp from '../../components/TextInputComp';
-import { ref, update } from 'firebase/database';
-import { auth, database } from '../../../../firebase';
+import { auth } from '../../../../firebase';
+import { getBaseUrl } from '../../../utils/api/baseUrl';
 
 const EditPrice = ({ setIsvisible, product }) => {
     const currentUser = auth.currentUser
+    const BASE_URL = getBaseUrl();
     const [price, setPrice] = useState('')
 
     useEffect(() => {
@@ -28,21 +29,37 @@ const EditPrice = ({ setIsvisible, product }) => {
         }
     }, [product])
 
-    const updatePrice = () => {
+    const updatePrice = async () => {
         if (!product || !product.id || !currentUser) return;
 
-        const productRef = ref(database, `users/${currentUser.uid}/products/${product.id}`);
-        
-        update(productRef, {
-            price: parseFloat(price) || 0
-        })
-            .then(() => {
-                console.log('Price updated successfully');
-                setIsvisible(false);
-            })
-            .catch(error => {
-                console.error('Error updating price:', error);
+        try {
+            const response = await fetch(`${BASE_URL}/api/products/${currentUser.uid}/${product.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    price: parseFloat(price) || 0
+                }),
             });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('Error updating price:', errorData.error || 'Unknown error');
+                return;
+            }
+
+            const result = await response.json();
+            if (result.error) {
+                console.error('API returned error:', result.error);
+                return;
+            }
+
+            console.log('Price updated successfully:', result.data);
+            setIsvisible(false);
+        } catch (error: any) {
+            console.error('Error updating price:', error.message);
+        }
     }
 
     const isFormValid = price && !isNaN(parseFloat(price)) && parseFloat(price) >= 0;

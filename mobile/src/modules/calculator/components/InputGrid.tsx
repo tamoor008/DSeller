@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, Switch, TouchableOpacity, StyleSheet, Modal, FlatList, Text } from 'react-native';
+import { View, TextInput, Switch, TouchableOpacity, StyleSheet, Modal, FlatList, Text, KeyboardAvoidingView, Platform } from 'react-native';
 import { CalculatorFormData } from '../types';
 import { COMMISSION_OPTIONS } from '../constants/commissions';
 import { useTheme } from '../../../context/ThemeContext';
@@ -134,10 +134,13 @@ export const InputGrid = ({
       <Modal
         visible={showCategoryModal}
         animationType="slide"
-        transparent={true}
+        transparent={false}
         onRequestClose={() => setShowCategoryModal(false)}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={styles.modalContainer}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <TextComp size={18} style={styles.modalTitle} numberOfLines={1}>Select Category</TextComp>
@@ -145,13 +148,23 @@ export const InputGrid = ({
                 <TextComp size={16} style={styles.closeButton} numberOfLines={1}>Close</TextComp>
               </TouchableOpacity>
             </View>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search category..."
-              placeholderTextColor={theme.textSecondary}
-              value={categoryQuery}
-              onChangeText={setCategoryQuery}
-            />
+            <View style={styles.searchInputContainer}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search category..."
+                placeholderTextColor={theme.textSecondary}
+                value={categoryQuery}
+                onChangeText={setCategoryQuery}
+              />
+              {categoryQuery.length > 0 && (
+                <TouchableOpacity
+                  style={styles.clearButton}
+                  onPress={() => setCategoryQuery('')}
+                >
+                  <Text style={styles.clearButtonText}>×</Text>
+                </TouchableOpacity>
+              )}
+            </View>
             <FlatList
               data={filteredCategories}
               keyExtractor={(item) => item.id}
@@ -166,9 +179,10 @@ export const InputGrid = ({
                   </TextComp>
                 </TouchableOpacity>
               )}
+              keyboardShouldPersistTaps="handled"
             />
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <View style={styles.formGrid}>
@@ -260,17 +274,14 @@ const getStyles = (theme: any) => StyleSheet.create({
   categoryText: {
     color: theme.textPrimary,
   },
-  modalOverlay: {
+  modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
   },
   modalContent: {
+    flex: 1,
     backgroundColor: theme.card,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '80%',
     padding: 16,
+    paddingTop: Platform.OS === 'ios' ? 50 : 16,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -286,15 +297,37 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.primaryOrange,
     fontWeight: '600',
   },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    position: 'relative',
+  },
   searchInput: {
+    flex: 1,
     borderWidth: 1,
     borderColor: theme.border,
     borderRadius: 8,
     padding: 12,
-    marginBottom: 16,
+    paddingRight: 40,
     fontSize: 16,
     color: theme.textPrimary,
     backgroundColor: theme.bgcolor,
+  },
+  clearButton: {
+    position: 'absolute',
+    right: 8,
+    width: 28,
+    height: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 14,
+    backgroundColor: theme.border,
+  },
+  clearButtonText: {
+    fontSize: 20,
+    color: theme.textSecondary,
+    lineHeight: 20,
   },
   categoryItem: {
     flexDirection: 'row',

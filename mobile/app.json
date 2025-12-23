@@ -27,7 +27,7 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "baseUrl": "https://99dc8d853e51.ngrok-free.app"
+      "baseUrl": "http://192.168.30.184:3001"
     },
     "plugins": [
       [

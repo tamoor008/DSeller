@@ -42,7 +42,6 @@ const ReadyToShipOrders: React.FC<NavigationProps> = ({ navigation }) => {
     const [darazReadyToShipOrders, setDarazReadyToShipOrders] = useState<any[]>([]);
     const [darazReadyToShipOrdersCount, setDarazReadyToShipOrdersCount] = useState<number>(0);
     const [all_access_tokens, setAll_access_tokens] = useState<any[]>([]);
-    const dispatch = useDispatch();
 
     const [processedItemIds, setProcessedItemIds] = useState<Set<string>>(new Set<string>());
 
@@ -121,10 +120,6 @@ const ReadyToShipOrders: React.FC<NavigationProps> = ({ navigation }) => {
         );
     };
 
-    const onChange = () => {
-        // No functionality needed for this screen
-    }
-
     useEffect(() => {
         // Use passed readyToShipOrders data if available, otherwise use Redux state
         if (readyToShipOrders && readyToShipOrders.length > 0) {
@@ -141,6 +136,7 @@ const ReadyToShipOrders: React.FC<NavigationProps> = ({ navigation }) => {
     }
 
     const [darazOrdersLoader, setDarazOrdersLoader] = useState(false)
+    const [refreshing, setRefreshing] = useState(false)
 
     const getDarazReadyToShipOrdersLocal = async (access_token: string) => {
         if (!access_token) {
@@ -220,6 +216,36 @@ const ReadyToShipOrders: React.FC<NavigationProps> = ({ navigation }) => {
         fetchOrders();
     }, [all_access_tokens]);
 
+    const onRefresh = async () => {
+        setRefreshing(true);
+        try {
+            // Reset states
+            setDarazReadyToShipOrders([]);
+            setDarazReadyToShipOrdersCount(0);
+            setTotalCost(0);
+            setAmountReceived(0);
+            setProcessedItemIds(new Set());
+            
+            // Fetch fresh data
+            if (all_access_tokens && Array.isArray(all_access_tokens) && all_access_tokens.length > 0) {
+                const requests = all_access_tokens.flatMap((item: any) => {
+                    if (item && item.access_token) {
+                        return [getDarazReadyToShipOrdersLocal(item.access_token)];
+                    }
+                    return [];
+                });
+                
+                if (requests.length > 0) {
+                    await Promise.all(requests);
+                }
+            }
+        } catch (error) {
+            console.error('Error refreshing orders:', error);
+        } finally {
+            setRefreshing(false);
+        }
+    };
+
     // Get all ready to ship orders
     const getOrdersBySelectedRange = () => {
         return darazReadyToShipOrders;
@@ -244,7 +270,17 @@ const ReadyToShipOrders: React.FC<NavigationProps> = ({ navigation }) => {
                         <ActivityIndicator size={'large'} color={theme.primaryOrange}></ActivityIndicator>
                     </View>
                     :
-                    <ScrollView showsVerticalScrollIndicator={false}>
+                    <ScrollView 
+                        showsVerticalScrollIndicator={false}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={refreshing}
+                                onRefresh={onRefresh}
+                                colors={[theme.primaryOrange]}
+                                tintColor={theme.primaryOrange}
+                            />
+                        }
+                    >
                         <FlatList
                             scrollEnabled={false}
                             ListHeaderComponent={

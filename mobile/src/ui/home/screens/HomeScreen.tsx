@@ -1,23 +1,19 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
     Alert,
     RefreshControl,
     ScrollView,
     StyleSheet,
-    Text,
-    TouchableOpacity,
     View,
 } from 'react-native';
 import { useTheme } from '../../../context/ThemeContext';
 import HomeHeader from '../components/HomeHeader';
 import SelectStore from '../../components/SelectStore';
-import TotalBusinessComp from '../../components/TotalBusinessComp';
 import IndividualValueComp from '../../components/IndividualValueComp';
 import { AppStrings } from '../../../constants/AppStrings';
 import { AppScreens } from '../../../constants/AppScreens';
 import { useDispatch, useSelector } from 'react-redux';
-import { ref, get } from 'firebase/database';
-import { auth, database } from '../../../../firebase';
+import { auth } from '../../../../firebase';
 import IndividualDataComp from '../../components/IndividualDataComp';
 import TextComp from '../../components/TextComp';
 import FontFamilty from '../../../constants/FontFamilty';
@@ -29,7 +25,6 @@ import { getBaseUrl } from '../../../utils/api/baseUrl';
 const HomeScreen = ({ navigation }) => {
     const { theme } = useTheme();
     const BASE_URL = getBaseUrl();
-    console.log(BASE_URL,'BASE_URL');
     
 
     const navigateDaraz = () => {
@@ -49,8 +44,6 @@ const HomeScreen = ({ navigation }) => {
     const [shippedOrder, setShippedOrder] = useState([])
     const [failedOrder, setFailedOrder] = useState([])
     const [ITRSOrder, setITRSOrder] = useState([])
-    const skuRef = ref(database, `users/${currentUser?.uid}/skusList`);
-    const productRef = ref(database, `users/${currentUser?.uid}/products`);
     const [failedDeliveries, setFailedDeliveries] = useState([])
     const [all_access_tokens, setAll_access_tokens] = useState([]);
     const [firebaseSkus, setFirebaseSkus] = useState([])
@@ -61,62 +54,92 @@ const HomeScreen = ({ navigation }) => {
 
     const [failedOrders,setFailedOrders]=useState([])
 
+    // Use refs to prevent unnecessary API calls
+    const isProcessingRef = useRef(false);
+    const lastProcessedDataRef = useRef<string>('');
 
+    // Fetch SKUs from backend API (all SKU operations go through backend)
     useEffect(() => {
         if (!currentUser) return;
         
-        const { onValue, off } = require('firebase/database');
-        const unsubscribe = onValue(skuRef, (snapshot) => {
-            const data = snapshot.val();
-
-            if (data) {
-                const array = Object.entries(data).map(([id, value]: [string, any]) => ({
-                    id,
-                    ...value,
-                }));
-
-                setFirebaseSkus(array);
-                setfirebaseDataLoaded(true)
-            } else {
-                setFirebaseSkus([]);
-            }
-        }, (error) => {
-            console.error('Error fetching data:', error);
-            setDarazLoader(false);
-            setScreenloader(false)
-        });
-
-        // 🔴 IMPORTANT: detach listener on unmount to prevent memory leaks
-        return () => off(skuRef, 'value', unsubscribe);
-    }, [reloadScreen, currentUser]);
-
-    useEffect(() => {
-        if (!currentUser) return;
+        const BASE_URL = getBaseUrl();
         
-        const fetchData = async () => {
+        const fetchSkus = async () => {
             try {
-                const { get } = require('firebase/database');
-                const snapshot = await get(productRef);
-                const data = snapshot.val();
-
-                if (data) {
-                    const array = Object.entries(data).map(([id, value]: [string, any]) => ({
-                        id,
-                        ...value,
-                    }));
-                } else {
-                    Alert.alert('There are no products added kindly add products as well');
+                const response = await fetch(`${BASE_URL}/api/skus/${currentUser.uid}`);
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    const errorMessage = errorData.error || 'Unknown error';
+                    console.warn('⚠️ [HomeScreen] Error fetching SKUs:', errorMessage);
+                    setFirebaseSkus([]);
+                    setfirebaseDataLoaded(true);
+                    return;
                 }
-            } catch (error) {
-                console.error('Error fetching data:', error);
-                setDarazLoader(false);
 
+                const result = await response.json();
+                if (result.error) {
+                    const errorMessage = result.error || 'Unknown error';
+                    console.warn('⚠️ [HomeScreen] API returned error:', errorMessage);
+                    setFirebaseSkus([]);
+                    setfirebaseDataLoaded(true);
+                    return;
+                }
+
+                const skus = result.data || [];
+                setFirebaseSkus(skus);
+                setfirebaseDataLoaded(true);
+            } catch (error: any) {
+                const errorMessage = error?.message || 'Unknown error occurred';
+                console.warn('⚠️ [HomeScreen] Error fetching SKU data:', errorMessage);
+                setFirebaseSkus([]);
+                setfirebaseDataLoaded(true);
             }
         };
 
-        fetchData();
+        fetchSkus();
+        // Set up polling to refresh SKUs periodically (every 30 seconds)
+        const intervalId = setInterval(fetchSkus, 30000);
+        return () => clearInterval(intervalId);
+    }, [reloadScreen, currentUser]);
 
-        // No need to return cleanup for `.once()`
+    // Fetch products from backend API (all product operations go through backend)
+    useEffect(() => {
+        if (!currentUser) return;
+        
+        const BASE_URL = getBaseUrl();
+        
+        const fetchProducts = async () => {
+            try {
+                const response = await fetch(`${BASE_URL}/api/products/${currentUser.uid}`);
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    const errorMessage = errorData.error || 'Unknown error';
+                    console.warn('⚠️ [HomeScreen] Error fetching products:', errorMessage);
+                    return;
+                }
+
+                const result = await response.json();
+                if (result.error) {
+                    const errorMessage = result.error || 'Unknown error';
+                    console.warn('⚠️ [HomeScreen] API returned error:', errorMessage);
+                    return;
+                }
+
+                const products = result.data || [];
+                if (products.length === 0) {
+                    Alert.alert('There are no products added kindly add products as well');
+                }
+            } catch (error: any) {
+                const errorMessage = error?.message || 'Unknown error occurred';
+                console.warn('⚠️ [HomeScreen] Error fetching product data:', errorMessage);
+                Alert.alert('Error', 'Failed to load product data. Please try again.', [{ text: 'OK' }]);
+                setDarazLoader(false);
+            }
+        };
+
+        fetchProducts();
     }, [reloadScreen, currentUser]);
 
     useEffect(() => {
@@ -190,8 +213,10 @@ const HomeScreen = ({ navigation }) => {
             try {
                 await Promise.all(requests); // Wait for all async tasks to complete
                 console.log('✅ [HOME SCREEN] All order fetches completed');
-            } catch (error) {
-                console.error('❌ [HOME SCREEN] Error while fetching orders:', error);
+            } catch (error: any) {
+                const errorMessage = error?.message || 'Unknown error occurred';
+                console.warn('⚠️ [HomeScreen] Error while fetching orders:', errorMessage);
+                Alert.alert('Error', 'Failed to fetch some orders. Please check your connection and try again.', [{ text: 'OK' }]);
             } finally {
                 setDarazLoader(false)
                 setScreenloader(false)
@@ -247,25 +272,174 @@ const HomeScreen = ({ navigation }) => {
 
 
     useEffect(() => {
+        // Prevent concurrent processing
+        if (isProcessingRef.current) {
+            console.log('⏸️ [HomeScreen] Skipping - already processing');
+            return;
+        }
+
+        // Check if we have the minimum required data
+        if (!firebaseDataLoaded || !shippedOrder || !failedDeliveries) {
+            console.log('⏸️ [HomeScreen] Skipping - data not ready:', {
+                firebaseDataLoaded,
+                hasShippedOrder: !!shippedOrder,
+                hasFailedDeliveries: !!failedDeliveries
+            });
+            return;
+        }
+
+        // Create a hash of the current data to check if it's changed
+        const dataHash = JSON.stringify({
+            shippedOrder: shippedOrder.map(s => ({ sku: s.sku, quantity: s.quantity })).sort((a, b) => a.sku.localeCompare(b.sku)),
+            failedDeliveries: failedDeliveries.map(f => ({ sku: f.sku, quantity: f.quantity })).sort((a, b) => a.sku.localeCompare(b.sku)),
+            firebaseSkus: firebaseSkus.map(s => ({ sku: s.sku, price: s.price })).sort((a, b) => a.sku.localeCompare(b.sku)),
+            firebaseProductsKeys: Object.keys(selector.firebaseProducts || {}).sort()
+        });
+
+        // If data hasn't changed, skip the API call
+        if (lastProcessedDataRef.current === dataHash) {
+            console.log('⏸️ [HomeScreen] Skipping - data unchanged');
+            return;
+        }
+
+        console.log('🔄 [HomeScreen] Processing orders for total calculation:', {
+            shippedOrderCount: shippedOrder.length,
+            failedDeliveriesCount: failedDeliveries.length,
+            firebaseSkusCount: firebaseSkus.length,
+            selectorProductsCount: Object.keys(selector.firebaseProducts || {}).length
+        });
+        
         const merged = mergeSkuCounts(shippedOrder, failedDeliveries);
+        console.log('🔀 [HomeScreen] Merged SKUs:', {
+            mergedCount: merged.length,
+            sample: merged.slice(0, 5).map(m => ({ sku: m.sku, quantity: m.quantity }))
+        });
 
         const enriched = merged.map(item => {
-            const price = getPriceBySku(firebaseSkus, item.sku)
+            const price = getPriceBySku(firebaseSkus, item.sku);
+            
+            // If no price found in firebaseSkus, try to get from firebaseProducts
+            let finalPrice = price;
+            if (price === 0 && selector.firebaseProducts) {
+                // Try to find product by SKU
+                const productEntry = Object.entries(selector.firebaseProducts).find(([key, product]: [string, any]) => 
+                    product?.sku === item.sku
+                );
+                if (productEntry) {
+                    const [, product] = productEntry;
+                    const productPrice = parseFloat(product.price || 0);
+                    if (!isNaN(productPrice) && productPrice > 0) {
+                        finalPrice = productPrice;
+                        console.log(`✅ [HomeScreen] Found product price for ${item.sku}: ${finalPrice}`);
+                    }
+                }
+            }
+            
             return {
                 ...item,
-                price: price,
-                status: price > 0 ? true : false
+                price: finalPrice,
+                status: finalPrice > 0 ? true : false
             };
         });
-        setAllOrdersTotal(enriched.reduce((sum, item) => {
-            return sum + (item.price * item.quantity);
-        }, 0));
-    }, [shippedOrder, failedDeliveries, firebaseSkus])
+        
+        console.log('💰 [HomeScreen] Enriched items:', {
+            total: enriched.length,
+            itemsWithPrice: enriched.filter(e => e.price > 0).length,
+            itemsWithZeroPrice: enriched.filter(e => e.price === 0).length,
+            zeroPriceSkus: enriched.filter(e => e.price === 0).map(e => e.sku).slice(0, 10),
+            sample: enriched.slice(0, 5).map(e => ({ sku: e.sku, price: e.price, quantity: e.quantity }))
+        });
+        
+        // Store the data hash for use in finally block
+        const currentDataHash = dataHash;
+        
+        // Calculate totals using backend API
+        const calculateAllOrdersTotal = async () => {
+            isProcessingRef.current = true;
+            try {
+                const BASE_URL = getBaseUrl();
+                const requestBody = {
+                    items: enriched.map(item => ({
+                        price: item.price,
+                        quantity: item.quantity,
+                        ...item,
+                    })),
+                };
+                
+                console.log('📊 [HOME SCREEN - ORDERS TOTAL] Starting calculation...');
+                console.log('📤 [HOME SCREEN - ORDERS TOTAL] Request URL:', `${BASE_URL}/api/orders/calculate-totals`);
+                console.log('📤 [HOME SCREEN - ORDERS TOTAL] Request body:', JSON.stringify(requestBody, null, 2));
+                console.log('📤 [HOME SCREEN - ORDERS TOTAL] Items count:', requestBody.items.length);
+                console.log('📤 [HOME SCREEN - ORDERS TOTAL] Items with price > 0:', requestBody.items.filter(i => i.price > 0).length);
+                console.log('📤 [HOME SCREEN - ORDERS TOTAL] Items with price = 0:', requestBody.items.filter(i => i.price === 0).length);
+                
+                const response = await fetch(`${BASE_URL}/api/orders/calculate-totals`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody),
+                });
+
+                console.log('📥 [HOME SCREEN - ORDERS TOTAL] Response status:', response.status, response.statusText);
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('✅ [HOME SCREEN - ORDERS TOTAL] Response data:', JSON.stringify(result, null, 2));
+                    
+                    if (!result.error && result.data?.summary) {
+                        console.log('💰 [HOME SCREEN - ORDERS TOTAL] Grand total:', result.data.summary.grandTotal);
+                        console.log('📈 [HOME SCREEN - ORDERS TOTAL] Total items:', result.data.summary.totalItems);
+                        console.log('💵 [HOME SCREEN - ORDERS TOTAL] Formatted total:', result.data.summary.formattedGrandTotal);
+                        console.log('✅ [HOME SCREEN - ORDERS TOTAL] Setting allOrdersTotal to:', result.data.summary.grandTotal);
+                        setAllOrdersTotal(result.data.summary.grandTotal);
+                    } else {
+                        console.warn('⚠️ [HOME SCREEN - ORDERS TOTAL] Response contains error:', result.error);
+                        console.warn('⚠️ [HOME SCREEN - ORDERS TOTAL] Full result:', JSON.stringify(result, null, 2));
+                        console.warn('⚠️ [HOME SCREEN - ORDERS TOTAL] Setting allOrdersTotal to 0');
+                        setAllOrdersTotal(0);
+                    }
+                } else {
+                    const errorData = await response.json().catch(() => ({}));
+                    const errorMessage = errorData.error || errorData.message || 'Unknown error';
+                    console.warn('⚠️ [HomeScreen] HTTP Error fetching orders total:', response.status, errorMessage);
+                    console.warn('⚠️ [HomeScreen] Error response data:', JSON.stringify(errorData, null, 2));
+                    console.warn('⚠️ [HOME SCREEN - ORDERS TOTAL] Setting allOrdersTotal to 0');
+                    setAllOrdersTotal(0);
+                }
+            } catch (error: any) {
+                const errorMessage = error?.message || 'Unknown error occurred';
+                console.warn('⚠️ [HomeScreen] Error calculating orders total:', errorMessage);
+                if (error?.stack) {
+                    console.warn('⚠️ [HomeScreen] Stack:', error.stack);
+                }
+                console.warn('⚠️ [HOME SCREEN - ORDERS TOTAL] Setting allOrdersTotal to 0 due to error');
+                // Don't show alert for calculation errors, just use default value
+                setAllOrdersTotal(0);
+            } finally {
+                isProcessingRef.current = false;
+                // Update the hash after processing
+                lastProcessedDataRef.current = currentDataHash;
+            }
+        };
+
+        calculateAllOrdersTotal();
+    }, [shippedOrder, failedDeliveries, firebaseSkus, selector.firebaseProducts, firebaseDataLoaded])
 
     //This function gets the price of any sku
     const getPriceBySku = (skuList, targetSku) => {
         const found = firebaseSkus.find(item => item.sku === targetSku);
-        return found ? found.price : 0; // returns null if not found
+        const price = found ? found.price : 0;
+        
+        console.log(`[HomeScreen] getPriceBySku for ${targetSku}:`, {
+            found: !!found,
+            price: price,
+            priceType: typeof price,
+            firebaseSkusLength: firebaseSkus.length,
+            sampleSkus: firebaseSkus.slice(0, 3).map(s => ({ sku: s.sku, price: s.price }))
+        });
+        
+        return price; // returns 0 if not found
     }
 
     //This function get the orders from daraz and then merge it in sku's and show us sku and quantity
@@ -311,40 +485,66 @@ const HomeScreen = ({ navigation }) => {
         try {
             // Validate access token before making request
             if (!access_token) {
-                console.warn("Missing access token for Daraz orders fetch");
+                console.warn("⚠️ [HOME SCREEN - DARAZ ORDERS] Missing access token for status:", status);
                 return null;
             }
 
-            const response = await fetch(`${BASE_URL}/get-daraz-order-details?access_token=${access_token}&created_after=${encodeURIComponent(createdAfterISO)}&status=${status}`);
+            const requestUrl = `${BASE_URL}/get-daraz-order-details?access_token=${access_token}&created_after=${encodeURIComponent(createdAfterISO)}&status=${status}`;
+            console.log('📤 [HOME SCREEN - DARAZ ORDERS] Fetching orders...');
+            console.log('📤 [HOME SCREEN - DARAZ ORDERS] Status:', status);
+            console.log('📤 [HOME SCREEN - DARAZ ORDERS] Created after:', createdAfterISO);
+            console.log('📤 [HOME SCREEN - DARAZ ORDERS] Request URL:', requestUrl.replace(access_token, 'ACCESS_TOKEN_HIDDEN'));
+
+            const response = await fetch(requestUrl);
+
+            console.log('📥 [HOME SCREEN - DARAZ ORDERS] Response status:', response.status, response.statusText);
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                console.warn(`Server error ${response.status}:`, errorData.error || errorData.message || 'Unknown error');
+                const errorMessage = errorData.error || errorData.message || 'Unknown error';
+                console.warn(`⚠️ [HomeScreen] Server error ${response.status} fetching Daraz orders:`, errorMessage);
+                // Don't show alert for individual order fetch failures
                 return null;
             }
 
             const data = await response.json();
+            console.log('✅ [HOME SCREEN - DARAZ ORDERS] Response received');
+            console.log('📊 [HOME SCREEN - DARAZ ORDERS] Response data:', JSON.stringify(data, null, 2));
 
             // Check if response contains an error
             if (data.error) {
-                console.warn("API returned error:", data.error, data.details || '');
+                console.warn("⚠️ [HOME SCREEN - DARAZ ORDERS] API returned error:", data.error, data.details || '');
                 return null;
             }
 
             // Ensure orderItems exists and is an array
             if (!data.orderItems || !Array.isArray(data.orderItems)) {
-                console.warn("Invalid response format: orderItems missing or not an array");
+                console.warn("⚠️ [HOME SCREEN - DARAZ ORDERS] Invalid response format: orderItems missing or not an array");
                 return null;
             }
 
+            console.log('📦 [HOME SCREEN - DARAZ ORDERS] Order items count:', data.orderItems.length);
+            console.log('📈 [HOME SCREEN - DARAZ ORDERS] Count total:', data.countTotal || 0);
+
             if (status == 'shipped') {
-                setShippedOrder(prev => [...prev, ...countSkusFromOrders(data.orderItems)]);
+                const skuCounts = countSkusFromOrders(data.orderItems);
+                console.log('🔄 [HOME SCREEN - DARAZ ORDERS] SKU counts calculated:', skuCounts);
+                console.log('🔄 [HOME SCREEN - DARAZ ORDERS] Adding', skuCounts.length, 'SKU entries to shipped orders');
+                setShippedOrder(prev => {
+                    const updated = [...prev, ...skuCounts];
+                    console.log('✅ [HOME SCREEN - DARAZ ORDERS] Total shipped order SKUs:', updated.length);
+                    return updated;
+                });
             }
 
             return data;
-        } catch (error) {
-            // Silently handle errors without showing notifications
-            console.warn("Error fetching Daraz orders:", error.message);
+        } catch (error: any) {
+            const errorMessage = error?.message || 'Unknown error occurred';
+            console.warn('⚠️ [HomeScreen] Error fetching Daraz orders:', errorMessage);
+            if (error?.stack) {
+                console.warn('⚠️ [HomeScreen] Stack:', error.stack);
+            }
+            // Don't show alert for individual order fetch failures
             return null;
         }
     };
@@ -410,10 +610,11 @@ const HomeScreen = ({ navigation }) => {
                     return updated;
                 });
             }
-        } catch (error) {
-            console.error('❌ [FAILED ORDERS] Error processing failed orders:', error);
-            console.error('❌ [FAILED ORDERS] Error message:', error.message);
-            console.error('❌ [FAILED ORDERS] Status:', status);
+        } catch (error: any) {
+            const errorMessage = error?.message || 'Unknown error occurred';
+            console.warn('⚠️ [HomeScreen] Error processing failed orders:', errorMessage);
+            console.warn('⚠️ [HomeScreen] Status:', status);
+            // Don't show alert for individual order processing errors
         }
     };
 
@@ -430,24 +631,40 @@ const HomeScreen = ({ navigation }) => {
     const [stockLoader, setStockLoader] = useState(false)
 
 
+    // Fetch products from backend API for stock management
     useEffect(() => {
         if (!currentUser) return;
+
+        const BASE_URL = getBaseUrl();
 
         const fetchProducts = async () => {
             try {
                 setStockLoader(true);
-                const snapshot = await get(productRef);
-                const data = snapshot.val();
-
-                if (data) {
-                    const array = Object.entries(data).map(([id, value]: [string, any]) => ({
-                        id,
-                        ...value,
-                    }));
-                    setProducts(array);
-                } else {
-                    setProducts([]); // Optional: clear products if nothing is found
+                const response = await fetch(`${BASE_URL}/api/products/${currentUser.uid}`);
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    const errorMessage = errorData.error || 'Unknown error';
+                    console.warn('⚠️ [HomeScreen] Error fetching products:', errorMessage);
+                    setProducts([]);
+                    return;
                 }
+
+                const result = await response.json();
+                if (result.error) {
+                    const errorMessage = result.error || 'Unknown error';
+                    console.warn('⚠️ [HomeScreen] API returned error:', errorMessage);
+                    setProducts([]);
+                    return;
+                }
+
+                const products = result.data || [];
+                // Convert to array format with id field
+                const array = products.map((product: any, index: number) => ({
+                    id: product.id || index.toString(),
+                    ...product,
+                }));
+                setProducts(array);
             } catch (error) {
                 console.error('Error fetching data:', error);
             } finally {
@@ -458,14 +675,73 @@ const HomeScreen = ({ navigation }) => {
         fetchProducts();
     }, [reloadScreen, currentUser])
 
-    const calculateTotalPrice = (products) => {
-        return products?.reduce((total, item) => {
-            return total + item.price * item.quantity;
-        }, 0);
+    // Calculate stock total using backend API
+    const calculateTotalPrice = async (productsList: any[]) => {
+        if (!productsList || productsList.length === 0) {
+            console.log('📦 [HOME SCREEN - STOCK TOTAL] No products to calculate');
+            setTotalPrice(0);
+            return;
+        }
+
+        try {
+            const BASE_URL = getBaseUrl();
+            const requestBody = {
+                products: productsList.map(item => ({
+                    price: item.price,
+                    quantity: item.quantity,
+                    ...item,
+                })),
+            };
+            
+            console.log('📦 [HOME SCREEN - STOCK TOTAL] Starting calculation...');
+            console.log('📤 [HOME SCREEN - STOCK TOTAL] Request URL:', `${BASE_URL}/api/stock/calculate-total`);
+            console.log('📤 [HOME SCREEN - STOCK TOTAL] Products count:', requestBody.products.length);
+            console.log('📤 [HOME SCREEN - STOCK TOTAL] Request body:', JSON.stringify(requestBody, null, 2));
+            
+            const response = await fetch(`${BASE_URL}/api/stock/calculate-total`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody),
+            });
+
+            console.log('📥 [HOME SCREEN - STOCK TOTAL] Response status:', response.status, response.statusText);
+            
+            if (response.ok) {
+                const result = await response.json();
+                console.log('✅ [HOME SCREEN - STOCK TOTAL] Response data:', JSON.stringify(result, null, 2));
+                
+                if (!result.error && result.data?.summary) {
+                    console.log('💰 [HOME SCREEN - STOCK TOTAL] Total stock value:', result.data.summary.totalStockValue);
+                    console.log('📈 [HOME SCREEN - STOCK TOTAL] Total products:', result.data.summary.totalProducts);
+                    console.log('💵 [HOME SCREEN - STOCK TOTAL] Formatted total:', result.data.summary.formattedTotalValue);
+                    setTotalPrice(result.data.summary.totalStockValue);
+                    return;
+                } else {
+                    console.warn('⚠️ [HOME SCREEN - STOCK TOTAL] Response contains error:', result.error);
+                }
+            } else {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('❌ [HOME SCREEN - STOCK TOTAL] HTTP Error:', response.status, errorData);
+            }
+        } catch (error: any) {
+            console.error('❌ [HOME SCREEN - STOCK TOTAL] Exception:', error.message);
+            console.error('❌ [HOME SCREEN - STOCK TOTAL] Stack:', error.stack);
+        }
+
+        // Fallback to client-side calculation if API fails
+        console.log('🔄 [HOME SCREEN - STOCK TOTAL] Falling back to client-side calculation');
+        const total = productsList?.reduce((total, item) => {
+            return total + (item.price || 0) * (item.quantity || 0);
+        }, 0) || 0;
+        console.log('💰 [HOME SCREEN - STOCK TOTAL] Client-side calculated total:', total);
+        setTotalPrice(total);
     };
 
     useEffect(() => {
-        setTotalPrice(calculateTotalPrice(products));
+        calculateTotalPrice(products);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [products, reloadScreen]);
 
     useEffect(() => {
@@ -490,49 +766,91 @@ const HomeScreen = ({ navigation }) => {
         try {
             // Validate access token before making request
             if (!access_token) {
-                console.warn("Missing access token for Daraz pending orders fetch");
+                console.warn("⚠️ [HOME SCREEN - PENDING ORDERS] Missing access token for status:", status);
                 return null;
             }
 
-            const response = await fetch(`${BASE_URL}/get-daraz-order-details?access_token=${access_token}&created_after=${encodeURIComponent(createdAfterISO)}&status=${status}`);
+            const requestUrl = `${BASE_URL}/get-daraz-order-details?access_token=${access_token}&created_after=${encodeURIComponent(createdAfterISO)}&status=${status}`;
+            console.log('📤 [HOME SCREEN - PENDING ORDERS] Fetching orders...');
+            console.log('📤 [HOME SCREEN - PENDING ORDERS] Status:', status);
+            console.log('📤 [HOME SCREEN - PENDING ORDERS] Created after:', createdAfterISO);
+            console.log('📤 [HOME SCREEN - PENDING ORDERS] Request URL:', requestUrl.replace(access_token, 'ACCESS_TOKEN_HIDDEN'));
+
+            const response = await fetch(requestUrl);
+
+            console.log('📥 [HOME SCREEN - PENDING ORDERS] Response status:', response.status, response.statusText);
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                console.warn(`Server error ${response.status}:`, errorData.error || errorData.message || 'Unknown error');
+                console.error(`❌ [HOME SCREEN - PENDING ORDERS] Server error ${response.status}:`, errorData);
                 return null;
             }
 
             const data = await response.json();
+            console.log('✅ [HOME SCREEN - PENDING ORDERS] Response received for status:', status);
+            console.log('📊 [HOME SCREEN - PENDING ORDERS] Response data:', JSON.stringify(data, null, 2));
 
             // Check if response contains an error
             if (data.error) {
-                console.warn("API returned error:", data.error, data.details || '');
+                console.warn("⚠️ [HOME SCREEN - PENDING ORDERS] API returned error:", data.error, data.details || '');
                 return null;
             }
 
             // Ensure orderItems exists and is an array
             if (!data.orderItems || !Array.isArray(data.orderItems)) {
-                console.warn("Invalid response format: orderItems missing or not an array");
+                console.warn("⚠️ [HOME SCREEN - PENDING ORDERS] Invalid response format: orderItems missing or not an array");
                 return null;
             }
 
+            console.log('📦 [HOME SCREEN - PENDING ORDERS] Order items count:', data.orderItems.length);
+            console.log('📈 [HOME SCREEN - PENDING ORDERS] Count total:', data.countTotal || 0);
+
             if (status == 'pending') {
-                setPendingOrdersCount(prev => prev + (data.countTotal || 0))
-                setPendingOrders(prev => [...prev, ...(data.orderItems || [])])
+                console.log('🔄 [HOME SCREEN - PENDING ORDERS] Updating pending orders state');
+                setPendingOrdersCount(prev => {
+                    const newCount = prev + (data.countTotal || 0);
+                    console.log('✅ [HOME SCREEN - PENDING ORDERS] Pending count:', newCount);
+                    return newCount;
+                });
+                setPendingOrders(prev => {
+                    const updated = [...prev, ...(data.orderItems || [])];
+                    console.log('✅ [HOME SCREEN - PENDING ORDERS] Total pending orders:', updated.length);
+                    return updated;
+                });
             } else if (status == 'ready_to_ship') {
-                setReadyToShipOrdersCount(prev => prev + (data.countTotal || 0))
-                setReadyToShipOrders(prev => [...prev, ...(data.orderItems || [])])
+                console.log('🔄 [HOME SCREEN - PENDING ORDERS] Updating ready to ship orders state');
+                setReadyToShipOrdersCount(prev => {
+                    const newCount = prev + (data.countTotal || 0);
+                    console.log('✅ [HOME SCREEN - PENDING ORDERS] Ready to ship count:', newCount);
+                    return newCount;
+                });
+                setReadyToShipOrders(prev => {
+                    const updated = [...prev, ...(data.orderItems || [])];
+                    console.log('✅ [HOME SCREEN - PENDING ORDERS] Total ready to ship orders:', updated.length);
+                    return updated;
+                });
             } else {
                 if(status=='delivered'){                    
-                    setDarazDeliveredOrders(prev => [...prev, ...countSkusFromOrders(data.orderItems || [])])
-                    setDarazDeliveredOrdersCount(prev=>prev+(data?.orderItems?.length || 0))
+                    console.log('🔄 [HOME SCREEN - PENDING ORDERS] Updating delivered orders state');
+                    const skuCounts = countSkusFromOrders(data.orderItems || []);
+                    console.log('📊 [HOME SCREEN - PENDING ORDERS] Delivered SKU counts:', skuCounts);
+                    setDarazDeliveredOrders(prev => {
+                        const updated = [...prev, ...skuCounts];
+                        console.log('✅ [HOME SCREEN - PENDING ORDERS] Total delivered order SKUs:', updated.length);
+                        return updated;
+                    });
+                    setDarazDeliveredOrdersCount(prev => {
+                        const newCount = prev + (data?.orderItems?.length || 0);
+                        console.log('✅ [HOME SCREEN - PENDING ORDERS] Delivered orders count:', newCount);
+                        return newCount;
+                    });
                 }
             }
 
             return data;
-        } catch (error) {
-            // Silently handle errors without showing notifications
-            console.warn("Error fetching Daraz pending orders:", error.message);
+        } catch (error: any) {
+            console.error("❌ [HOME SCREEN - PENDING ORDERS] Exception:", error.message);
+            console.error("❌ [HOME SCREEN - PENDING ORDERS] Stack:", error.stack);
             return null;
         }
     };
@@ -600,9 +918,6 @@ const HomeScreen = ({ navigation }) => {
         
         navigation.navigate('FailedDeliveryOrders',{failedOrderss:failedOrders,firebaseSkus:firebaseSkus})
     }
-
-
-
     const navigatePendingOrders=()=>{
         navigation.navigate('PendingOrders',{pendingOrders:pendingOrders,firebaseSkus:firebaseSkus})
     }

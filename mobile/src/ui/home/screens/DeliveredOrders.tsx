@@ -3,14 +3,12 @@ import {
     View,
     FlatList,
     StyleSheet,
-    Image,
-    TouchableOpacity,
-    Alert,
     ActivityIndicator,
     ScrollView,
+    RefreshControl,
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { useTheme } from '../../../context/ThemeContext';
 import TextComp from '../../components/TextComp';
 import FontFamilty from '../../../constants/FontFamilty';
@@ -19,8 +17,6 @@ import OrderItem from '../components/OrderItem';
 import SelectStore from '../../components/SelectStore';
 import { AppStrings } from '../../../constants/AppStrings';
 import Header from '../../components/Header';
-import { setTodayDeliveredOrders } from '../../../redux/AppReducer';
-import { getDarazDeliveredOrders } from '../../../utils/api/getDarazDeliveredOrders';
 import WeekRangePST from '../components/WeekRangePST';
 import { getBaseUrl } from '../../../utils/api/baseUrl';
 
@@ -38,7 +34,6 @@ const DeliveredOrders = ({ navigation }) => {
     const [darazDeliveredOrders, setDarazDeliveredOrders] = useState([])
     const [darazDeliveredOrdersCount, setDarazDeliveredOrdersCount] = useState(0)
     const [all_access_tokens, setAll_access_tokens] = useState([]);
-    const dispatch = useDispatch()
 
     const [startWeek, setStartWeek] = useState()
     const [endWeek, setEndWeek] = useState()
@@ -122,25 +117,18 @@ const DeliveredOrders = ({ navigation }) => {
 
 
 
-    const onChange = () => {
-
-    }
-
     const [selectedRange, setSelectedRange] = useState('today');
     const [customDate, setCustomDate] = useState(null);
 
 
 
-    useEffect(() => {
-        setDarazDeliveredOrders(selector.todayDeliveredOrders || []);
-        setDarazDeliveredOrdersCount(selector.todayDeliveredOrders?.length || 0);
-    }, [selector.todayDeliveredOrders]);
 
     const goBack = () => {
         navigation.goBack()
     }
 
     const [darazOrdersLoader, setDarazOrdersLoader] = useState(false)
+    const [refreshing, setRefreshing] = useState(false)
 
     const getDarazDeliveredOrdersLocal = async (access_token, update_after, update_before, status, date) => {
         try {
@@ -308,7 +296,96 @@ const DeliveredOrders = ({ navigation }) => {
         fetchOrders();
     }, [selectedRange, customDate, startWeek]);
 
+    const onRefresh = async () => {
+        setRefreshing(true);
+        try {
+            // Reset states based on selected range
+            switch (selectedRange) {
+                case 'today':
+                    setDarazDeliveredOrders([]);
+                    setDarazDeliveredOrdersCount(0);
+                    break;
+                case 'yesterday':
+                    setDarazDeliveredOrdersYesterday([]);
+                    setDarazDeliveredOrdersYesterdayCount(0);
+                    break;
+                case '7days':
+                    setDarazDeliveredOrdersSevenDays([]);
+                    setDarazDeliveredOrdersSevenDaysCount(0);
+                    break;
+                case '30days':
+                    setDarazDeliveredOrdersThirtyDays([]);
+                    setDarazDeliveredOrdersThirtyDaysCount(0);
+                    break;
+                case 'By Week':
+                    setDarazDeliveredOrdersByWeek([]);
+                    setDarazDeliveredOrdersByWeekCount(0);
+                    break;
+                case 'custom':
+                    setDarazDeliveredOrdersCustom([]);
+                    setDarazDeliveredOrdersCustomCount(0);
+                    break;
+            }
 
+            setTotalProfit(0);
+            setAmountReceived(0);
+            setProcessedItemIds(new Set());
+
+            // Calculate update_after and update_before based on selectedRange
+            const now = new Date();
+            const updateAfter = new Date();
+            const updateBefore = new Date();
+
+            switch (selectedRange) {
+                case 'today':
+                    updateAfter.setHours(0, 0, 0, 0);
+                    break;
+                case 'yesterday':
+                    updateAfter.setDate(updateAfter.getDate() - 1);
+                    updateAfter.setHours(0, 0, 0, 0);
+                    updateBefore.setHours(0, 0, 0, 0);
+                    break;
+                case '7days':
+                    updateAfter.setDate(updateAfter.getDate() - 7);
+                    updateAfter.setHours(0, 0, 0, 0);
+                    break;
+                case '30days':
+                    updateAfter.setDate(updateAfter.getDate() - 30);
+                    updateAfter.setHours(0, 0, 0, 0);
+                    break;
+                case 'By Week':
+                    if (startWeek && endWeek) {
+                        updateAfter.setTime(new Date(startWeek).getTime());
+                        updateBefore.setTime(new Date(endWeek).getTime());
+                    }
+                    break;
+                case 'custom':
+                    if (customDate) {
+                        updateAfter.setTime(new Date(customDate).setHours(0, 0, 0, 0));
+                        updateBefore.setTime(new Date(customDate).setHours(23, 59, 59, 999));
+                    }
+                    break;
+            }
+
+            // Fetch fresh data
+            if (all_access_tokens && Array.isArray(all_access_tokens) && all_access_tokens.length > 0) {
+                const requests = all_access_tokens.flatMap((item: any) => {
+                    if (item && item.access_token) {
+                        return [getDarazDeliveredOrdersLocal(item.access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'delivered', selectedRange)];
+                    }
+                    return [];
+                });
+                
+                if (requests.length > 0) {
+                    await Promise.all(requests);
+                }
+            }
+        } catch (error) {
+            console.error('Error refreshing orders:', error);
+        } finally {
+            setRefreshing(false);
+        }
+    };
 
     //This function gets the price of any sku
 
@@ -391,7 +468,17 @@ const DeliveredOrders = ({ navigation }) => {
                         <ActivityIndicator size={'large'} color={theme.primaryOrange}></ActivityIndicator>
                     </View>
                     :
-                    <ScrollView showsVerticalScrollIndicator={false}>
+                    <ScrollView 
+                        showsVerticalScrollIndicator={false}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={refreshing}
+                                onRefresh={onRefresh}
+                                colors={[theme.primaryOrange]}
+                                tintColor={theme.primaryOrange}
+                            />
+                        }
+                    >
 
 
                         <FlatList

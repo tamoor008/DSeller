@@ -3,7 +3,6 @@ import {
     View,
     FlatList,
     StyleSheet,
-    Image,
     TouchableOpacity,
     Alert,
     ActivityIndicator,
@@ -11,7 +10,7 @@ import {
     RefreshControl,
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { useTheme } from '../../../context/ThemeContext';
 import TextComp from '../../components/TextComp';
 import FontFamilty from '../../../constants/FontFamilty';
@@ -19,7 +18,6 @@ import OrderItem from '../components/OrderItem';
 import SelectStore from '../../components/SelectStore';
 import { AppStrings } from '../../../constants/AppStrings';
 import Header from '../../components/Header';
-import { setTodayPendingOrders } from '../../../redux/AppReducer';
 import { getBaseUrl } from '../../../utils/api/baseUrl';
 import { packAndRtsOrders, prepareOrderData } from '../../../utils/api/packAndRtsOrders';
 
@@ -44,7 +42,6 @@ const PendingOrders: React.FC<NavigationProps> = ({ navigation }) => {
     const [darazPendingOrders, setDarazPendingOrders] = useState<any[]>([]);
     const [darazPendingOrdersCount, setDarazPendingOrdersCount] = useState<number>(0);
     const [all_access_tokens, setAll_access_tokens] = useState<any[]>([]);
-    const dispatch = useDispatch();
 
     const [processedItemIds, setProcessedItemIds] = useState<Set<string>>(new Set<string>());
 
@@ -146,9 +143,6 @@ const PendingOrders: React.FC<NavigationProps> = ({ navigation }) => {
 
 
 
-    const onChange = () => {
-
-    }
 
 
 
