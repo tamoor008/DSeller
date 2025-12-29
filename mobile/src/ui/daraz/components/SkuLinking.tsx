@@ -27,6 +27,7 @@ const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boo
     const [productDescription, setProductDescription] = useState('')
     const [quantity, setQuantity] = useState('')
     const [price, setPrice] = useState('')
+    const [packagingPrice, setPackagingPrice] = useState('')
     const [calculatedPrice, setCalculatedPrice] = useState<number>(0);
     const BASE_URL = getBaseUrl();
 
@@ -75,7 +76,7 @@ const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boo
             
             // Recalculate price when product changes
             if (quantity) {
-                calculateSkuPrice(product.price, quantity);
+                calculateSkuPrice(product.price, quantity, packagingPrice);
             }
         } catch (error: any) {
             console.error('[SkuLinking] ❌ Error fetching product data:', error.message);
@@ -89,6 +90,10 @@ const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boo
         
         if (selectedSku?.productQuantity) {
             setQuantity(selectedSku.productQuantity.toString());
+        }
+        
+        if (selectedSku?.packagingPrice !== undefined && selectedSku?.packagingPrice !== null) {
+            setPackagingPrice(selectedSku.packagingPrice.toString());
         }
         
         // If selectedSku already has a productId, pre-select it and fetch the product
@@ -122,7 +127,7 @@ const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boo
     }, [value, currentUser, fetchProduct]);
 
     // Calculate SKU price using backend API
-    const calculateSkuPrice = useCallback(async (unitPrice: number, qty: string) => {
+    const calculateSkuPrice = useCallback(async (unitPrice: number, qty: string, packaging: string = '') => {
         if (!unitPrice || !qty) {
             setCalculatedPrice(0);
             return;
@@ -137,6 +142,7 @@ const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boo
                 body: JSON.stringify({
                     quantity: qty,
                     unitPrice: unitPrice,
+                    packagingPrice: packaging || '0',
                 }),
             });
 
@@ -159,14 +165,14 @@ const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boo
         }
     }, [BASE_URL]);
 
-    // Recalculate price when quantity or product price changes
+    // Recalculate price when quantity, product price, or packaging price changes
     useEffect(() => {
         if (selectedProduct?.price && quantity) {
-            calculateSkuPrice(selectedProduct.price, quantity);
+            calculateSkuPrice(selectedProduct.price, quantity, packagingPrice);
         } else {
             setCalculatedPrice(0);
         }
-    }, [quantity, selectedProduct?.price, calculateSkuPrice]);
+    }, [quantity, selectedProduct?.price, packagingPrice, calculateSkuPrice]);
 
     // Fetch products list from backend API
     useEffect(() => {
@@ -219,6 +225,7 @@ const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boo
                     productId: value,
                     quantity: quantityNum,
                     productName: (selectedProduct as any)?.productName || '',
+                    packagingPrice: packagingPrice || '0',
                 }),
             });
 
@@ -238,6 +245,7 @@ const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boo
             console.log('[SkuLinking] ✅ SKU updated successfully via backend:', result.data);
             setValue(null);
             setQuantity('');
+            setPackagingPrice('');
             setCalculatedPrice(0);
             setIsvisible(false);
         } catch (error: any) {
@@ -307,7 +315,7 @@ const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boo
                                     setText={(text: string) => {
                                         setQuantity(text);
                                         if (selectedProduct?.price) {
-                                            calculateSkuPrice(selectedProduct.price, text);
+                                            calculateSkuPrice(selectedProduct.price, text, packagingPrice);
                                         }
                                     }}
                                     secureTextEntry={false}
@@ -340,12 +348,36 @@ const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boo
                                 <TextComp size={12} style={{ fontFamily: FontFamilty.medium, color: theme.textSecondary }} numberOfLines={1}>{' /  ' + ((selectedProduct as any)?.unit || '')}</TextComp>
                             </View>
                         </View>
+
+                        <View style={{ rowGap: 8 }}>
+                            <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: theme.textPrimary }} numberOfLines={1}>Packaging Price (Rs.)</TextComp>
+
+                            <View style={{ flexDirection: 'row', columnGap: 16, alignItems: 'center' }}>
+                                <TextInputComp 
+                                    style={{ flex: 1 }} 
+                                    keyboardType={'numeric'} 
+                                    cumpolsury={false} 
+                                    size={16} 
+                                    placeHolder={'Packaging Price'} 
+                                    text={packagingPrice} 
+                                    setText={(text: string) => {
+                                        setPackagingPrice(text);
+                                        if (selectedProduct?.price && quantity) {
+                                            calculateSkuPrice(selectedProduct.price, quantity, text);
+                                        }
+                                    }}
+                                    secureTextEntry={false}
+                                />
+                                <TextComp size={12} style={{ fontFamily: FontFamilty.medium, color: theme.textSecondary }} numberOfLines={1}>per SKU</TextComp>
+                            </View>
+                        </View>
+
                         <View style={{ flexDirection: 'row', columnGap: 8, alignItems: 'center' }}>
                             <TextComp size={16} style={{ fontFamily: FontFamilty.medium, color: theme.textPrimary }} numberOfLines={1}>{'SKU Price'}</TextComp>
                             <TextComp size={16} style={{ fontFamily: FontFamilty.medium, color: theme.primaryOrange }} numberOfLines={1}>
                                 {calculatedPrice > 0 ? calculatedPrice.toFixed(2) : '0.00'}
                             </TextComp>
-</View>
+                        </View>
                         <View style={{ flexDirection: 'row', alignItems: 'center', columnGap: 16 }}>
                             <TouchableOpacity onPress={() => setIsvisible(false)} activeOpacity={0.9} style={styles.cancelButton}>
                                 <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: theme.textSecondary, textAlign: 'center' }} numberOfLines={1}>{AppStrings.cancel}</TextComp>

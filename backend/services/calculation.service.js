@@ -1,14 +1,16 @@
 /**
- * Calculate SKU price (quantity × unit price)
+ * Calculate SKU price (quantity × unit price + packaging price)
  * @param {number|string} quantity - Quantity of items
  * @param {number|string} unitPrice - Price per unit
+ * @param {number|string} packagingPrice - Packaging price (optional, defaults to 0)
  * @returns {object} - Calculation result with totals
  */
-function calculateSkuPrice(quantity, unitPrice) {
+function calculateSkuPrice(quantity, unitPrice, packagingPrice = 0) {
   try {
     // Parse and normalize values
     const quantityNum = parseFloat(quantity) || 0;
     let priceNum = 0;
+    let packagingNum = 0;
     
     if (typeof unitPrice === 'string') {
       priceNum = parseFloat(unitPrice) || 0;
@@ -16,6 +18,14 @@ function calculateSkuPrice(quantity, unitPrice) {
       priceNum = unitPrice;
     } else {
       priceNum = parseFloat(String(unitPrice || '0')) || 0;
+    }
+
+    if (typeof packagingPrice === 'string') {
+      packagingNum = parseFloat(packagingPrice) || 0;
+    } else if (typeof packagingPrice === 'number') {
+      packagingNum = packagingPrice;
+    } else {
+      packagingNum = parseFloat(String(packagingPrice || '0')) || 0;
     }
 
     // Validate inputs
@@ -31,8 +41,15 @@ function calculateSkuPrice(quantity, unitPrice) {
       throw error;
     }
 
-    // Calculate total price
-    const calculatedPrice = quantityNum * priceNum;
+    if (isNaN(packagingNum)) {
+      const error = new Error("Invalid packaging price value");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Calculate total price: (quantity × unit price) + packaging price
+    const productTotal = quantityNum * priceNum;
+    const calculatedPrice = productTotal + packagingNum;
 
     // Check for invalid calculations (Infinity, NaN)
     if (!isFinite(calculatedPrice)) {
@@ -44,6 +61,8 @@ function calculateSkuPrice(quantity, unitPrice) {
     return {
       quantity: quantityNum,
       unitPrice: priceNum,
+      packagingPrice: packagingNum,
+      productTotal: productTotal,
       totalPrice: calculatedPrice,
       formattedPrice: calculatedPrice.toFixed(2),
     };

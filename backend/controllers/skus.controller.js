@@ -43,11 +43,11 @@ async function getSkus(req, res, next) {
 }
 
 /**
- * Calculate SKU price (quantity × unit price)
+ * Calculate SKU price (quantity × unit price + packaging price)
  */
 function calculateSku(req, res, next) {
   try {
-    const { quantity, unitPrice } = req.body;
+    const { quantity, unitPrice, packagingPrice } = req.body;
 
     // Validation
     if (quantity === undefined || quantity === null || quantity === '') {
@@ -66,7 +66,7 @@ function calculateSku(req, res, next) {
       });
     }
 
-    const result = calculateSkuPrice(quantity, unitPrice);
+    const result = calculateSkuPrice(quantity, unitPrice, packagingPrice || 0);
 
     return res.status(200).json({
       message: "SKU price calculated successfully",
@@ -88,7 +88,7 @@ function calculateSku(req, res, next) {
 async function updateSkuHandler(req, res, next) {
   try {
     const { userId, sku } = req.params;
-    const { productId, quantity, productName } = req.body;
+    const { productId, quantity, productName, packagingPrice } = req.body;
 
     if (!userId || !sku) {
       return res.status(400).json({ 
@@ -126,11 +126,13 @@ async function updateSkuHandler(req, res, next) {
       });
     }
 
-    // Normalize quantity
+    // Normalize quantity and packaging price
     const quantityNum = parseFloat(quantity || '0') || 0;
+    const packagingNum = parseFloat(packagingPrice || '0') || 0;
 
-    // Calculate total price server-side
-    const calculatedPrice = quantityNum * product.price;
+    // Calculate total price server-side: (quantity × unit price) + packaging price
+    const productTotal = quantityNum * product.price;
+    const calculatedPrice = productTotal + packagingNum;
 
     // Update SKU in Firebase
     const updates = {
@@ -138,6 +140,7 @@ async function updateSkuHandler(req, res, next) {
       productId: productId,
       productQuantity: quantityNum.toString(),
       productName: productName || product.productName || '',
+      packagingPrice: packagingNum,
       sku: sku,
     };
 

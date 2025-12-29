@@ -1,20 +1,49 @@
 import { setTodayDeliveredOrders } from '../../redux/AppReducer';
 import { store } from '../../redux/store'; // Adjust based on your project setup
 import { getBaseUrl } from './baseUrl';
+import { refreshStoreToken, refreshStoreTokenWithRefreshToken, checkResponseForTokenExpiration } from './tokenRefresh';
 
-export const getDarazDeliveredOrders = async (access_token, createdAfterISO, status, dispatch) => {
+export const getDarazDeliveredOrders = async (access_token, createdAfterISO, status, dispatch, storeInfo?: any) => {
     const BASE_URL = getBaseUrl(); // instant access, no async
+
+    const storeName = storeInfo?.storeName || storeInfo?.name || 'Unknown Store';
+    const sellerId = storeInfo?.seller_id || 'Unknown Seller ID';
+
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`📦 [DELIVERED ORDERS API - ${storeName}] Starting fetch`);
+    console.log(`🆔 [DELIVERED ORDERS API - ${storeName}] Seller ID: ${sellerId}`);
+    console.log(`📅 [DELIVERED ORDERS API - ${storeName}] Update after: ${createdAfterISO}`);
+    console.log(`📋 [DELIVERED ORDERS API - ${storeName}] Status: ${status}`);
 
     try {
         // Validate access token before making request
         if (!access_token) {
-            console.warn("Missing access token for Daraz delivered orders fetch");
+            console.warn(`⚠️ [DELIVERED ORDERS API - ${storeName}] Missing access token`);
             return [];
         }
 
-        const response = await fetch(
-            `${BASE_URL}/get-daraz-delivered-order-details?access_token=${access_token}&update_after=${encodeURIComponent(createdAfterISO)}&status=${status}`
-        );
+        let url = `${BASE_URL}/get-daraz-delivered-order-details?access_token=${access_token}&update_after=${encodeURIComponent(createdAfterISO)}&status=${status}`;
+        console.log(`📤 [DELIVERED ORDERS API - ${storeName}] Request URL: ${url.replace(access_token, 'ACCESS_TOKEN_HIDDEN')}`);
+        let response = await fetch(url);
+        console.log(`📥 [DELIVERED ORDERS API - ${storeName}] Response status: ${response.status} ${response.statusText}`);
+
+        // Check if token expired and refresh if needed
+        const isExpired = await checkResponseForTokenExpiration(response);
+        if (isExpired && storeInfo?.seller_id) {
+            console.log('🔄 [DELIVERED ORDERS API] Token expired, attempting refresh...');
+            const newToken = await refreshStoreTokenWithRefreshToken(storeInfo);
+            
+            if (newToken) {
+                console.log('✅ [DELIVERED ORDERS API] Token refreshed, retrying...');
+                url = url.replace(`access_token=${access_token}`, `access_token=${newToken}`);
+                response = await fetch(url);
+                
+                // Update the token in the store object for future use
+                if (storeInfo.store?.user?.token) {
+                    storeInfo.store.user.token.access_token = newToken;
+                }
+            }
+        }
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
@@ -36,19 +65,42 @@ export const getDarazDeliveredOrders = async (access_token, createdAfterISO, sta
             return [];
         }
 
-        // ✅ Get fresh state directly from the store
+        // ✅ Get fresh state directly from the Redux store (not the parameter)
         const existingOrders = store.getState().AppReducer?.todayDeliveredOrders || [];
         const newOrders = data.orderItems;
+        
+        console.log(`📦 [DELIVERED ORDERS API - ${storeName}] Order items count: ${newOrders.length}`);
+        console.log(`📈 [DELIVERED ORDERS API - ${storeName}] Count total: ${data.countTotal || newOrders.length}`);
+        
+        if (newOrders.length > 0) {
+            console.log(`✅ [DELIVERED ORDERS API - ${storeName}] Successfully fetched ${newOrders.length} orders`);
+            newOrders.forEach((order: any, index: number) => {
+                console.log(`  Order ${index + 1}:`, {
+                    orderId: order.order_id || order.orderNumber || 'N/A',
+                    orderNumber: order.order_number || 'N/A',
+                    status: order.status || 'N/A',
+                    orderItemsCount: order.order_items?.length || 0,
+                    store: storeName
+                });
+            });
+        } else {
+            console.log(`ℹ️ [DELIVERED ORDERS API - ${storeName}] No orders found for this store`);
+        }
+        
         dispatch(setTodayDeliveredOrders([...existingOrders, ...newOrders]));
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         return newOrders;
     } catch (error) {
-        // Silently handle errors without showing notifications
-        console.warn("Error fetching Daraz delivered orders:", error.message);
+        console.error(`❌ [DELIVERED ORDERS API - ${storeName}] Error:`, error.message);
+        if (error instanceof Error && error.stack) {
+            console.error(`❌ [DELIVERED ORDERS API - ${storeName}] Stack:`, error.stack);
+        }
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         return [];
     }
 };
 
-export const getDarazFailedOrders = async (access_token, update_after, update_before, status) => {
+export const getDarazFailedOrders = async (access_token, update_after, update_before, status, storeInfo?: any) => {
     const BASE_URL = getBaseUrl(); // instant access, no async
 
     console.log('🚨 [FAILED ORDERS API] Fetching failed orders...');
@@ -58,9 +110,26 @@ export const getDarazFailedOrders = async (access_token, update_after, update_be
     console.log('🔗 [FAILED ORDERS API] URL:', `${BASE_URL}/get-daraz-delivered-order-details?access_token=${access_token ? access_token.substring(0, 20) + '...' : 'missing'}&update_after=${encodeURIComponent(update_after)}&update_before=${encodeURIComponent(update_before)}&status=${status}`);
 
     try {
-        const response = await fetch(
-            `${BASE_URL}/get-daraz-delivered-order-details?access_token=${access_token}&update_after=${encodeURIComponent(update_after)}&update_before=${encodeURIComponent(update_before)}&status=${status}`
-        );
+        let url = `${BASE_URL}/get-daraz-delivered-order-details?access_token=${access_token}&update_after=${encodeURIComponent(update_after)}&update_before=${encodeURIComponent(update_before)}&status=${status}`;
+        let response = await fetch(url);
+
+        // Check if token expired and refresh if needed
+        const isExpired = await checkResponseForTokenExpiration(response);
+        if (isExpired && storeInfo?.seller_id) {
+            console.log('🔄 [FAILED ORDERS API] Token expired, attempting refresh...');
+            const newToken = await refreshStoreTokenWithRefreshToken(storeInfo);
+            
+            if (newToken) {
+                console.log('✅ [FAILED ORDERS API] Token refreshed, retrying...');
+                url = url.replace(`access_token=${access_token}`, `access_token=${newToken}`);
+                response = await fetch(url);
+                
+                // Update the token in the store object for future use
+                if (storeInfo.store?.user?.token) {
+                    storeInfo.store.user.token.access_token = newToken;
+                }
+            }
+        }
 
         if (!response.ok) {
             throw new Error(`Server error: ${response.status}`);

@@ -193,7 +193,12 @@ const OrderTabs = ({ }) => {
                 storeName: name || null
             }];
         } else {
-            newTokens = Array.isArray(selector.access_tokens) ? selector.access_tokens : [];
+            // Filter out stores without valid access tokens
+            newTokens = Array.isArray(selector.access_tokens) 
+                ? selector.access_tokens.filter((token: any) => 
+                    token && token.access_token && token.access_token.trim() !== ''
+                  )
+                : [];
         }
 
 
@@ -269,17 +274,24 @@ const OrderTabs = ({ }) => {
             let requests = [];
 
             if (Array.isArray(all_access_tokens)) {
-                requests = all_access_tokens.flatMap(item => [
+                // Filter out invalid access tokens before making requests
+                const validTokens = all_access_tokens.filter(item => 
+                    item && item.access_token && item.access_token.trim() !== ''
+                );
+                console.log('🔄 [ORDER TABS] Fetching for', validTokens.length, 'stores (filtered from', all_access_tokens.length, 'total)');
+                requests = validTokens.flatMap(item => [
                     getDarazOrders(item.access_token, createdAfter, 'shipped'),
                     getDarazOrders(item.access_token, createdAfter, 'failed_delivery'),
                     getDarazOrders(item.access_token, createdAfter, 'shipped_back'),
                 ]);
-            } else if (all_access_tokens) {
+            } else if (all_access_tokens && all_access_tokens.access_token && all_access_tokens.access_token.trim() !== '') {
                 requests = [
-                    getDarazOrders(all_access_tokens[0].access_token, createdAfter, 'shipped'),
-                    getDarazOrders(all_access_tokens[0].access_token, createdAfter, 'failed_delivery'),
-                    getDarazOrders(all_access_tokens[0].access_token, createdAfter, 'shipped_back'),
+                    getDarazOrders(all_access_tokens.access_token, createdAfter, 'shipped'),
+                    getDarazOrders(all_access_tokens.access_token, createdAfter, 'failed_delivery'),
+                    getDarazOrders(all_access_tokens.access_token, createdAfter, 'shipped_back'),
                 ];
+            } else {
+                console.log('⚠️ [ORDER TABS] No valid access tokens available');
             }
 
             try {

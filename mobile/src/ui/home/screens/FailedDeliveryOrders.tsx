@@ -87,7 +87,12 @@ const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
                 storeName: name || null
             }];
         } else {
-            newTokens = Array.isArray(selector.access_tokens) ? selector.access_tokens : [];
+            // Filter out stores without valid access tokens
+            newTokens = Array.isArray(selector.access_tokens) 
+                ? selector.access_tokens.filter((token: any) => 
+                    token && token.access_token && token.access_token.trim() !== ''
+                  )
+                : [];
         }
 
 
@@ -327,19 +332,23 @@ const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
             let requests = [];
 
             if (Array.isArray(all_access_tokens)) {
-                requests = all_access_tokens.flatMap((item: any) => [
+                // Filter out invalid access tokens before making requests
+                const validTokens = all_access_tokens.filter((item: any) => 
+                    item && item.access_token && item.access_token.trim() !== ''
+                );
+                requests = validTokens.flatMap((item: any) => [
                     getfailedOrdersLocal(item.access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'failed_delivery', selectedRange, item.storeName),
                     getfailedOrdersLocal(item.access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'shipped_back', selectedRange, item.storeName),
                     getfailedOrdersLocal(item.access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'shipped_back_success', selectedRange, item.storeName),
                 ]);
-            } else if (all_access_tokens && Array.isArray(all_access_tokens) && all_access_tokens.length > 0) {
-
+            } else if (all_access_tokens && all_access_tokens.access_token && all_access_tokens.access_token.trim() !== '') {
                 requests = [
-                    getfailedOrdersLocal(all_access_tokens[0].access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'failed_delivery', selectedRange, all_access_tokens[0].storeName),
-                    getfailedOrdersLocal(all_access_tokens[0].access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'shipped_back', selectedRange, all_access_tokens[0].storeName),
-                    getfailedOrdersLocal(all_access_tokens[0].access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'shipped_back_success', selectedRange, all_access_tokens[0].storeName),
+                    getfailedOrdersLocal(all_access_tokens.access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'failed_delivery', selectedRange, all_access_tokens.storeName),
+                    getfailedOrdersLocal(all_access_tokens.access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'shipped_back', selectedRange, all_access_tokens.storeName),
+                    getfailedOrdersLocal(all_access_tokens.access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'shipped_back_success', selectedRange, all_access_tokens.storeName),
                 ];
             } else {
+                console.log('⚠️ [FAILED DELIVERY ORDERS] No valid access tokens available');
                 requests = [];
             }
 

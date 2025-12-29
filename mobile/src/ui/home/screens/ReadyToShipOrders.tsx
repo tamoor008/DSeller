@@ -8,6 +8,7 @@ import {
     Alert,
     ActivityIndicator,
     ScrollView,
+    RefreshControl,
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
@@ -60,7 +61,12 @@ const ReadyToShipOrders: React.FC<NavigationProps> = ({ navigation }) => {
                     }];
                 }
             } else {
-                newTokens = Array.isArray(selector.access_tokens) ? selector.access_tokens : [];
+                // Filter out stores without valid access tokens
+                newTokens = Array.isArray(selector.access_tokens) 
+                    ? selector.access_tokens.filter((token: any) => 
+                        token && token.access_token && token.access_token.trim() !== ''
+                      )
+                    : [];
             }
 
             // Only update state if value has changed
@@ -138,35 +144,111 @@ const ReadyToShipOrders: React.FC<NavigationProps> = ({ navigation }) => {
     const [darazOrdersLoader, setDarazOrdersLoader] = useState(false)
     const [refreshing, setRefreshing] = useState(false)
 
-    const getDarazReadyToShipOrdersLocal = async (access_token: string) => {
+    const getDarazReadyToShipOrdersLocal = async (access_token: string, storeInfo?: any) => {
         if (!access_token) {
+            console.warn('⚠️ [READY TO SHIP] Missing access token');
             return;
         }
+
+        const storeName = storeInfo?.storeName || storeInfo?.name || 'Unknown Store';
+        const sellerId = storeInfo?.seller_id || 'Unknown Seller ID';
+        
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log(`🏪 [READY TO SHIP - ${storeName}] Starting fetch for store: ${storeName}`);
+        console.log(`🆔 [READY TO SHIP - ${storeName}] Seller ID: ${sellerId}`);
+        console.log(`🔑 [READY TO SHIP - ${storeName}] Token preview: ${access_token.substring(0, 15)}...`);
 
         try {
             // Calculate date 30 days before today
             const createdAfter = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+            const requestUrl = `${BASE_URL}/get-daraz-delivered-order-details?access_token=${access_token}&created_after=${encodeURIComponent(createdAfter)}&status=ready_to_ship`;
+            
+            console.log(`📤 [READY TO SHIP - ${storeName}] Request URL: ${requestUrl.replace(access_token, 'ACCESS_TOKEN_HIDDEN')}`);
+            console.log(`📅 [READY TO SHIP - ${storeName}] Created after: ${createdAfter}`);
             
             // Use the same API endpoint but with ready_to_ship status
-            const response = await fetch(
-                `${BASE_URL}/get-daraz-delivered-order-details?access_token=${access_token}&created_after=${encodeURIComponent(createdAfter)}&status=ready_to_ship`
-            );
+            const response = await fetch(requestUrl);
+
+            console.log(`📥 [READY TO SHIP - ${storeName}] Response status: ${response.status} ${response.statusText}`);
 
             if (!response.ok) {
+                const errorText = await response.text().catch(() => 'Unknown error');
+                console.error(`❌ [READY TO SHIP - ${storeName}] Server error ${response.status}:`, errorText);
                 throw new Error(`Server error: ${response.status}`);
             }
 
             const data = await response.json();
+            
+            console.log(`✅ [READY TO SHIP - ${storeName}] Response received`);
+            console.log(`📊 [READY TO SHIP - ${storeName}] Response keys:`, Object.keys(data));
 
             if (!data?.orderItems?.length) {
+                console.log(`ℹ️ [READY TO SHIP - ${storeName}] No orders found for this store`);
+                console.log(`📦 [READY TO SHIP - ${storeName}] Order items: 0`);
+                console.log(`📈 [READY TO SHIP - ${storeName}] Count total: 0`);
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                 return;
             }
 
-            setDarazReadyToShipOrders(prev => [...prev, ...data.orderItems]);
-            setDarazReadyToShipOrdersCount(prev => prev + (data.countTotal || data.orderItems.length));
+            const orderCount = data.orderItems.length;
+            const countTotal = data.countTotal || orderCount;
+            
+            console.log(`📦 [READY TO SHIP - ${storeName}] Order items count: ${orderCount}`);
+            console.log(`📈 [READY TO SHIP - ${storeName}] Count total: ${countTotal}`);
+            
+            // Log details of each order for this store
+            console.log(`📋 [READY TO SHIP - ${storeName}] Order details:`);
+            data.orderItems.forEach((order: any, index: number) => {
+                const orderId = order.order_id || order.orderNumber || 'N/A';
+                const orderItemsCount = order.order_items?.length || 0;
+                const orderStatus = order.status || 'N/A';
+                const createdAt = order.created_at || 'N/A';
+                
+                console.log(`  Order ${index + 1}:`, {
+                    orderId: orderId,
+                    orderNumber: order.order_number || 'N/A',
+                    status: orderStatus,
+                    orderItemsCount: orderItemsCount,
+                    createdAt: createdAt,
+                    store: storeName
+                });
+                
+                // Log order items if available
+                if (order.order_items && Array.isArray(order.order_items) && order.order_items.length > 0) {
+                    order.order_items.forEach((item: any, itemIndex: number) => {
+                        console.log(`    Item ${itemIndex + 1}:`, {
+                            sku: item.sku || 'N/A',
+                            name: item.name ? item.name.substring(0, 50) + '...' : 'N/A',
+                            quantity: item.quantity || 0,
+                            paidPrice: item.paid_price || 0,
+                            orderItemId: item.order_item_id || 'N/A'
+                        });
+                    });
+                }
+            });
+
+            setDarazReadyToShipOrders(prev => {
+                const updated = [...prev, ...data.orderItems];
+                console.log(`✅ [READY TO SHIP - ${storeName}] Added ${orderCount} orders. Total orders now: ${updated.length}`);
+                return updated;
+            });
+            
+            setDarazReadyToShipOrdersCount(prev => {
+                const newCount = prev + countTotal;
+                console.log(`📊 [READY TO SHIP - ${storeName}] Updated count: ${prev} + ${countTotal} = ${newCount}`);
+                return newCount;
+            });
+
+            console.log(`✅ [READY TO SHIP - ${storeName}] Successfully processed ${orderCount} orders for ${storeName}`);
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
         } catch (error: any) {
-            console.error("Error fetching Daraz ready to ship orders:", error.message);
+            console.error(`❌ [READY TO SHIP - ${storeName}] Error fetching orders:`, error.message);
+            console.error(`❌ [READY TO SHIP - ${storeName}] Error type:`, error?.constructor?.name || 'Unknown');
+            if (error?.stack) {
+                console.error(`❌ [READY TO SHIP - ${storeName}] Stack trace:`, error.stack);
+            }
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         }
     };
 
@@ -189,27 +271,51 @@ const ReadyToShipOrders: React.FC<NavigationProps> = ({ navigation }) => {
                 let requests: Promise<void>[] = [];
 
                 if (Array.isArray(all_access_tokens) && all_access_tokens.length > 0) {
-                    requests = all_access_tokens.flatMap((item: any) => {
-                        if (item && item.access_token) {
-                            return [getDarazReadyToShipOrdersLocal(item.access_token)];
-                        }
-                        return [];
+                    // Filter out invalid access tokens before making requests
+                    const validTokens = all_access_tokens.filter((item: any) => 
+                        item && item.access_token && item.access_token.trim() !== ''
+                    );
+                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    console.log('🔄 [READY TO SHIP] Starting fetch for all stores');
+                    console.log(`📊 [READY TO SHIP] Total stores: ${all_access_tokens.length}`);
+                    console.log(`✅ [READY TO SHIP] Valid stores: ${validTokens.length}`);
+                    console.log(`📋 [READY TO SHIP] Store list:`, validTokens.map((t: any) => ({
+                        name: t.storeName || t.name || 'Unknown',
+                        seller_id: t.seller_id || 'N/A',
+                        hasToken: !!t.access_token
+                    })));
+                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    
+                    requests = validTokens.flatMap((item: any) => {
+                        return [getDarazReadyToShipOrdersLocal(item.access_token, item)];
                     });
                 } else if (all_access_tokens && Array.isArray(all_access_tokens) && all_access_tokens.length > 0) {
-                    if (all_access_tokens[0] && all_access_tokens[0].access_token) {
+                    if (all_access_tokens[0] && all_access_tokens[0].access_token && all_access_tokens[0].access_token.trim() !== '') {
+                        console.log('🔄 [READY TO SHIP] Fetching for single store');
                         requests = [
-                            getDarazReadyToShipOrdersLocal(all_access_tokens[0].access_token),
+                            getDarazReadyToShipOrdersLocal(all_access_tokens[0].access_token, all_access_tokens[0]),
                         ];
                     }
                 }
 
                 if (requests.length > 0) {
+                    console.log(`🚀 [READY TO SHIP] Executing ${requests.length} API requests in parallel`);
                     await Promise.all(requests);
+                    console.log('✅ [READY TO SHIP] All store requests completed');
+                    console.log(`📊 [READY TO SHIP] Final order count: ${darazReadyToShipOrdersCount}`);
+                    console.log(`📦 [READY TO SHIP] Final orders array length: ${darazReadyToShipOrders.length}`);
+                } else {
+                    console.warn('⚠️ [READY TO SHIP] No valid requests to execute');
                 }
             } catch (error) {
-                console.error('Error while fetching orders:', error);
+                console.error('❌ [READY TO SHIP] Error while fetching orders:', error);
+                if (error instanceof Error) {
+                    console.error('❌ [READY TO SHIP] Error message:', error.message);
+                    console.error('❌ [READY TO SHIP] Error stack:', error.stack);
+                }
             } finally {
                 setDarazOrdersLoader(false);
+                console.log('🏁 [READY TO SHIP] Fetch operation completed');
             }
         };
 
@@ -228,15 +334,19 @@ const ReadyToShipOrders: React.FC<NavigationProps> = ({ navigation }) => {
             
             // Fetch fresh data
             if (all_access_tokens && Array.isArray(all_access_tokens) && all_access_tokens.length > 0) {
-                const requests = all_access_tokens.flatMap((item: any) => {
-                    if (item && item.access_token) {
-                        return [getDarazReadyToShipOrdersLocal(item.access_token)];
-                    }
-                    return [];
+                // Filter out invalid access tokens before making requests
+                const validTokens = all_access_tokens.filter((item: any) => 
+                    item && item.access_token && item.access_token.trim() !== ''
+                );
+                console.log('🔄 [READY TO SHIP - REFRESH] Refreshing orders for', validTokens.length, 'stores');
+                const requests = validTokens.flatMap((item: any) => {
+                    return [getDarazReadyToShipOrdersLocal(item.access_token, item)];
                 });
                 
                 if (requests.length > 0) {
+                    console.log('🚀 [READY TO SHIP - REFRESH] Executing refresh requests');
                     await Promise.all(requests);
+                    console.log('✅ [READY TO SHIP - REFRESH] Refresh completed');
                 }
             }
         } catch (error) {

@@ -205,14 +205,38 @@ const SelectStore = () => {
                 const dataset = result.data || [];
                 console.log('📦 [SELECT STORE] Stores count:', dataset.length);
                 
-                const access_tokens = dataset.map((item: any) => ({
-                    access_token: item.user?.token?.access_token,
-                    name: item.user?.seller?.data?.name,
-                }));
+                // Filter out stores without access tokens and include seller_id and refresh_token for token refresh
+                const access_tokens = dataset
+                    .map((item: any) => {
+                        // Extract token information - handle both nested (user.token) and direct (token) structures
+                        const token = item.user?.token || item.token || {};
+                        const access_token = token.access_token;
+                        const refresh_token = token.refresh_token;
+                        const expires_in = token.expires_in; // Token expiration time in seconds
+                        const refresh_expires_in = token.refresh_expires_in; // Refresh token expiration time in seconds
+                        
+                        return {
+                            access_token: access_token,
+                            refresh_token: refresh_token, // Include refresh token for token refresh
+                            expires_in: expires_in, // Access token expiration
+                            refresh_expires_in: refresh_expires_in, // Refresh token expiration
+                            name: item.user?.seller?.data?.name || item.user?.seller?.name,
+                            seller_id: item.user?.seller?.data?.short_code || 
+                                      item.user?.seller?.data?.seller_id || 
+                                      item.seller_id || 
+                                      item.id,
+                            store: item, // Store full store object for token refresh
+                        };
+                    })
+                    .filter((token: any) => token.access_token && token.access_token.trim() !== '');
                 
                 console.log('🔑 [SELECT STORE] Access tokens extracted:', access_tokens.length);
+                console.log('🔑 [SELECT STORE] Valid access tokens:', access_tokens.length, 'out of', dataset.length, 'stores');
                 console.log('🔑 [SELECT STORE] Access tokens:', access_tokens.map((t: any) => ({
                     name: t.name,
+                    seller_id: t.seller_id,
+                    has_refresh_token: !!t.refresh_token,
+                    expires_in: t.expires_in ? `${Math.floor(t.expires_in / 86400)} days` : 'N/A',
                     token_preview: t.access_token ? t.access_token.substring(0, 10) + '...' : 'N/A'
                 })));
                 

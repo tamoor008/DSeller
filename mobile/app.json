@@ -41,7 +41,8 @@
             "./src/assets/fonts/Poppins-Black.ttf"
           ]
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ]
   }
 }

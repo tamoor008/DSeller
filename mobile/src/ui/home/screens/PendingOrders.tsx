@@ -62,7 +62,12 @@ const PendingOrders: React.FC<NavigationProps> = ({ navigation }) => {
                     }];
                 }
             } else {
-                newTokens = Array.isArray(selector.access_tokens) ? selector.access_tokens : [];
+                // Filter out stores without valid access tokens
+                newTokens = Array.isArray(selector.access_tokens) 
+                    ? selector.access_tokens.filter((token: any) => 
+                        token && token.access_token && token.access_token.trim() !== ''
+                      )
+                    : [];
             }
 
             // Only update state if value has changed
@@ -220,14 +225,15 @@ const PendingOrders: React.FC<NavigationProps> = ({ navigation }) => {
                 let requests: Promise<void>[] = [];
 
                 if (Array.isArray(all_access_tokens) && all_access_tokens.length > 0) {
-                    requests = all_access_tokens.flatMap((item: any) => {
-                        if (item && item.access_token) {
-                            return [getDarazPendingOrdersLocal(item.access_token)];
-                        }
-                        return [];
+                    // Filter out invalid access tokens before making requests
+                    const validTokens = all_access_tokens.filter((item: any) => 
+                        item && item.access_token && item.access_token.trim() !== ''
+                    );
+                    requests = validTokens.flatMap((item: any) => {
+                        return [getDarazPendingOrdersLocal(item.access_token)];
                     });
                 } else if (all_access_tokens && Array.isArray(all_access_tokens) && all_access_tokens.length > 0) {
-                    if (all_access_tokens[0] && all_access_tokens[0].access_token) {
+                    if (all_access_tokens[0] && all_access_tokens[0].access_token && all_access_tokens[0].access_token.trim() !== '') {
                         requests = [
                             getDarazPendingOrdersLocal(all_access_tokens[0].access_token),
                         ];
@@ -270,7 +276,11 @@ const PendingOrders: React.FC<NavigationProps> = ({ navigation }) => {
             
             // Fetch fresh data
             if (all_access_tokens && Array.isArray(all_access_tokens) && all_access_tokens.length > 0) {
-                const requests = all_access_tokens.flatMap((item: any) => {
+                // Filter out invalid access tokens before making requests
+                const validTokens = all_access_tokens.filter((item: any) => 
+                    item && item.access_token && item.access_token.trim() !== ''
+                );
+                const requests = validTokens.flatMap((item: any) => {
                     if (item && item.access_token) {
                         return [getDarazPendingOrdersLocal(item.access_token)];
                     }

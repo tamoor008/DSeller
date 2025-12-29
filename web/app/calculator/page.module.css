@@ -1,0 +1,243 @@
+.calculator {
+  min-height: 100vh;
+}
+
+.hero {
+  padding: 4rem 0 3rem;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(245, 158, 11, 0.05) 100%);
+  text-align: center;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.title {
+  font-size: 3rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+}
+
+.subtitle {
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+}
+
+.content {
+  padding: 4rem 0;
+}
+
+.calculatorWrapper {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 3rem;
+  margin-bottom: 4rem;
+}
+
+.inputSection {
+  padding: 2rem;
+  border-radius: 1rem;
+  border: 1px solid var(--border-color);
+  background: white;
+}
+
+@media (prefers-color-scheme: dark) {
+  .inputSection {
+    background: rgba(30, 41, 59, 0.5);
+  }
+}
+
+.sectionTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  color: var(--text-primary);
+}
+
+.inputGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.inputGroup label {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+.inputGroup input {
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  background: white;
+  color: var(--text-primary);
+  transition: border-color 0.2s;
+}
+
+@media (prefers-color-scheme: dark) {
+  .inputGroup input {
+    background: rgba(15, 23, 42, 0.5);
+  }
+}
+
+.inputGroup input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.calculateBtn {
+  width: 100%;
+  padding: 1rem 2rem;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 1.125rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.calculateBtn:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2);
+}
+
+.resultsSection {
+  padding: 2rem;
+  border-radius: 1rem;
+  border: 1px solid var(--border-color);
+  background: white;
+}
+
+@media (prefers-color-scheme: dark) {
+  .resultsSection {
+    background: rgba(30, 41, 59, 0.5);
+  }
+}
+
+.resultsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.resultCard {
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-color);
+  background: rgba(37, 99, 235, 0.05);
+}
+
+.resultCardProfit {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: var(--accent-color);
+}
+
+.resultLabel {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.resultValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.profitPositive {
+  color: #10b981;
+}
+
+.profitNegative {
+  color: #ef4444;
+}
+
+.upgradeSection {
+  padding: 3rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(245, 158, 11, 0.1));
+  border: 2px solid var(--primary-color);
+  text-align: center;
+}
+
+.upgradeTitle {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+}
+
+.upgradeDescription {
+  font-size: 1.125rem;
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.upgradeFeatures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+  text-align: left;
+}
+
+.upgradeFeature {
+  padding: 0.75rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.upgradeBtn {
+  display: inline-block;
+  padding: 1rem 2.5rem;
+  background-color: var(--primary-color);
+  color: white;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+  font-size: 1.125rem;
+}
+
+.upgradeBtn:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2);
+}
+
+@media (max-width: 768px) {
+  .title {
+    font-size: 2.25rem;
+  }
+
+  .inputGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .resultsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .upgradeFeatures {
+    grid-template-columns: 1fr;
+  }
+}
+

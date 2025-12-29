@@ -20,6 +20,7 @@ import FontFamilty from '../../../constants/FontFamilty';
 import { getDarazDeliveredOrders, getDarazFailedOrders } from '../../../utils/api/getDarazDeliveredOrders';
 import { setTodayDeliveredOrders } from '../../../redux/AppReducer';
 import { getBaseUrl } from '../../../utils/api/baseUrl';
+import { refreshStoreToken, refreshStoreTokenWithRefreshToken, checkResponseForTokenExpiration } from '../../../utils/api/tokenRefresh';
 
 
 const HomeScreen = ({ navigation }) => {
@@ -146,17 +147,39 @@ const HomeScreen = ({ navigation }) => {
         let newTokens = [];
 
         if (selector.selectedStore?.id) {
-            const access_token = selector.selectedStore.user?.token?.access_token;
-            const name = selector.selectedStore?.user.seller.data.name;
+            // Handle both nested (user.token) and direct (token) structures
+            const token = selector.selectedStore.user?.token || selector.selectedStore.token || {};
+            const access_token = token.access_token;
+            const refresh_token = token.refresh_token;
+            const expires_in = token.expires_in;
+            const refresh_expires_in = token.refresh_expires_in;
+            const name = selector.selectedStore?.user?.seller?.data?.name || 
+                        selector.selectedStore?.user?.seller?.name;
+            const seller_id = selector.selectedStore.user?.seller?.data?.short_code || 
+                            selector.selectedStore.user?.seller?.data?.seller_id ||
+                            selector.selectedStore.seller_id ||
+                            selector.selectedStore.id;
 
-            newTokens = [{
-                access_token: access_token || null,
-                storeName: name || null
-            }];
+            // Only include if access_token exists and is not empty
+            if (access_token && access_token.trim() !== '') {
+                newTokens = [{
+                    access_token: access_token,
+                    refresh_token: refresh_token || null, // Include refresh token if available
+                    expires_in: expires_in, // Access token expiration
+                    refresh_expires_in: refresh_expires_in, // Refresh token expiration
+                    storeName: name || null,
+                    seller_id: seller_id,
+                    store: selector.selectedStore
+                }];
+            }
         } else {
-            newTokens = Array.isArray(selector.access_tokens) ? selector.access_tokens : [];
+            // Filter out stores without valid access tokens
+            newTokens = Array.isArray(selector.access_tokens) 
+                ? selector.access_tokens.filter((token: any) => 
+                    token && token.access_token && token.access_token.trim() !== ''
+                  )
+                : [];
         }
-
 
         // Only update state if value has changed
         const hasChanged = JSON.stringify(newTokens) !== JSON.stringify(all_access_tokens);
@@ -195,19 +218,23 @@ const HomeScreen = ({ navigation }) => {
             let requests = [];
 
             if (Array.isArray(all_access_tokens)) {
-                console.log('🔄 [HOME SCREEN] Fetching for', all_access_tokens.length, 'stores');
-                requests = all_access_tokens.flatMap(item => [
-                    getDarazOrders(item.access_token, createdAfter, 'shipped'),
-                    getFailedOrders(item.access_token, todayISO, 'shipped_back_success'), // Today only - uses update_after
+                // Filter out invalid access tokens before making requests
+                const validTokens = all_access_tokens.filter(item => 
+                    item && item.access_token && item.access_token.trim() !== ''
+                );
+                console.log('🔄 [HOME SCREEN] Fetching for', validTokens.length, 'stores (filtered from', all_access_tokens.length, 'total)');
+                requests = validTokens.flatMap(item => [
+                    getDarazOrders(item.access_token, createdAfter, 'shipped', item),
+                    getFailedOrders(item.access_token, todayISO, 'shipped_back_success', item), // Today only - uses update_after
                 ]);
-            } else if (all_access_tokens) {
+            } else if (all_access_tokens && all_access_tokens.access_token && all_access_tokens.access_token.trim() !== '') {
                 console.log('🔄 [HOME SCREEN] Fetching for single store');
                 requests = [
-                    getDarazOrders(all_access_tokens[0].access_token, createdAfter, 'shipped'),
-                    getFailedOrders(all_access_tokens[0].access_token, todayISO, 'shipped_back_success'), // Today only - uses update_after
+                    getDarazOrders(all_access_tokens.access_token, createdAfter, 'shipped', all_access_tokens),
+                    getFailedOrders(all_access_tokens.access_token, todayISO, 'shipped_back_success', all_access_tokens), // Today only - uses update_after
                 ];
             } else {
-                console.log('⚠️ [HOME SCREEN] No access tokens available');
+                console.log('⚠️ [HOME SCREEN] No valid access tokens available');
             }
 
             try {
@@ -481,7 +508,7 @@ const HomeScreen = ({ navigation }) => {
     }
 
     // this function get the orders from daraz api, orders with different statuses
-    const getDarazOrders = async (access_token, createdAfterISO, status) => {
+    const getDarazOrders = async (access_token, createdAfterISO, status, store?: any) => {
         try {
             // Validate access token before making request
             if (!access_token) {
@@ -495,9 +522,27 @@ const HomeScreen = ({ navigation }) => {
             console.log('📤 [HOME SCREEN - DARAZ ORDERS] Created after:', createdAfterISO);
             console.log('📤 [HOME SCREEN - DARAZ ORDERS] Request URL:', requestUrl.replace(access_token, 'ACCESS_TOKEN_HIDDEN'));
 
-            const response = await fetch(requestUrl);
+            let response = await fetch(requestUrl);
 
             console.log('📥 [HOME SCREEN - DARAZ ORDERS] Response status:', response.status, response.statusText);
+
+            // Check if token expired and refresh if needed
+            const isExpired = await checkResponseForTokenExpiration(response);
+            if (isExpired && store?.seller_id) {
+                console.log('🔄 [HOME SCREEN - DARAZ ORDERS] Token expired, attempting refresh...');
+                const newToken = await refreshStoreTokenWithRefreshToken(store);
+                
+                if (newToken) {
+                    console.log('✅ [HOME SCREEN - DARAZ ORDERS] Token refreshed, retrying...');
+                    const newUrl = requestUrl.replace(`access_token=${access_token}`, `access_token=${newToken}`);
+                    response = await fetch(newUrl);
+                    
+                    // Update the token in the store object for future use
+                    if (store.store?.user?.token) {
+                        store.store.user.token.access_token = newToken;
+                    }
+                }
+            }
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
@@ -550,14 +595,14 @@ const HomeScreen = ({ navigation }) => {
     };
 
     // Separate function for failed orders using update_after and update_before
-    const getFailedOrders = async (access_token, updateAfterISO, status) => {
+    const getFailedOrders = async (access_token, updateAfterISO, status, store?: any) => {
         try {
             // Calculate update_before as end of today (23:59:59.999)
             const endOfToday = new Date();
             endOfToday.setHours(23, 59, 59, 999);
             const updateBeforeISO = endOfToday.toISOString();
 
-            const data = await getDarazFailedOrders(access_token, updateAfterISO, updateBeforeISO, status);
+            const data = await getDarazFailedOrders(access_token, updateAfterISO, updateBeforeISO, status, store);
             
             if (!data || !data.orderItems || !data.orderItems.length) {
                 console.log('⚠️ [FAILED ORDERS] No data returned from API');
@@ -770,13 +815,31 @@ const HomeScreen = ({ navigation }) => {
                 return null;
             }
 
-            const requestUrl = `${BASE_URL}/get-daraz-order-details?access_token=${access_token}&created_after=${encodeURIComponent(createdAfterISO)}&status=${status}`;
+            let requestUrl = `${BASE_URL}/get-daraz-order-details?access_token=${access_token}&created_after=${encodeURIComponent(createdAfterISO)}&status=${status}`;
             console.log('📤 [HOME SCREEN - PENDING ORDERS] Fetching orders...');
             console.log('📤 [HOME SCREEN - PENDING ORDERS] Status:', status);
             console.log('📤 [HOME SCREEN - PENDING ORDERS] Created after:', createdAfterISO);
             console.log('📤 [HOME SCREEN - PENDING ORDERS] Request URL:', requestUrl.replace(access_token, 'ACCESS_TOKEN_HIDDEN'));
 
-            const response = await fetch(requestUrl);
+            let response = await fetch(requestUrl);
+            
+            // Check if token expired and refresh if needed
+            const isExpired = await checkResponseForTokenExpiration(response);
+            if (isExpired && store?.seller_id) {
+                console.log('🔄 [HOME SCREEN - PENDING ORDERS] Token expired, attempting refresh...');
+                const newToken = await refreshStoreTokenWithRefreshToken(store);
+                
+                if (newToken) {
+                    console.log('✅ [HOME SCREEN - PENDING ORDERS] Token refreshed, retrying...');
+                    requestUrl = requestUrl.replace(`access_token=${access_token}`, `access_token=${newToken}`);
+                    response = await fetch(requestUrl);
+                    
+                    // Update the token in the store object for future use
+                    if (store.store?.user?.token) {
+                        store.store.user.token.access_token = newToken;
+                    }
+                }
+            }
 
             console.log('📥 [HOME SCREEN - PENDING ORDERS] Response status:', response.status, response.statusText);
 
@@ -882,19 +945,23 @@ const HomeScreen = ({ navigation }) => {
             let requests = [];
 
             if (Array.isArray(all_access_tokens)) {
-                requests = all_access_tokens.flatMap(item => [
-                    getDarazPendingOrders(item.access_token, createdAfter, 'pending'),
-                    getDarazPendingOrders(item.access_token, createdAfter, 'ready_to_ship'),
-                    getDarazDeliveredOrders(item.access_token, startOfToday.toISOString(), 'delivered',dispatch),
+                // Filter out invalid access tokens before making requests
+                const validTokens = all_access_tokens.filter(item => 
+                    item && item.access_token && item.access_token.trim() !== ''
+                );
+                requests = validTokens.flatMap(item => [
+                    getDarazPendingOrders(item.access_token, createdAfter, 'pending', item),
+                    getDarazPendingOrders(item.access_token, createdAfter, 'ready_to_ship', item),
+                    getDarazDeliveredOrders(item.access_token, startOfToday.toISOString(), 'delivered', dispatch, item),
                 ]);
-            } else if (all_access_tokens) {
-
+            } else if (all_access_tokens && all_access_tokens.access_token && all_access_tokens.access_token.trim() !== '') {
                 requests = [
-                    getDarazPendingOrders(all_access_tokens[0].access_token, createdAfter, 'pending'),
-                    getDarazPendingOrders(all_access_tokens[0].access_token, createdAfter, 'ready_to_ship'),
-                    getDarazDeliveredOrders(all_access_tokens[0].access_token, startOfToday.toISOString(), 'delivered',dispatch),
+                    getDarazPendingOrders(all_access_tokens.access_token, createdAfter, 'pending', all_access_tokens),
+                    getDarazPendingOrders(all_access_tokens.access_token, createdAfter, 'ready_to_ship', all_access_tokens),
+                    getDarazDeliveredOrders(all_access_tokens.access_token, startOfToday.toISOString(), 'delivered', dispatch, all_access_tokens),
                 ];
             } else {
+                console.log('⚠️ [HOME SCREEN - PENDING ORDERS] No valid access tokens available');
             }
 
             try {

@@ -93,16 +93,19 @@ const IncomeTab = ({ }) => {
       let requests = [];
 
       if (Array.isArray(all_access_tokens)) {
-        requests = all_access_tokens.flatMap(item => [
-          console.log(item),
-
+        // Filter out invalid access tokens before making requests
+        const validTokens = all_access_tokens.filter(item => 
+          item && item.access_token && item.access_token.trim() !== ''
+        );
+        requests = validTokens.flatMap(item => [
           getDarazIncome(item.access_token, item.name, createdAfter),
-
         ]);
-      } else if (all_access_tokens) {
+      } else if (all_access_tokens && all_access_tokens.access_token && all_access_tokens.access_token.trim() !== '') {
         requests = [
-          getDarazIncome(all_access_tokens[0].access_token, all_access_tokens[0].name, createdAfter),
+          getDarazIncome(all_access_tokens.access_token, all_access_tokens.name, createdAfter),
         ];
+      } else {
+        console.log('⚠️ [INCOME TAB] No valid access tokens available');
       }
 
       try {
@@ -126,12 +129,20 @@ const IncomeTab = ({ }) => {
       const access_token = selector.selectedStore.user?.token?.access_token;
       const name = selector.selectedStore?.user.seller.data.name;
 
-      newTokens = [{
-        access_token: access_token || null,
-        name: name || null
-      }];
+      // Only include if access_token exists and is not empty
+      if (access_token && access_token.trim() !== '') {
+        newTokens = [{
+          access_token: access_token,
+          name: name || null
+        }];
+      }
     } else {
-      newTokens = Array.isArray(selector.access_tokens) ? selector.access_tokens : [];
+      // Filter out stores without valid access tokens
+      newTokens = Array.isArray(selector.access_tokens) 
+        ? selector.access_tokens.filter((token: any) => 
+            token && token.access_token && token.access_token.trim() !== ''
+          )
+        : [];
     }
     console.log(newTokens, 'newTokens');
 

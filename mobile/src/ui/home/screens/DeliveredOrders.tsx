@@ -66,7 +66,12 @@ const DeliveredOrders = ({ navigation }) => {
                 storeName: name || null
             }];
         } else {
-            newTokens = Array.isArray(selector.access_tokens) ? selector.access_tokens : [];
+            // Filter out stores without valid access tokens
+            newTokens = Array.isArray(selector.access_tokens) 
+                ? selector.access_tokens.filter((token: any) => 
+                    token && token.access_token && token.access_token.trim() !== ''
+                  )
+                : [];
         }
 
 
@@ -271,17 +276,19 @@ const DeliveredOrders = ({ navigation }) => {
             let requests = [];
 
             if (Array.isArray(all_access_tokens)) {
-                requests = all_access_tokens.flatMap(item => [
-
+                // Filter out invalid access tokens before making requests
+                const validTokens = all_access_tokens.filter(item => 
+                    item && item.access_token && item.access_token.trim() !== ''
+                );
+                requests = validTokens.flatMap(item => [
                     getDarazDeliveredOrdersLocal(item.access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'delivered', selectedRange),
                 ]);
-            } else if (all_access_tokens) {
-
+            } else if (all_access_tokens && all_access_tokens.access_token && all_access_tokens.access_token.trim() !== '') {
                 requests = [
-
-                    getDarazDeliveredOrdersLocal(all_access_tokens[0].access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'delivered', selectedRange),
+                    getDarazDeliveredOrdersLocal(all_access_tokens.access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'delivered', selectedRange),
                 ];
             } else {
+                console.log('⚠️ [DELIVERED ORDERS] No valid access tokens available');
             }
 
             try {
@@ -369,7 +376,11 @@ const DeliveredOrders = ({ navigation }) => {
 
             // Fetch fresh data
             if (all_access_tokens && Array.isArray(all_access_tokens) && all_access_tokens.length > 0) {
-                const requests = all_access_tokens.flatMap((item: any) => {
+                // Filter out invalid access tokens before making requests
+                const validTokens = all_access_tokens.filter((item: any) => 
+                    item && item.access_token && item.access_token.trim() !== ''
+                );
+                const requests = validTokens.flatMap((item: any) => {
                     if (item && item.access_token) {
                         return [getDarazDeliveredOrdersLocal(item.access_token, updateAfter.toISOString(), updateBefore.toISOString(), 'delivered', selectedRange)];
                     }
