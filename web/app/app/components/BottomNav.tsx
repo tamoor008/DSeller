@@ -10,7 +10,6 @@ const BottomNav = () => {
 
   const tabs = [
     { path: '/app', label: 'Home', icon: 'home' },
-    { path: '/app/orders', label: 'Orders', icon: 'list' },
     { path: '/app/profit-calculator', label: 'Calculator', icon: 'calculator' },
   ]
 
@@ -98,6 +97,7 @@ const BottomNav = () => {
 }
 
 export default BottomNav
+
 
 
 

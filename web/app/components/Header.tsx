@@ -3,16 +3,17 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import styles from './Header.module.css'
+import { APP_ROUTES } from '../config/constants'
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   const handleLogin = () => {
-    window.location.href = 'https://app.dseller.com/login'
+    window.location.href = APP_ROUTES.LOGIN
   }
 
   const handleSignUp = () => {
-    window.location.href = 'https://app.dseller.com/signup'
+    window.location.href = APP_ROUTES.SIGNUP
   }
 
   return (

@@ -6,10 +6,22 @@ const { isFirebaseInitialized } = require("../config/firebase");
  * Get all SKUs for a user
  */
 async function getSkus(req, res, next) {
+  const startTime = Date.now();
+  const { userId } = req.params;
+  
+  console.log('📥 [BACKEND - GET SKUS] Request received');
+  console.log('📥 [BACKEND - GET SKUS] User ID:', userId);
+  console.log('📥 [BACKEND - GET SKUS] Request URL:', req.originalUrl);
+  console.log('📥 [BACKEND - GET SKUS] Request method:', req.method);
+  console.log('📥 [BACKEND - GET SKUS] Request headers:', {
+    'content-type': req.headers['content-type'],
+    'user-agent': req.headers['user-agent'],
+    'host': req.headers['host']
+  });
+  
   try {
-    const { userId } = req.params;
-    
     if (!userId) {
+      console.warn('⚠️ [BACKEND - GET SKUS] Missing userId');
       return res.status(400).json({ 
         error: "Missing userId",
         message: "User ID is required",
@@ -18,6 +30,7 @@ async function getSkus(req, res, next) {
     }
 
     if (!isFirebaseInitialized()) {
+      console.error('❌ [BACKEND - GET SKUS] Firebase Admin not initialized');
       return res.status(500).json({ 
         error: "Firebase Admin not initialized",
         message: "Please configure Firebase Admin credentials",
@@ -25,7 +38,19 @@ async function getSkus(req, res, next) {
       });
     }
 
+    console.log('🔄 [BACKEND - GET SKUS] Fetching SKUs from Firebase...');
     const skus = await getUserSkus(userId);
+    
+    const duration = Date.now() - startTime;
+    console.log('✅ [BACKEND - GET SKUS] SKUs fetched successfully');
+    console.log('📊 [BACKEND - GET SKUS] SKUs count:', skus.length);
+    console.log('⏱️ [BACKEND - GET SKUS] Duration:', duration, 'ms');
+    
+    if (skus.length > 0) {
+      console.log('📦 [BACKEND - GET SKUS] Sample SKUs (first 3):', 
+        skus.slice(0, 3).map(s => ({ sku: s.sku, price: s.price, productId: s.productId }))
+      );
+    }
 
     return res.status(200).json({
       message: "SKUs retrieved successfully",
@@ -35,7 +60,12 @@ async function getSkus(req, res, next) {
       statusCode: 200,
     });
   } catch (error) {
-    console.error("Error fetching SKUs:", error);
+    const duration = Date.now() - startTime;
+    console.error('❌ [BACKEND - GET SKUS] Error fetching SKUs');
+    console.error('❌ [BACKEND - GET SKUS] Error message:', error.message);
+    console.error('❌ [BACKEND - GET SKUS] Error stack:', error.stack);
+    console.error('❌ [BACKEND - GET SKUS] Duration before error:', duration, 'ms');
+    console.error('❌ [BACKEND - GET SKUS] User ID was:', userId);
     error.statusCode = error.statusCode || 500;
     error.message = error.message || "Failed to fetch SKUs";
     next(error);

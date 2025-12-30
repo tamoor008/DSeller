@@ -6,8 +6,8 @@ import { AppColors } from '../constants/colors'
 import { AppStrings } from '../constants/strings'
 
 const LoginPage = () => {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [email, setEmail] = useState('tam@gmail.com')
+  const [password, setPassword] = useState('12345678')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()

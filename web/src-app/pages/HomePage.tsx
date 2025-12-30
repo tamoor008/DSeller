@@ -6,7 +6,6 @@ import { database } from '../config/firebase'
 import { auth } from '../config/firebase'
 import { useTheme } from '../context/ThemeContext'
 import { AppStrings } from '../constants/strings'
-import HomeHeader from '../components/HomeHeader'
 import SelectStore from '../components/SelectStore'
 import TotalBusinessComp from '../components/TotalBusinessComp'
 import IndividualValueComp from '../components/IndividualValueComp'
@@ -167,28 +166,28 @@ const HomePage = () => {
 
   return (
     <div style={{ 
-      minHeight: '100vh',
-      backgroundColor: theme.bgcolor,
-      padding: '20px',
-      maxWidth: '1200px',
-      margin: '0 auto'
+      width: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '32px'
     }}>
-      <HomeHeader onOpenSettings={() => navigate('/app/settings')} />
-        <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         <SelectStore />
         <TotalBusinessComp businessValue="500,000" />
-        
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <h3 style={{
+      </div>
+      
+      <div className="home-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <h2 style={{
             margin: 0,
-            fontSize: '18px',
+            fontSize: '20px',
             fontWeight: 700,
             color: theme.textPrimary,
             letterSpacing: '-0.02em'
           }}>
             {AppStrings.darazDetails}
-          </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
             <IndividualDataComp
               loader={darazOrdersLoader}
               data={pendingOrdersCount}
@@ -220,17 +219,17 @@ const HomePage = () => {
           />
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <h3 style={{
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <h2 style={{
             margin: 0,
-            fontSize: '18px',
+            fontSize: '20px',
             fontWeight: 700,
             color: theme.textPrimary,
             letterSpacing: '-0.02em'
           }}>
             {AppStrings.businessDetails}
-          </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
             <IndividualValueComp
               loader={darazLoader}
               amount={allOrdersTotal}

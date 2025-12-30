@@ -69,7 +69,10 @@ const AppContent = () => {
   }, []);
 
   useEffect(() => {
-    initializeBaseUrl();
+    const initBaseUrl = async () => {
+      await initializeBaseUrl();
+    };
+    initBaseUrl();
   }, []);
   
   const navigationTheme = useMemo(() => ({

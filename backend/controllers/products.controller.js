@@ -16,6 +16,13 @@ async function getProducts(req, res, next) {
   
   console.log('📥 [BACKEND - GET PRODUCTS] Request received');
   console.log('📥 [BACKEND - GET PRODUCTS] User ID:', userId);
+  console.log('📥 [BACKEND - GET PRODUCTS] Request URL:', req.originalUrl);
+  console.log('📥 [BACKEND - GET PRODUCTS] Request method:', req.method);
+  console.log('📥 [BACKEND - GET PRODUCTS] Request headers:', {
+    'content-type': req.headers['content-type'],
+    'user-agent': req.headers['user-agent'],
+    'host': req.headers['host']
+  });
   
   try {
     if (!userId) {
@@ -44,6 +51,12 @@ async function getProducts(req, res, next) {
     console.log('✅ [BACKEND - GET PRODUCTS] Products fetched successfully');
     console.log('📊 [BACKEND - GET PRODUCTS] Products count:', products.length);
     console.log('⏱️ [BACKEND - GET PRODUCTS] Duration:', duration, 'ms');
+    
+    if (products.length > 0) {
+      console.log('📦 [BACKEND - GET PRODUCTS] Sample products (first 3):', 
+        products.slice(0, 3).map(p => ({ id: p.id, productName: p.productName, price: p.price, quantity: p.quantity }))
+      );
+    }
 
     return res.status(200).json({
       message: "Products retrieved successfully",
@@ -58,6 +71,7 @@ async function getProducts(req, res, next) {
     console.error('❌ [BACKEND - GET PRODUCTS] Error message:', error.message);
     console.error('❌ [BACKEND - GET PRODUCTS] Error stack:', error.stack);
     console.error('❌ [BACKEND - GET PRODUCTS] Duration before error:', duration, 'ms');
+    console.error('❌ [BACKEND - GET PRODUCTS] User ID was:', userId);
     error.statusCode = error.statusCode || 500;
     error.message = error.message || "Failed to fetch products";
     next(error);

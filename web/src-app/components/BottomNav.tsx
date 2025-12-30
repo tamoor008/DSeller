@@ -8,7 +8,6 @@ const BottomNav = () => {
 
   const tabs = [
     { path: '/', label: 'Home', icon: 'home' },
-    { path: '/orders', label: 'Orders', icon: 'list' },
     { path: '/profit-calculator', label: 'Calculator', icon: 'calculator' },
   ]
 

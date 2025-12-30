@@ -64,15 +64,39 @@ const HomeScreen = ({ navigation }) => {
         if (!currentUser) return;
         
         const BASE_URL = getBaseUrl();
+        console.log('🌐 [HomeScreen] Base URL:', BASE_URL);
         
         const fetchSkus = async () => {
             try {
-                const response = await fetch(`${BASE_URL}/api/skus/${currentUser.uid}`);
+                const fetchUrl = `${BASE_URL}/api/skus/${currentUser.uid}`;
+                console.log('📤 [HomeScreen] Fetching SKUs from URL:', fetchUrl);
+                
+                const response = await fetch(fetchUrl);
                 
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    const errorMessage = errorData.error || 'Unknown error';
+                    const contentType = response.headers.get('content-type') || '';
+                    let errorMessage = 'Unknown error';
+                    
+                    if (contentType.includes('application/json')) {
+                        const errorData = await response.json().catch(() => ({}));
+                        errorMessage = errorData.error || errorData.message || 'Unknown error';
+                    } else {
+                        // Handle HTML or other non-JSON responses
+                        const text = await response.text().catch(() => '');
+                        if (text.includes('ERR_NGROK')) {
+                            errorMessage = 'Ngrok rate limit reached. Please check your ngrok billing.';
+                        } else if (text.includes('ngrok')) {
+                            errorMessage = 'Ngrok error - response was HTML instead of JSON';
+                        } else {
+                            errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                        }
+                    }
+                    
                     console.warn('⚠️ [HomeScreen] Error fetching SKUs:', errorMessage);
+                    console.warn('⚠️ [HomeScreen] Base URL was:', BASE_URL);
+                    console.warn('⚠️ [HomeScreen] Full URL was:', fetchUrl);
+                    console.warn('⚠️ [HomeScreen] Response status:', response.status, response.statusText);
+                    console.warn('⚠️ [HomeScreen] Content-Type:', contentType);
                     setFirebaseSkus([]);
                     setfirebaseDataLoaded(true);
                     return;
@@ -93,6 +117,11 @@ const HomeScreen = ({ navigation }) => {
             } catch (error: any) {
                 const errorMessage = error?.message || 'Unknown error occurred';
                 console.warn('⚠️ [HomeScreen] Error fetching SKU data:', errorMessage);
+                console.warn('⚠️ [HomeScreen] Base URL was:', BASE_URL);
+                console.warn('⚠️ [HomeScreen] Full URL was:', `${BASE_URL}/api/skus/${currentUser.uid}`);
+                if (error?.stack) {
+                    console.warn('⚠️ [HomeScreen] Error stack:', error.stack);
+                }
                 setFirebaseSkus([]);
                 setfirebaseDataLoaded(true);
             }
@@ -112,12 +141,35 @@ const HomeScreen = ({ navigation }) => {
         
         const fetchProducts = async () => {
             try {
-                const response = await fetch(`${BASE_URL}/api/products/${currentUser.uid}`);
+                const fetchUrl = `${BASE_URL}/api/products/${currentUser.uid}`;
+                console.log('📤 [HomeScreen] Fetching products from URL:', fetchUrl);
+                
+                const response = await fetch(fetchUrl);
                 
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    const errorMessage = errorData.error || 'Unknown error';
+                    const contentType = response.headers.get('content-type') || '';
+                    let errorMessage = 'Unknown error';
+                    
+                    if (contentType.includes('application/json')) {
+                        const errorData = await response.json().catch(() => ({}));
+                        errorMessage = errorData.error || errorData.message || 'Unknown error';
+                    } else {
+                        // Handle HTML or other non-JSON responses
+                        const text = await response.text().catch(() => '');
+                        if (text.includes('ERR_NGROK')) {
+                            errorMessage = 'Ngrok rate limit reached. Please check your ngrok billing.';
+                        } else if (text.includes('ngrok')) {
+                            errorMessage = 'Ngrok error - response was HTML instead of JSON';
+                        } else {
+                            errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                        }
+                    }
+                    
                     console.warn('⚠️ [HomeScreen] Error fetching products:', errorMessage);
+                    console.warn('⚠️ [HomeScreen] Base URL was:', BASE_URL);
+                    console.warn('⚠️ [HomeScreen] Full URL was:', fetchUrl);
+                    console.warn('⚠️ [HomeScreen] Response status:', response.status, response.statusText);
+                    console.warn('⚠️ [HomeScreen] Content-Type:', contentType);
                     return;
                 }
 
@@ -135,6 +187,11 @@ const HomeScreen = ({ navigation }) => {
             } catch (error: any) {
                 const errorMessage = error?.message || 'Unknown error occurred';
                 console.warn('⚠️ [HomeScreen] Error fetching product data:', errorMessage);
+                console.warn('⚠️ [HomeScreen] Base URL was:', BASE_URL);
+                console.warn('⚠️ [HomeScreen] Full URL was:', `${BASE_URL}/api/products/${currentUser.uid}`);
+                if (error?.stack) {
+                    console.warn('⚠️ [HomeScreen] Error stack:', error.stack);
+                }
                 Alert.alert('Error', 'Failed to load product data. Please try again.', [{ text: 'OK' }]);
                 setDarazLoader(false);
             }

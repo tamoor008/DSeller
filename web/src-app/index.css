@@ -51,6 +51,34 @@ a:hover {
 body {
   margin: 0;
   min-width: 320px;
+}
+
+/* Web app responsive styles */
+@media (max-width: 1024px) {
+  .home-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar-layout aside {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+  
+  .sidebar-layout .top-header {
+    left: 0 !important;
+    padding: 0 16px !important;
+  }
+  
+  .sidebar-layout main {
+    padding: 16px !important;
+    margin-left: 0 !important;
+  }
+  
+  .sidebar-layout > div {
+    margin-left: 0 !important;
+  }
   min-height: 100vh;
   background-color: var(--bgcolor);
   color: var(--text-primary);
@@ -102,6 +130,34 @@ button:focus-visible {
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* Web app responsive styles */
+@media (max-width: 1024px) {
+  .home-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar-layout aside {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+  
+  .sidebar-layout .top-header {
+    left: 0 !important;
+    padding: 0 16px !important;
+  }
+  
+  .sidebar-layout main {
+    padding: 16px !important;
+    margin-left: 0 !important;
+  }
+  
+  .sidebar-layout > div {
+    margin-left: 0 !important;
   }
 }
 
