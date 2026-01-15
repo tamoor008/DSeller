@@ -21,6 +21,7 @@ import WebView from 'react-native-webview';
 import { setAccessToken, setAccessTokens, setSelectedStore } from '../../redux/AppReducer';
 import { useDispatch, useSelector } from 'react-redux';
 import { getBaseUrl } from '../../utils/api/baseUrl';
+import { fetchWithTimeout } from '../../utils/api/fetchWithTimeout';
 
 
 const SelectStore = () => {
@@ -50,12 +51,12 @@ const SelectStore = () => {
             console.log('🔍 [API Health Check] Testing API connection...');
             console.log('📍 [API Health Check] URL:', `${BASE_URL}/test`);
             
-            const response = await fetch(`${BASE_URL}/test`, {
+            const response = await fetchWithTimeout(`${BASE_URL}/test`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-            });
+            }, 5000);
 
             console.log('📊 [API Health Check] Response Status:', response.status);
             console.log('📊 [API Health Check] Response OK:', response.ok);
@@ -102,7 +103,7 @@ const SelectStore = () => {
             console.log('🔍 [Backend] Checking if seller already exists...');
             
             // Add store via backend API
-            const response = await fetch(`${BASE_URL}/api/stores/${currentUser.uid}`, {
+            const response = await fetchWithTimeout(`${BASE_URL}/api/stores/${currentUser.uid}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -111,7 +112,7 @@ const SelectStore = () => {
                     storeId: sellerId,
                     storeData: { user }
                 }),
-            });
+            }, 10000);
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
@@ -173,7 +174,7 @@ const SelectStore = () => {
                 console.log('📤 [SELECT STORE] Request URL:', requestUrl);
                 console.log('📤 [SELECT STORE] User ID:', currentUser.uid);
                 
-                const response = await fetch(requestUrl);
+                const response = await fetchWithTimeout(requestUrl, {}, 8000);
                 
                 console.log('📥 [SELECT STORE] Response status:', response.status, response.statusText);
                 
@@ -291,9 +292,9 @@ const SelectStore = () => {
                         onPress: async () => {
                             try {
                                 // Delete store via backend API
-                                const response = await fetch(`${BASE_URL}/api/stores/${currentUser.uid}/${sellerId}`, {
+                                const response = await fetchWithTimeout(`${BASE_URL}/api/stores/${currentUser.uid}/${sellerId}`, {
                                     method: 'DELETE',
-                                });
+                                }, 10000);
 
                                 if (!response.ok) {
                                     const errorData = await response.json().catch(() => ({}));
@@ -363,13 +364,13 @@ const SelectStore = () => {
             console.log('📤 [API Request] Body:', JSON.stringify(requestBody, null, 2));
             console.log('📤 [API Request] Authorization Code:', code);
 
-            const response = await fetch(url, {
+            const response = await fetchWithTimeout(url, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify(requestBody),
-            });
+            }, 15000);
 
             console.log('📊 [API Response] Status:', response.status);
             console.log('📊 [API Response] Status Text:', response.statusText);
@@ -456,7 +457,16 @@ const SelectStore = () => {
             ) : stores.length <= 0 ? (
                 <View>
                     <TextComp size={14} numberOfLines={1} style={{ fontFamily: FontFamilty.medium, color: theme.textSecondary }}>{AppStrings.youhavenoconnecteddarazstoreatthemoment}</TextComp>
-                    <TouchableOpacity onPress={() => setDarazOAuth(true)}>
+                    <TouchableOpacity 
+                        onPress={() => {
+                            console.log('🔘 [SELECT STORE] Add Account button pressed');
+                            console.log('🔘 [SELECT STORE] Current darazOAuth state:', darazOAuth);
+                            console.log('🔘 [SELECT STORE] Setting darazOAuth to true');
+                            setDarazOAuth(true);
+                            console.log('🔘 [SELECT STORE] AUTH_URL:', AUTH_URL);
+                        }}
+                        activeOpacity={0.7}
+                    >
                         <TextComp size={16} numberOfLines={1} style={{ fontFamily: FontFamilty.medium, color: theme.primaryOrange }}>{AppStrings.addaccount}</TextComp>
                     </TouchableOpacity>
                 </View>
@@ -509,7 +519,16 @@ const SelectStore = () => {
                         </View>
                     )}
                     <TextComp size={12} numberOfLines={1} style={{ fontFamily: FontFamilty.medium, color: theme.textSecondary }}>{AppStrings.total + ' : ' + stores.length}</TextComp>
-                    <TouchableOpacity onPress={() => setDarazOAuth(true)}>
+                    <TouchableOpacity 
+                        onPress={() => {
+                            console.log('🔘 [SELECT STORE] Add Account button pressed');
+                            console.log('🔘 [SELECT STORE] Current darazOAuth state:', darazOAuth);
+                            console.log('🔘 [SELECT STORE] Setting darazOAuth to true');
+                            setDarazOAuth(true);
+                            console.log('🔘 [SELECT STORE] AUTH_URL:', AUTH_URL);
+                        }}
+                        activeOpacity={0.7}
+                    >
                         <TextComp size={16} numberOfLines={1} style={{ fontFamily: FontFamilty.medium, color: theme.primaryOrange }}>{AppStrings.addaccount}</TextComp>
                     </TouchableOpacity>
                 </View>
@@ -520,30 +539,112 @@ const SelectStore = () => {
                     visible={darazOAuth}
                     animationType="slide"
                     presentationStyle="fullScreen"
-                    onRequestClose={() => setDarazOAuth(false)}
+                    onRequestClose={() => {
+                        console.log('🔘 [SELECT STORE] Modal close requested');
+                        setDarazOAuth(false);
+                    }}
+                    onShow={() => {
+                        console.log('✅ [SELECT STORE] OAuth Modal opened');
+                        console.log('✅ [SELECT STORE] Modal AUTH_URL:', AUTH_URL);
+                    }}
                 >
                     <SafeAreaView style={{ flex: 1, backgroundColor: theme.bgcolor }}>
                         <View style={{ alignItems: 'flex-end', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8 }}>
-                            <TouchableOpacity onPress={() => setDarazOAuth(false)}>
+                            <TouchableOpacity onPress={() => {
+                                console.log('🔘 [SELECT STORE] Close button pressed');
+                                setDarazOAuth(false);
+                            }}>
                                 <Icon name="close" size={24} color={theme.textPrimary} />
                             </TouchableOpacity>
                         </View>
+                        {loading && (
+                            <View style={{ position: 'absolute', top: 50, left: 0, right: 0, alignItems: 'center', zIndex: 1000 }}>
+                                <ActivityIndicator size="large" color={theme.primaryOrange} />
+                                <TextComp size={14} style={{ marginTop: 8, color: theme.textSecondary }}>
+                                    Loading OAuth page...
+                                </TextComp>
+                            </View>
+                        )}
                         <WebView
                            userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
                             style={{ flex: 1 }}
-                            source={{ uri: AUTH_URL }} // ← Correct URL to start OAuth
-                            onLoadEnd={() => setLoading(false)}
-                            onNavigationStateChange={handleNavigationStateChange}
+                            source={{ uri: AUTH_URL }}
+                            javaScriptEnabled={true}
+                            domStorageEnabled={true}
+                            startInLoadingState={true}
+                            scalesPageToFit={true}
+                            allowsInlineMediaPlayback={true}
+                            mediaPlaybackRequiresUserAction={false}
+                            onLoadStart={() => {
+                                console.log('🌐 [WEBVIEW] Loading started:', AUTH_URL);
+                                setLoading(true);
+                            }}
+                            onLoadEnd={() => {
+                                console.log('✅ [WEBVIEW] Loading completed');
+                                setLoading(false);
+                            }}
+                            onError={(syntheticEvent) => {
+                                const { nativeEvent } = syntheticEvent;
+                                console.error('❌ [WEBVIEW] Error loading:', nativeEvent.url);
+                                console.error('❌ [WEBVIEW] Error code:', nativeEvent.code);
+                                console.error('❌ [WEBVIEW] Error description:', nativeEvent.description);
+                                setLoading(false);
+                            }}
+                            onHttpError={(syntheticEvent) => {
+                                const { nativeEvent } = syntheticEvent;
+                                console.error('❌ [WEBVIEW] HTTP Error:', nativeEvent.statusCode, nativeEvent.url);
+                                setLoading(false);
+                            }}
+                            onNavigationStateChange={(navState) => {
+                                console.log('🌐 [WEBVIEW] Navigation changed to:', navState.url);
+                                console.log('🌐 [WEBVIEW] Can go back:', navState.canGoBack);
+                                console.log('🌐 [WEBVIEW] Can go forward:', navState.canGoForward);
+                                console.log('🌐 [WEBVIEW] Loading:', navState.loading);
+                                handleNavigationStateChange(navState);
+                            }}
                             onShouldStartLoadWithRequest={(request) => {
                                 // Prevent opening in external apps, force web view
                                 const url = request.url;
-                                // Allow navigation within the same domain or to redirect URI
-                                if (url.startsWith('https://api.daraz.pk') || url.startsWith(REDIRECT_URI)) {
+                                console.log('🔍 [WEBVIEW] Should start load with request:', url);
+                                console.log('🔍 [WEBVIEW] Request method:', request.method);
+                                console.log('🔍 [WEBVIEW] Request navigationType:', request.navigationType);
+                                
+                                // Allow navigation within Daraz domains or to redirect URI
+                                if (
+                                    url.startsWith('https://api.daraz.pk') || 
+                                    url.startsWith(REDIRECT_URI) || 
+                                    url.startsWith('https://www.daraz.pk') || 
+                                    url.startsWith('https://login.daraz.pk') ||
+                                    url.startsWith('https://sellercenter.daraz.pk') ||
+                                    url.startsWith('https://account.daraz.pk')
+                                ) {
+                                    console.log('✅ [WEBVIEW] Allowing navigation to:', url);
                                     return true;
                                 }
                                 // Block other URLs to prevent app opening
+                                console.log('⚠️ [WEBVIEW] Blocking navigation to:', url);
                                 return false;
                             }}
+                            onMessage={(event) => {
+                                console.log('📨 [WEBVIEW] Message from WebView:', event.nativeEvent.data);
+                            }}
+                            injectedJavaScript={`
+                                (function() {
+                                    console.log('🔧 [WEBVIEW] JavaScript injected');
+                                    // Enable all button clicks
+                                    document.addEventListener('click', function(e) {
+                                        console.log('🖱️ [WEBVIEW] Click detected on:', e.target);
+                                        console.log('🖱️ [WEBVIEW] Click target tag:', e.target.tagName);
+                                        console.log('🖱️ [WEBVIEW] Click target href:', e.target.href || 'none');
+                                    }, true);
+                                    
+                                    // Log when page is ready
+                                    if (document.readyState === 'complete') {
+                                        console.log('✅ [WEBVIEW] Page fully loaded');
+                                        window.ReactNativeWebView.postMessage('PageLoaded');
+                                    }
+                                })();
+                            `}
                         />
                     </SafeAreaView>
                 </Modal>

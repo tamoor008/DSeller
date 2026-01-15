@@ -230,7 +230,14 @@ const StoresScreen = ({ navigation }) => {
               paddingVertical: 12,
               alignItems: 'center',
             }}
-            onPress={() => setDarazOAuth(true)}
+            onPress={() => {
+              console.log('🔘 [STORES SCREEN] Add New Store button pressed');
+              console.log('🔘 [STORES SCREEN] Current darazOAuth state:', darazOAuth);
+              console.log('🔘 [STORES SCREEN] Setting darazOAuth to true');
+              setDarazOAuth(true);
+              console.log('🔘 [STORES SCREEN] AUTH_URL:', AUTH_URL);
+            }}
+            activeOpacity={0.7}
           >
             <TextComp size={16} numberOfLines={1} style={{ color: theme.white, fontFamily: FontFamilty.bold }}>
               Add New Store
@@ -289,7 +296,15 @@ const StoresScreen = ({ navigation }) => {
         <Modal
           visible={darazOAuth}
           animationType="slide"
-          onRequestClose={() => setDarazOAuth(false)}
+          presentationStyle="fullScreen"
+          onRequestClose={() => {
+            console.log('🔘 [STORES SCREEN] Modal close requested');
+            setDarazOAuth(false);
+          }}
+          onShow={() => {
+            console.log('✅ [STORES SCREEN] OAuth Modal opened');
+            console.log('✅ [STORES SCREEN] Modal AUTH_URL:', AUTH_URL);
+          }}
         >
           <SafeAreaView style={{ flex: 1, backgroundColor: theme.bgcolor }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: theme.border }}>
@@ -310,19 +325,84 @@ const StoresScreen = ({ navigation }) => {
             )}
             <WebView
               source={{ uri: AUTH_URL }}
-              onNavigationStateChange={handleNavigationStateChange}
+              javaScriptEnabled={true}
+              domStorageEnabled={true}
+              startInLoadingState={true}
+              scalesPageToFit={true}
+              allowsInlineMediaPlayback={true}
+              mediaPlaybackRequiresUserAction={false}
+              onLoadStart={() => {
+                console.log('🌐 [STORES SCREEN - WEBVIEW] Loading started:', AUTH_URL);
+                setLoading(true);
+              }}
+              onLoadEnd={() => {
+                console.log('✅ [STORES SCREEN - WEBVIEW] Loading completed');
+                setLoading(false);
+              }}
+              onError={(syntheticEvent) => {
+                const { nativeEvent } = syntheticEvent;
+                console.error('❌ [STORES SCREEN - WEBVIEW] Error loading:', nativeEvent.url);
+                console.error('❌ [STORES SCREEN - WEBVIEW] Error code:', nativeEvent.code);
+                console.error('❌ [STORES SCREEN - WEBVIEW] Error description:', nativeEvent.description);
+                setLoading(false);
+              }}
+              onHttpError={(syntheticEvent) => {
+                const { nativeEvent } = syntheticEvent;
+                console.error('❌ [STORES SCREEN - WEBVIEW] HTTP Error:', nativeEvent.statusCode, nativeEvent.url);
+                setLoading(false);
+              }}
+              onNavigationStateChange={(navState) => {
+                console.log('🌐 [STORES SCREEN - WEBVIEW] Navigation changed to:', navState.url);
+                console.log('🌐 [STORES SCREEN - WEBVIEW] Can go back:', navState.canGoBack);
+                console.log('🌐 [STORES SCREEN - WEBVIEW] Can go forward:', navState.canGoForward);
+                console.log('🌐 [STORES SCREEN - WEBVIEW] Loading:', navState.loading);
+                handleNavigationStateChange(navState);
+              }}
               style={{ flex: 1 }}
               userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
               onShouldStartLoadWithRequest={(request) => {
                 // Prevent opening in external apps, force web view
                 const url = request.url;
-                // Allow navigation within the same domain or to redirect URI
-                if (url.startsWith('https://api.daraz.pk') || url.startsWith(REDIRECT_URI)) {
+                console.log('🔍 [STORES SCREEN - WEBVIEW] Should start load with request:', url);
+                console.log('🔍 [STORES SCREEN - WEBVIEW] Request method:', request.method);
+                console.log('🔍 [STORES SCREEN - WEBVIEW] Request navigationType:', request.navigationType);
+                
+                // Allow navigation within Daraz domains or to redirect URI
+                if (
+                  url.startsWith('https://api.daraz.pk') || 
+                  url.startsWith(REDIRECT_URI) || 
+                  url.startsWith('https://www.daraz.pk') || 
+                  url.startsWith('https://login.daraz.pk') ||
+                  url.startsWith('https://sellercenter.daraz.pk') ||
+                  url.startsWith('https://account.daraz.pk')
+                ) {
+                  console.log('✅ [STORES SCREEN - WEBVIEW] Allowing navigation to:', url);
                   return true;
                 }
                 // Block other URLs to prevent app opening
+                console.log('⚠️ [STORES SCREEN - WEBVIEW] Blocking navigation to:', url);
                 return false;
               }}
+              onMessage={(event) => {
+                console.log('📨 [STORES SCREEN - WEBVIEW] Message from WebView:', event.nativeEvent.data);
+              }}
+              injectedJavaScript={`
+                (function() {
+                    console.log('🔧 [STORES SCREEN - WEBVIEW] JavaScript injected');
+                    // Enable all button clicks
+                    document.addEventListener('click', function(e) {
+                        console.log('🖱️ [STORES SCREEN - WEBVIEW] Click detected on:', e.target);
+                        console.log('🖱️ [STORES SCREEN - WEBVIEW] Click target tag:', e.target.tagName);
+                        console.log('🖱️ [STORES SCREEN - WEBVIEW] Click target href:', e.target.href || 'none');
+                    }, true);
+                    
+                    // Log when page is ready
+                    if (document.readyState === 'complete') {
+                        console.log('✅ [STORES SCREEN - WEBVIEW] Page fully loaded');
+                        window.ReactNativeWebView.postMessage('PageLoaded');
+                    }
+                })();
+              `}
             />
           </SafeAreaView>
         </Modal>

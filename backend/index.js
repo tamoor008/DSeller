@@ -33,19 +33,35 @@ app.use((req, res, next) => {
   const timestamp = new Date().toISOString();
   const startTime = Date.now();
   
+  // Get client IP from various sources
+  const clientIP = req.ip || 
+                   req.connection.remoteAddress || 
+                   req.socket.remoteAddress ||
+                   (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
+                   'unknown';
+  
+  // Get host header to see what the client thinks the server is
+  const hostHeader = req.get('host') || 'unknown';
+  
   console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log(`📥 [${timestamp}] ${req.method} ${req.url}`);
-  console.log(`📍 [REQUEST] IP: ${req.ip || req.connection.remoteAddress}`);
+  console.log(`📍 [REQUEST] Client IP: ${clientIP}`);
+  console.log(`📍 [REQUEST] Host header: ${hostHeader}`);
   console.log(`📍 [REQUEST] User-Agent: ${req.get('user-agent') || 'N/A'}`);
   console.log(`📋 [REQUEST] Query params:`, req.query);
   console.log(`📋 [REQUEST] Body keys:`, req.body ? Object.keys(req.body) : 'none');
   console.log(`📋 [REQUEST] Params:`, req.params);
+  console.log(`⏱️ [REQUEST] Request received at: ${new Date().toISOString()}`);
   
   // Log response when it finishes
   const originalSend = res.send;
   res.send = function(data) {
     const duration = Date.now() - startTime;
     console.log(`📤 [RESPONSE] ${req.method} ${req.url} - Status: ${res.statusCode} - Duration: ${duration}ms`);
+    console.log(`⏱️ [RESPONSE] Response sent at: ${new Date().toISOString()}`);
+    if (duration > 1000) {
+      console.warn(`⚠️ [PERFORMANCE] Slow request detected: ${duration}ms for ${req.method} ${req.url}`);
+    }
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
     return originalSend.call(this, data);
   };
@@ -122,6 +138,10 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`📚 API docs available at http://localhost:${PORT}/docs`);
   console.log(`🔍 Test endpoint: http://${localIP}:${PORT}/test`);
   console.log(`🏪 Stores endpoint: http://${localIP}:${PORT}/api/stores/:userId`);
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log(`🌐 [NETWORK INFO] Detected local IP: ${localIP}`);
+  console.log(`🌐 [NETWORK INFO] Server bound to: 0.0.0.0:${PORT} (all interfaces)`);
+  console.log(`🌐 [NETWORK INFO] Make sure mobile app uses: http://${localIP}:${PORT}`);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
   console.log('⏳ Waiting for requests...\n');
   console.log(`💡 For iPhone testing, use: http://${localIP}:${PORT}\n`);

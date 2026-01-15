@@ -21,6 +21,7 @@ import { getDarazDeliveredOrders, getDarazFailedOrders } from '../../../utils/ap
 import { setTodayDeliveredOrders } from '../../../redux/AppReducer';
 import { getBaseUrl } from '../../../utils/api/baseUrl';
 import { refreshStoreToken, refreshStoreTokenWithRefreshToken, checkResponseForTokenExpiration } from '../../../utils/api/tokenRefresh';
+import { fetchWithTimeout } from '../../../utils/api/fetchWithTimeout';
 
 
 const HomeScreen = ({ navigation }) => {
@@ -71,7 +72,7 @@ const HomeScreen = ({ navigation }) => {
                 const fetchUrl = `${BASE_URL}/api/skus/${currentUser.uid}`;
                 console.log('📤 [HomeScreen] Fetching SKUs from URL:', fetchUrl);
                 
-                const response = await fetch(fetchUrl);
+                const response = await fetchWithTimeout(fetchUrl, {}, 8000);
                 
                 if (!response.ok) {
                     const contentType = response.headers.get('content-type') || '';
@@ -144,7 +145,7 @@ const HomeScreen = ({ navigation }) => {
                 const fetchUrl = `${BASE_URL}/api/products/${currentUser.uid}`;
                 console.log('📤 [HomeScreen] Fetching products from URL:', fetchUrl);
                 
-                const response = await fetch(fetchUrl);
+                const response = await fetchWithTimeout(fetchUrl, {}, 8000);
                 
                 if (!response.ok) {
                     const contentType = response.headers.get('content-type') || '';

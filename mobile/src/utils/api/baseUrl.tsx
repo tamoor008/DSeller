@@ -10,9 +10,10 @@ const ENV_BASE_URL =
   Constants.manifest2?.extra?.baseUrl;
 
 // Fallback to localhost for development, or local IP for device testing
-// For iPhone testing on same network, use your Mac's local IP (e.g., http://192.168.30.184:3001)
-// For iOS Simulator, use http://localhost:3001
-const FALLBACK_BASE_URL = ENV_BASE_URL || 'http://192.168.30.184:3001';
+// For iPhone testing on same network, use your Mac's local IP (e.g., http://192.168.30.184:3002)
+// For iOS Simulator, use http://localhost:3002
+// NOTE: Port changed from 3001 to 3002
+const FALLBACK_BASE_URL = ENV_BASE_URL || 'http://192.168.30.184:3002';
 
 let BASE_URL = FALLBACK_BASE_URL;
 let isInitialized = false;
@@ -23,26 +24,55 @@ let initializationPromise: Promise<void> | null = null;
  * Always uses the value from Firebase, with fallback to env/config if Firebase fails
  */
 const fetchBaseUrlFromFirebase = async (): Promise<string> => {
+  const startTime = Date.now();
   try {
+    console.log('🔍 [BASE URL] Starting Firebase fetch...');
+    console.log('🔍 [BASE URL] Fallback URL:', FALLBACK_BASE_URL);
+    
     const database = getDatabase(app);
     const baseUrlRef = ref(database, 'Base_URL');
     
+    console.log('⏱️ [BASE URL] Firebase get() called at:', new Date().toISOString());
     // Try to get the value once
     const snapshot = await get(baseUrlRef);
+    const fetchDuration = Date.now() - startTime;
+    console.log(`⏱️ [BASE URL] Firebase get() completed in ${fetchDuration}ms`);
     
     if (snapshot.exists()) {
       const firebaseBaseUrl = snapshot.val();
+      console.log('📥 [BASE URL] Raw Firebase value:', firebaseBaseUrl);
+      console.log('📥 [BASE URL] Value type:', typeof firebaseBaseUrl);
+      
       if (firebaseBaseUrl && typeof firebaseBaseUrl === 'string') {
-        console.log('✅ [BASE URL] Fetched from Firebase:', firebaseBaseUrl);
-        return firebaseBaseUrl;
+        // Extract IP and port for logging
+        try {
+          const url = new URL(firebaseBaseUrl);
+          console.log('✅ [BASE URL] Fetched from Firebase:', firebaseBaseUrl);
+          console.log('🌐 [BASE URL] Parsed URL - Host:', url.hostname, 'Port:', url.port, 'Protocol:', url.protocol);
+          console.log(`⏱️ [BASE URL] Total fetch time: ${Date.now() - startTime}ms`);
+          return firebaseBaseUrl;
+        } catch (urlError) {
+          console.warn('⚠️ [BASE URL] Invalid URL format from Firebase:', firebaseBaseUrl);
+          console.warn('⚠️ [BASE URL] URL parse error:', urlError);
+        }
+      } else {
+        console.warn('⚠️ [BASE URL] Firebase value is not a valid string:', firebaseBaseUrl);
       }
+    } else {
+      console.warn('⚠️ [BASE URL] Firebase snapshot does not exist');
     }
     
     console.warn('⚠️ [BASE URL] Firebase Base_URL not found or invalid, using fallback');
+    console.log('🔄 [BASE URL] Using fallback URL:', FALLBACK_BASE_URL);
+    console.log(`⏱️ [BASE URL] Total time (with fallback): ${Date.now() - startTime}ms`);
     return FALLBACK_BASE_URL;
   } catch (error) {
+    const errorDuration = Date.now() - startTime;
     console.error('❌ [BASE URL] Error fetching from Firebase:', error);
+    console.error('❌ [BASE URL] Error message:', error instanceof Error ? error.message : String(error));
+    console.error('❌ [BASE URL] Error duration:', errorDuration, 'ms');
     console.log('🔄 [BASE URL] Using fallback URL:', FALLBACK_BASE_URL);
+    console.log(`⏱️ [BASE URL] Total time (with error): ${Date.now() - startTime}ms`);
     return FALLBACK_BASE_URL;
   }
 };
@@ -113,7 +143,15 @@ export const getBaseUrl = (): string => {
   // If not initialized yet, return fallback (shouldn't happen if initializeBaseUrl is called)
   if (!isInitialized) {
     console.warn('⚠️ [BASE URL] getBaseUrl called before initialization, using fallback');
+    console.warn('⚠️ [BASE URL] Fallback URL:', FALLBACK_BASE_URL);
     return FALLBACK_BASE_URL;
+  }
+  console.log('🔗 [BASE URL] getBaseUrl() called, returning:', BASE_URL);
+  try {
+    const url = new URL(BASE_URL);
+    console.log('🌐 [BASE URL] Current URL details - Host:', url.hostname, 'Port:', url.port || 'default', 'Protocol:', url.protocol);
+  } catch (e) {
+    console.warn('⚠️ [BASE URL] Could not parse current URL:', BASE_URL);
   }
   return BASE_URL;
 };

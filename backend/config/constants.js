@@ -15,8 +15,8 @@ module.exports = {
   
   FIREBASE_DATABASE_URL: "https://dseller-c21ee-default-rtdb.firebaseio.com",
   
-  PORT: process.env.PORT || 3001,
+  PORT: process.env.PORT || 3002,
   
-  SWAGGER_SERVER_URL: process.env.SWAGGER_SERVER_URL || "http://localhost:3001",
+  SWAGGER_SERVER_URL: process.env.SWAGGER_SERVER_URL || "http://localhost:3002",
 };
 

@@ -1,4 +1,5 @@
 const { getFirebaseAdmin, isFirebaseInitialized } = require("../config/firebase");
+const { withTimeout } = require("../utils/firebaseTimeout");
 
 /**
  * Get all products for a user
@@ -22,7 +23,18 @@ async function getUserProducts(userId) {
     const admin = getFirebaseAdmin();
     const db = admin.database();
     const productsRef = db.ref(`users/${userId}/products`);
-    const snapshot = await productsRef.once("value");
+    console.log('⏱️ [FIREBASE SERVICE] getUserProducts operation started at:', new Date().toISOString());
+    const operationStartTime = Date.now();
+    
+    const snapshot = await withTimeout(
+      productsRef.once("value"),
+      15000,
+      `getUserProducts for user ${userId}`
+    );
+    
+    const operationDuration = Date.now() - operationStartTime;
+    console.log(`⏱️ [FIREBASE SERVICE] getUserProducts operation completed in ${operationDuration}ms`);
+    
     const products = snapshot.val() || {};
 
     // Convert to array format with IDs
@@ -303,7 +315,18 @@ async function getUserSkus(userId) {
     const admin = getFirebaseAdmin();
     const db = admin.database();
     const skusRef = db.ref(`users/${userId}/skusList`);
-    const snapshot = await skusRef.once("value");
+    console.log('⏱️ [FIREBASE SERVICE] getUserSkus operation started at:', new Date().toISOString());
+    const operationStartTime = Date.now();
+    
+    const snapshot = await withTimeout(
+      skusRef.once("value"),
+      15000,
+      `getUserSkus for user ${userId}`
+    );
+    
+    const operationDuration = Date.now() - operationStartTime;
+    console.log(`⏱️ [FIREBASE SERVICE] getUserSkus operation completed in ${operationDuration}ms`);
+    
     const skus = snapshot.val() || {};
 
     // Convert to array format
@@ -481,8 +504,19 @@ async function getUserStores(userId) {
     
     const storesRef = db.ref(firebasePath);
     console.log('🔄 [FIREBASE SERVICE] Fetching data from Firebase...');
+    console.log('⏱️ [FIREBASE SERVICE] Operation started at:', new Date().toISOString());
+    const operationStartTime = Date.now();
     
-    const snapshot = await storesRef.once("value");
+    const snapshot = await withTimeout(
+      storesRef.once("value"),
+      15000,
+      `getUserStores for user ${userId}`
+    );
+    
+    const operationDuration = Date.now() - operationStartTime;
+    console.log(`⏱️ [FIREBASE SERVICE] Firebase operation completed in ${operationDuration}ms`);
+    console.log('⏱️ [FIREBASE SERVICE] Operation completed at:', new Date().toISOString());
+    
     const stores = snapshot.val() || {};
     
     console.log('✅ [FIREBASE SERVICE] Firebase data retrieved');
