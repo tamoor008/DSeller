@@ -15,6 +15,7 @@ import SplashScreen from './src/ui/splash/SplashScreen';
 import AuthNav from './src/navigation/AuthNav';
 import { startFirebaseListener, stopFirebaseListener } from './src/utils/firebase/firebaseListeners';
 import { initializeBaseUrl } from './src/utils/api/baseUrl';
+import { TokenRefreshService } from './src/services/TokenRefreshService';
 
 const AppContent = () => {
   const { theme, isDark } = useTheme();
@@ -54,6 +55,14 @@ const AppContent = () => {
   function handleAuthStateChanged(user: any) {
     setUser(user)
     if (initializing) setInitializing(false);
+
+    // Refresh tokens when user logs in or app starts with a user
+    if (user) {
+      // Small delay to ensure everything is ready
+      setTimeout(() => {
+        TokenRefreshService.refreshAllStores(user.uid);
+      }, 2000);
+    }
   }
 
   useEffect(() => {
@@ -61,7 +70,7 @@ const AppContent = () => {
     return subscriber; // unsubscribe on unmount
   }, []);
 
- 
+
 
   useEffect(() => {
     startFirebaseListener(dispatch);
@@ -74,7 +83,7 @@ const AppContent = () => {
     };
     initBaseUrl();
   }, []);
-  
+
   const navigationTheme = useMemo(() => ({
     dark: isDark,
     colors: {

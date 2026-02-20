@@ -25,16 +25,16 @@ async function getUserProducts(userId) {
     const productsRef = db.ref(`users/${userId}/products`);
     console.log('⏱️ [FIREBASE SERVICE] getUserProducts operation started at:', new Date().toISOString());
     const operationStartTime = Date.now();
-    
+
     const snapshot = await withTimeout(
       productsRef.once("value"),
       15000,
       `getUserProducts for user ${userId}`
     );
-    
+
     const operationDuration = Date.now() - operationStartTime;
     console.log(`⏱️ [FIREBASE SERVICE] getUserProducts operation completed in ${operationDuration}ms`);
-    
+
     const products = snapshot.val() || {};
 
     // Convert to array format with IDs
@@ -86,8 +86,8 @@ async function getProductById(userId, productId) {
     return {
       id: productId,
       ...product,
-      price: typeof product.price === 'string' 
-        ? parseFloat(product.price) || 0 
+      price: typeof product.price === 'string'
+        ? parseFloat(product.price) || 0
         : (typeof product.price === 'number' ? product.price : 0)
     };
   } catch (error) {
@@ -133,11 +133,11 @@ async function updateSku(userId, sku, updates) {
     const admin = getFirebaseAdmin();
     const db = admin.database();
     const skuRef = db.ref(`users/${userId}/skusList/${sku}`);
-    
+
     // Get existing SKU to preserve price if it exists
     const existingSnapshot = await skuRef.once('value');
     const existingSku = existingSnapshot.val();
-    
+
     const updateData = {
       ...updates,
       updatedAt: admin.database.ServerValue.TIMESTAMP,
@@ -151,7 +151,7 @@ async function updateSku(userId, sku, updates) {
 
     // Use .update() which will create if doesn't exist, or update if it does
     await skuRef.update(updateData);
-    
+
     console.log(`✅ [updateSku] SKU ${sku} updated/created in Firebase for user ${userId}`);
   } catch (error) {
     // Re-throw with status code if not already set
@@ -186,18 +186,18 @@ async function createProduct(userId, productData) {
     const admin = getFirebaseAdmin();
     const db = admin.database();
     const productsRef = db.ref(`users/${userId}/products`);
-    
+
     // Push new product (equivalent to Firebase push())
     const newProductRef = productsRef.push();
     const productId = newProductRef.key;
 
     const normalizedProduct = {
       ...productData,
-      price: typeof productData.price === 'string' 
-        ? parseFloat(productData.price) || 0 
+      price: typeof productData.price === 'string'
+        ? parseFloat(productData.price) || 0
         : (typeof productData.price === 'number' ? productData.price : 0),
-      quantity: typeof productData.quantity === 'string' 
-        ? parseFloat(productData.quantity) || 0 
+      quantity: typeof productData.quantity === 'string'
+        ? parseFloat(productData.quantity) || 0
         : (typeof productData.quantity === 'number' ? productData.quantity : 0),
       createdAt: admin.database.ServerValue.TIMESTAMP,
     };
@@ -240,8 +240,8 @@ async function updateProduct(userId, productId, updates) {
 
     // Normalize price if it's being updated
     if (updates.price !== undefined) {
-      updates.price = typeof updates.price === 'string' 
-        ? parseFloat(updates.price) || 0 
+      updates.price = typeof updates.price === 'string'
+        ? parseFloat(updates.price) || 0
         : (typeof updates.price === 'number' ? updates.price : 0);
     }
 
@@ -317,16 +317,16 @@ async function getUserSkus(userId) {
     const skusRef = db.ref(`users/${userId}/skusList`);
     console.log('⏱️ [FIREBASE SERVICE] getUserSkus operation started at:', new Date().toISOString());
     const operationStartTime = Date.now();
-    
+
     const snapshot = await withTimeout(
       skusRef.once("value"),
       15000,
       `getUserSkus for user ${userId}`
     );
-    
+
     const operationDuration = Date.now() - operationStartTime;
     console.log(`⏱️ [FIREBASE SERVICE] getUserSkus operation completed in ${operationDuration}ms`);
-    
+
     const skus = snapshot.val() || {};
 
     // Convert to array format
@@ -381,11 +381,11 @@ async function batchUpdateSkus(userId, skusData) {
     // CRITICAL: Get existing SKUs first to preserve prices
     const existingSnapshot = await skusRef.once('value');
     const existingSkus = existingSnapshot.val() || {};
-    
+
     // SAFETY CHECK: Count existing SKUs with prices > 0
     const existingSkusWithPrice = Object.values(existingSkus).filter(sku => sku && (sku.price > 0)).length;
     const newSkusWithPriceZero = Object.values(skusData).filter(sku => sku && (!sku.price || sku.price === 0)).length;
-    
+
     console.log(`🔒 [batchUpdateSkus] SAFETY CHECK:`, {
       existingSkusCount: Object.keys(existingSkus).length,
       existingSkusWithPrice: existingSkusWithPrice,
@@ -393,14 +393,14 @@ async function batchUpdateSkus(userId, skusData) {
       newSkusWithPriceZero: newSkusWithPriceZero,
       warning: newSkusWithPriceZero > 0 && existingSkusWithPrice > 0 ? '⚠️ Attempting to add SKUs with price 0 - will preserve existing prices' : 'OK'
     });
-    
+
     // CRITICAL PROTECTION: Never overwrite existing prices with 0
     // Merge new SKUs with existing ones, ALWAYS preserving existing prices > 0
     const mergedSkus = { ...existingSkus };
     let newSkusAdded = 0;
     let existingSkusPreserved = 0;
     let pricesProtected = 0;
-    
+
     Object.keys(skusData).forEach(skuKey => {
       if (!mergedSkus[skuKey]) {
         // New SKU - add it (even if price is 0, this is OK for new SKUs)
@@ -411,7 +411,7 @@ async function batchUpdateSkus(userId, skusData) {
         // Existing SKU - CRITICAL: NEVER overwrite price if it's > 0
         const existingPrice = parseFloat(mergedSkus[skuKey].price) || 0;
         const newPrice = parseFloat(skusData[skuKey].price) || 0;
-        
+
         if (existingPrice > 0) {
           // CRITICAL PROTECTION: Existing price > 0 - ALWAYS preserve it
           mergedSkus[skuKey] = {
@@ -452,7 +452,7 @@ async function batchUpdateSkus(userId, skusData) {
 
     // Use update() instead of set() to merge, not replace
     await skusRef.update(mergedSkus);
-    
+
     console.log(`✅ [batchUpdateSkus] SAFELY updated SKUs:`, {
       newSkusAdded: newSkusAdded,
       existingSkusPreserved: existingSkusPreserved,
@@ -481,7 +481,7 @@ async function batchUpdateSkus(userId, skusData) {
 async function getUserStores(userId) {
   console.log('🔍 [FIREBASE SERVICE] getUserStores called');
   console.log('🔍 [FIREBASE SERVICE] User ID:', userId);
-  
+
   try {
     if (!isFirebaseInitialized()) {
       console.error('❌ [FIREBASE SERVICE] Firebase Admin not initialized');
@@ -501,24 +501,24 @@ async function getUserStores(userId) {
     const db = admin.database();
     const firebasePath = `users/${userId}/stores`;
     console.log('📍 [FIREBASE SERVICE] Firebase path:', firebasePath);
-    
+
     const storesRef = db.ref(firebasePath);
     console.log('🔄 [FIREBASE SERVICE] Fetching data from Firebase...');
     console.log('⏱️ [FIREBASE SERVICE] Operation started at:', new Date().toISOString());
     const operationStartTime = Date.now();
-    
+
     const snapshot = await withTimeout(
       storesRef.once("value"),
       15000,
       `getUserStores for user ${userId}`
     );
-    
+
     const operationDuration = Date.now() - operationStartTime;
     console.log(`⏱️ [FIREBASE SERVICE] Firebase operation completed in ${operationDuration}ms`);
     console.log('⏱️ [FIREBASE SERVICE] Operation completed at:', new Date().toISOString());
-    
+
     const stores = snapshot.val() || {};
-    
+
     console.log('✅ [FIREBASE SERVICE] Firebase data retrieved');
     console.log('📊 [FIREBASE SERVICE] Raw stores data type:', typeof stores);
     console.log('📊 [FIREBASE SERVICE] Raw stores keys count:', Object.keys(stores).length);
@@ -529,17 +529,17 @@ async function getUserStores(userId) {
       id,
       ...value,
     }));
-    
+
     console.log('✅ [FIREBASE SERVICE] Stores array created');
     console.log('📊 [FIREBASE SERVICE] Stores array length:', storesArray.length);
-    
+
     return storesArray;
   } catch (error) {
     console.error('❌ [FIREBASE SERVICE] Error in getUserStores');
     console.error('❌ [FIREBASE SERVICE] Error message:', error.message);
     console.error('❌ [FIREBASE SERVICE] Error code:', error.code);
     console.error('❌ [FIREBASE SERVICE] Error stack:', error.stack);
-    
+
     if (!error.statusCode) {
       error.statusCode = 500;
       error.message = error.message || "Failed to fetch stores from Firebase";
@@ -559,7 +559,7 @@ async function addStore(userId, storeId, storeData) {
   console.log('🔍 [FIREBASE SERVICE] addStore called');
   console.log('🔍 [FIREBASE SERVICE] User ID:', userId);
   console.log('🔍 [FIREBASE SERVICE] Store ID:', storeId);
-  
+
   try {
     if (!isFirebaseInitialized()) {
       console.error('❌ [FIREBASE SERVICE] Firebase Admin not initialized');
@@ -579,7 +579,7 @@ async function addStore(userId, storeId, storeData) {
     const db = admin.database();
     const firebasePath = `users/${userId}/stores/${storeId}`;
     console.log('📍 [FIREBASE SERVICE] Firebase path:', firebasePath);
-    
+
     const storeRef = db.ref(firebasePath);
 
     // Check if store already exists
@@ -616,7 +616,7 @@ async function removeStore(userId, storeId) {
   console.log('🔍 [FIREBASE SERVICE] removeStore called');
   console.log('🔍 [FIREBASE SERVICE] User ID:', userId);
   console.log('🔍 [FIREBASE SERVICE] Store ID:', storeId);
-  
+
   try {
     if (!isFirebaseInitialized()) {
       console.error('❌ [FIREBASE SERVICE] Firebase Admin not initialized');
@@ -636,9 +636,9 @@ async function removeStore(userId, storeId) {
     const db = admin.database();
     const firebasePath = `users/${userId}/stores/${storeId}`;
     console.log('📍 [FIREBASE SERVICE] Firebase path:', firebasePath);
-    
+
     const storeRef = db.ref(firebasePath);
-    
+
     // Check if store exists before removing
     console.log('🔄 [FIREBASE SERVICE] Checking if store exists...');
     const snapshot = await storeRef.once("value");
@@ -648,7 +648,7 @@ async function removeStore(userId, storeId) {
       error.statusCode = 404;
       throw error;
     }
-    
+
     console.log('🔄 [FIREBASE SERVICE] Removing store from Firebase...');
     await storeRef.remove();
     console.log('✅ [FIREBASE SERVICE] Store removed successfully:', storeId);
@@ -710,5 +710,44 @@ module.exports = {
   addStore,
   removeStore,
   setPersonalInformation,
+  updateStoreToken,
 };
+
+/**
+ * Update store token in Firebase
+ * @param {string} userId - Firebase user ID
+ * @param {string} storeId - Store ID
+ * @param {object} tokenData - New token data
+ * @returns {Promise<void>}
+ */
+async function updateStoreToken(userId, storeId, tokenData) {
+  try {
+    if (!isFirebaseInitialized()) {
+      const error = new Error("Firebase Admin not initialized");
+      error.statusCode = 500;
+      throw error;
+    }
+
+    if (!userId || !storeId) {
+      const error = new Error("User ID and Store ID are required");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const admin = getFirebaseAdmin();
+    const db = admin.database();
+    // Path to the specific store's token data
+    // Assuming structure: users/{userId}/stores/{storeId}/user/token
+    const tokenRef = db.ref(`users/${userId}/stores/${storeId}/user/token`);
+
+    await tokenRef.update(tokenData);
+    console.log(`✅ [FIREBASE SERVICE] Token updated for store ${storeId}`);
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = error.message || "Failed to update store token";
+    }
+    throw error;
+  }
+}
 

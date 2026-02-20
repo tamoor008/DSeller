@@ -15,9 +15,9 @@ function initializeFirebase() {
       let credential;
 
       // Option 1: Service account JSON file path (most common)
-      const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH || 
-                                  path.join(__dirname, '..', 'serviceAccountKey.json');
-      
+      const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH ||
+        path.join(__dirname, '..', 'serviceAccountKey.json');
+
       try {
         const serviceAccount = require(serviceAccountPath);
         credential = admin.credential.cert(serviceAccount);
@@ -33,7 +33,7 @@ function initializeFirebase() {
             console.warn("⚠️ Failed to parse FIREBASE_SERVICE_ACCOUNT env variable");
           }
         }
-        
+
         // Option 3: Application Default Credentials (for GCP/Cloud Run)
         if (!credential) {
           try {
@@ -48,14 +48,14 @@ function initializeFirebase() {
       // If no credential method worked, try to initialize without explicit credential
       // This will work if Firebase is initialized elsewhere or using environment variables
       if (!credential) {
-        console.warn("⚠️ No Firebase credentials found. Attempting to initialize without explicit credential...");
-        console.warn("⚠️ Make sure you have:");
-        console.warn("  1. A serviceAccountKey.json file in the backend directory, OR");
-        console.warn("  2. FIREBASE_SERVICE_ACCOUNT environment variable set, OR");
-        console.warn("  3. Google Application Default Credentials configured");
-        admin.initializeApp({
-          databaseURL: FIREBASE_DATABASE_URL
-        });
+        // Only initialize without credential if explicitly intended, otherwise it causes spammy connection errors
+        console.warn("⚠️ No Firebase credentials found. Skipping Firebase initialization.");
+        console.warn("⚠️ To enable Firebase features (like Base_URL auto-update):");
+        console.warn("  1. Download 'serviceAccountKey.json' from Firebase Console");
+        console.warn("  2. Place it in the 'backend' directory");
+
+        firebaseInitialized = false;
+        return null;
       } else {
         admin.initializeApp({
           credential: credential,
@@ -101,4 +101,3 @@ module.exports = {
   isFirebaseInitialized,
   admin,
 };
-

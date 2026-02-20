@@ -32,17 +32,17 @@ app.use(express.json());
 app.use((req, res, next) => {
   const timestamp = new Date().toISOString();
   const startTime = Date.now();
-  
+
   // Get client IP from various sources
-  const clientIP = req.ip || 
-                   req.connection.remoteAddress || 
-                   req.socket.remoteAddress ||
-                   (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
-                   'unknown';
-  
+  const clientIP = req.ip ||
+    req.connection.remoteAddress ||
+    req.socket.remoteAddress ||
+    (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
+    'unknown';
+
   // Get host header to see what the client thinks the server is
   const hostHeader = req.get('host') || 'unknown';
-  
+
   console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log(`📥 [${timestamp}] ${req.method} ${req.url}`);
   console.log(`📍 [REQUEST] Client IP: ${clientIP}`);
@@ -52,10 +52,10 @@ app.use((req, res, next) => {
   console.log(`📋 [REQUEST] Body keys:`, req.body ? Object.keys(req.body) : 'none');
   console.log(`📋 [REQUEST] Params:`, req.params);
   console.log(`⏱️ [REQUEST] Request received at: ${new Date().toISOString()}`);
-  
+
   // Log response when it finishes
   const originalSend = res.send;
-  res.send = function(data) {
+  res.send = function (data) {
     const duration = Date.now() - startTime;
     console.log(`📤 [RESPONSE] ${req.method} ${req.url} - Status: ${res.statusCode} - Duration: ${duration}ms`);
     console.log(`⏱️ [RESPONSE] Response sent at: ${new Date().toISOString()}`);
@@ -65,7 +65,7 @@ app.use((req, res, next) => {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
     return originalSend.call(this, data);
   };
-  
+
   next();
 });
 
@@ -114,11 +114,11 @@ process.on('uncaughtException', (error) => {
 });
 
 // Start server - bind to 0.0.0.0 to accept connections from local network (for iPhone testing)
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', async () => {
   const os = require('os');
   const networkInterfaces = os.networkInterfaces();
   let localIP = 'localhost';
-  
+
   // Find local IP address
   for (const interfaceName in networkInterfaces) {
     const addresses = networkInterfaces[interfaceName];
@@ -130,20 +130,54 @@ app.listen(PORT, '0.0.0.0', () => {
     }
     if (localIP !== 'localhost') break;
   }
-  
+
+  const baseUrl = `http://${localIP}:${PORT}`;
+
   console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log(`🚀 Backend server is running on port ${PORT}`);
   console.log(`📡 API available at http://localhost:${PORT}`);
-  console.log(`📱 API available on local network at http://${localIP}:${PORT}`);
+  console.log(`📱 API available on local network at ${baseUrl}`);
   console.log(`📚 API docs available at http://localhost:${PORT}/docs`);
-  console.log(`🔍 Test endpoint: http://${localIP}:${PORT}/test`);
-  console.log(`🏪 Stores endpoint: http://${localIP}:${PORT}/api/stores/:userId`);
+  console.log(`🔍 Test endpoint: ${baseUrl}/test`);
+  console.log(`🏪 Stores endpoint: ${baseUrl}/api/stores/:userId`);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log(`🌐 [NETWORK INFO] Detected local IP: ${localIP}`);
   console.log(`🌐 [NETWORK INFO] Server bound to: 0.0.0.0:${PORT} (all interfaces)`);
-  console.log(`🌐 [NETWORK INFO] Make sure mobile app uses: http://${localIP}:${PORT}`);
+  console.log(`🌐 [NETWORK INFO] Make sure mobile app uses: ${baseUrl}`);
+
+  // Update Firebase Base_URL
+  try {
+    const { getFirebaseAdmin, isFirebaseInitialized } = require("./config/firebase");
+
+    // Ensure Firebase is initialized
+    if (!isFirebaseInitialized()) {
+      initializeFirebase();
+    }
+
+    if (isFirebaseInitialized()) {
+      const admin = getFirebaseAdmin();
+      const db = admin.database();
+      const baseUrlRef = db.ref('Base_URL');
+
+      console.log(`🔄 [FIREBASE] Updating Base_URL to: ${baseUrl}`);
+
+      // Attempt to set the value
+      try {
+        await baseUrlRef.set(baseUrl);
+        console.log(`✅ [FIREBASE] Base_URL updated successfully!`);
+      } catch (writeError) {
+        console.warn(`⚠️ [FIREBASE] Failed to write to database. This usually means the server is missing a valid 'serviceAccountKey.json' or has insufficient permissions.`);
+        console.warn(`⚠️ [FIREBASE] Error details: ${writeError.message}`);
+      }
+    } else {
+      console.warn(`⚠️ [FIREBASE] Could not update Base_URL - Firebase not initialized`);
+    }
+  } catch (error) {
+    console.error(`❌ [FIREBASE] Unexpected error during update:`, error.message);
+  }
+
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
   console.log('⏳ Waiting for requests...\n');
-  console.log(`💡 For iPhone testing, use: http://${localIP}:${PORT}\n`);
+  console.log(`💡 For iPhone testing, use: ${baseUrl}\n`);
 });
 

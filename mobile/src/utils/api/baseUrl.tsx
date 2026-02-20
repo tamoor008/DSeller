@@ -13,7 +13,7 @@ const ENV_BASE_URL =
 // For iPhone testing on same network, use your Mac's local IP (e.g., http://192.168.30.184:3002)
 // For iOS Simulator, use http://localhost:3002
 // NOTE: Port changed from 3001 to 3002
-const FALLBACK_BASE_URL = ENV_BASE_URL || 'http://192.168.30.184:3002';
+const FALLBACK_BASE_URL = ENV_BASE_URL || '';
 
 let BASE_URL = FALLBACK_BASE_URL;
 let isInitialized = false;
@@ -28,21 +28,21 @@ const fetchBaseUrlFromFirebase = async (): Promise<string> => {
   try {
     console.log('🔍 [BASE URL] Starting Firebase fetch...');
     console.log('🔍 [BASE URL] Fallback URL:', FALLBACK_BASE_URL);
-    
+
     const database = getDatabase(app);
     const baseUrlRef = ref(database, 'Base_URL');
-    
+
     console.log('⏱️ [BASE URL] Firebase get() called at:', new Date().toISOString());
     // Try to get the value once
     const snapshot = await get(baseUrlRef);
     const fetchDuration = Date.now() - startTime;
     console.log(`⏱️ [BASE URL] Firebase get() completed in ${fetchDuration}ms`);
-    
+
     if (snapshot.exists()) {
       const firebaseBaseUrl = snapshot.val();
       console.log('📥 [BASE URL] Raw Firebase value:', firebaseBaseUrl);
       console.log('📥 [BASE URL] Value type:', typeof firebaseBaseUrl);
-      
+
       if (firebaseBaseUrl && typeof firebaseBaseUrl === 'string') {
         // Extract IP and port for logging
         try {
@@ -61,7 +61,7 @@ const fetchBaseUrlFromFirebase = async (): Promise<string> => {
     } else {
       console.warn('⚠️ [BASE URL] Firebase snapshot does not exist');
     }
-    
+
     console.warn('⚠️ [BASE URL] Firebase Base_URL not found or invalid, using fallback');
     console.log('🔄 [BASE URL] Using fallback URL:', FALLBACK_BASE_URL);
     console.log(`⏱️ [BASE URL] Total time (with fallback): ${Date.now() - startTime}ms`);
@@ -85,7 +85,7 @@ const setupFirebaseListener = () => {
   try {
     const database = getDatabase(app);
     const baseUrlRef = ref(database, 'Base_URL');
-    
+
     // Listen for changes to Base_URL in real-time
     onValue(baseUrlRef, (snapshot) => {
       if (snapshot.exists()) {
@@ -112,12 +112,12 @@ export const initializeBaseUrl = async (): Promise<void> => {
   if (initializationPromise) {
     return initializationPromise;
   }
-  
+
   // If already initialized synchronously, just return
   if (isInitialized) {
     return Promise.resolve();
   }
-  
+
   // Create a promise for initialization
   initializationPromise = (async () => {
     try {
@@ -131,7 +131,7 @@ export const initializeBaseUrl = async (): Promise<void> => {
       isInitialized = true;
     }
   })();
-  
+
   return initializationPromise;
 };
 

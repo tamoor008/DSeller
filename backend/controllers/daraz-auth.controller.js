@@ -63,7 +63,7 @@ async function getDarazToken(req, res, next) {
     const { access_token } = tokenData;
 
     if (!access_token) {
-      return res.status(500).json({ 
+      return res.status(500).json({
         error: "Access token not received from Daraz",
         details: {
           responseData: tokenData,
@@ -157,7 +157,24 @@ async function refreshDarazToken(req, res, next) {
       }
     );
 
-    return res.status(200).json(response.data);
+    const newTokenData = response.data;
+
+    // Optional: Update Firebase if userId and storeId are provided
+    const { userId, storeId } = req.body;
+    if (userId && storeId && newTokenData && newTokenData.access_token) {
+      try {
+        const { updateStoreToken } = require("../services/firebase.service");
+        // We only want to save the token part, not the whole response if it has extra unrelated fields
+        // But Daraz refresh response is usually just the token info
+        await updateStoreToken(userId, storeId, newTokenData);
+        console.log(`✅ [DARAZ AUTH] Automatically updated token for store ${storeId}`);
+      } catch (updateError) {
+        console.error(`⚠️ [DARAZ AUTH] Failed to update token in Firebase: ${updateError.message}`);
+        // Don't fail the request, just log the error
+      }
+    }
+
+    return res.status(200).json(newTokenData);
   } catch (error) {
     console.error("Error in refresh-daraz-token:", error);
     error.statusCode = error.statusCode || 500;

@@ -26,9 +26,7 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "extra": {
-      "baseUrl": "http://192.168.30.48:3002"
-    },
+    "extra": {},
     "plugins": [
       [
         "expo-font",

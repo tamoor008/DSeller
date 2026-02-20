@@ -1,6 +1,6 @@
-import { initializeApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
-import { getDatabase } from 'firebase/database'
+import { initializeApp, FirebaseApp } from 'firebase/app'
+import { getAuth, Auth } from 'firebase/auth'
+import { getDatabase, Database } from 'firebase/database'
 
 // Firebase configuration
 // Fallback to actual values if env vars are not set
@@ -16,9 +16,9 @@ const firebaseConfig = {
 }
 
 // Initialize Firebase with error handling
-let app
-let auth
-let database
+let app: FirebaseApp
+let auth: Auth
+let database: Database
 
 try {
   app = initializeApp(firebaseConfig)
