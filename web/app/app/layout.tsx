@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation'
 import { Provider } from 'react-redux'
 import { store } from '../../src-app/store/store'
 import { ThemeProvider } from '../../src-app/context/ThemeContext'
+import { AlertProvider } from '../../src-app/context/AlertContext'
 import { useAuth } from '../../src-app/hooks/useAuth'
 import Sidebar from './components/Sidebar'
 import TopHeader from './components/TopHeader'
@@ -13,7 +14,7 @@ import '../../src-app/index.css'
 function AppContent({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   const pathname = usePathname()
-  
+
   // Don't show sidebar/header on login/signup pages
   const isAuthPage = pathname === '/app/login' || pathname === '/app/signup'
   const showLayout = user && !isAuthPage
@@ -38,32 +39,32 @@ function AppContent({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="sidebar-layout" style={{
+      display: 'flex',
+      minHeight: '100vh',
+      backgroundColor: AppColors.bgcolor
+    }}>
+      {showLayout && <Sidebar />}
+      <div style={{
+        marginLeft: showLayout ? '260px' : '0',
+        flex: 1,
         display: 'flex',
-        minHeight: '100vh',
-        backgroundColor: AppColors.bgcolor
+        flexDirection: 'column',
+        transition: 'margin-left 0.3s ease'
       }}>
-        {showLayout && <Sidebar />}
-        <div style={{
-          marginLeft: showLayout ? '260px' : '0',
+        {showLayout && <TopHeader />}
+        <main style={{
+          marginTop: showLayout ? '64px' : '0',
           flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          transition: 'margin-left 0.3s ease'
+          padding: showLayout ? '32px' : '0',
+          maxWidth: showLayout ? '1400px' : '100%',
+          width: '100%',
+          marginLeft: showLayout ? 'auto' : '0',
+          marginRight: showLayout ? 'auto' : '0'
         }}>
-          {showLayout && <TopHeader />}
-          <main style={{
-            marginTop: showLayout ? '64px' : '0',
-            flex: 1,
-            padding: showLayout ? '32px' : '0',
-            maxWidth: showLayout ? '1400px' : '100%',
-            width: '100%',
-            marginLeft: showLayout ? 'auto' : '0',
-            marginRight: showLayout ? 'auto' : '0'
-          }}>
-            {children}
-          </main>
-        </div>
+          {children}
+        </main>
       </div>
+    </div>
   )
 }
 
@@ -75,9 +76,10 @@ export default function AppLayout({
   return (
     <Provider store={store}>
       <ThemeProvider>
-        <AppContent>{children}</AppContent>
+        <AlertProvider>
+          <AppContent>{children}</AppContent>
+        </AlertProvider>
       </ThemeProvider>
     </Provider>
   )
 }
-

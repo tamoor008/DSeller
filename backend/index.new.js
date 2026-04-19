@@ -43,8 +43,8 @@ app.use("/", practitionersRoutes);
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Backend server is running on port ${PORT}`);
-  console.log(`📡 API available at http://localhost:${PORT}`);
-  console.log(`📚 API docs available at http://localhost:${PORT}/docs`);
+  // console.log(`🚀 Backend server is running on port ${PORT}`);
+  // console.log(`📡 API available at http://localhost:${PORT}`);
+  // console.log(`📚 API docs available at http://localhost:${PORT}/docs`);
 });
 

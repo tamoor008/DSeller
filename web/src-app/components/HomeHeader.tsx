@@ -4,6 +4,7 @@ import { signOut } from 'firebase/auth'
 import { auth } from '../config/firebase'
 import { AppColors } from '../constants/colors'
 import { AppStrings } from '../constants/strings'
+import { useAlert } from '../context/AlertContext'
 
 interface HomeHeaderProps {
   onOpenSettings?: () => void
@@ -11,9 +12,11 @@ interface HomeHeaderProps {
 
 const HomeHeader: React.FC<HomeHeaderProps> = ({ onOpenSettings }) => {
   const navigate = useNavigate()
+  const { showConfirm } = useAlert()
 
   const handleLogout = async () => {
-    if (window.confirm('Are you sure you want to log out?')) {
+    const confirmed = await showConfirm('Logout', 'Are you sure you want to log out?');
+    if (confirmed) {
       try {
         await signOut(auth)
         navigate('/app/login')
@@ -22,6 +25,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({ onOpenSettings }) => {
       }
     }
   }
+
 
   const handleSettings = () => {
     if (onOpenSettings) {

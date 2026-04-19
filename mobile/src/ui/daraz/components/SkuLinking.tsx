@@ -20,7 +20,15 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import { getBaseUrl } from '../../../utils/api/baseUrl';
 
 
-const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boolean) => void; selectedSku: any }) => {
+const SkuLinking = ({
+    setIsvisible,
+    selectedSku,
+    onSuccess
+}: {
+    setIsvisible: (visible: boolean) => void;
+    selectedSku: any;
+    onSuccess?: (data: any) => void;
+}) => {
     const { theme } = useTheme();
     const currentUser = auth.currentUser
     const [productName, setProductName] = useState('')
@@ -35,70 +43,66 @@ const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boo
     const [open, setOpen] = useState(false);
     const [value, setValue] = useState<string | null>(null);
     const [items, setItems] = useState<any[]>([]);
+    const resolvedUnitPrice = Number(price || selectedProduct?.price || 0);
 
     // Define fetchProduct using useCallback to fetch from backend API
     const fetchProduct = useCallback(async (id: string) => {
-        console.log('[SkuLinking] 🔍 fetchProduct CALLED with id:', id);
-        console.log('[SkuLinking] 🔍 Current user:', { uid: currentUser?.uid, hasUser: !!currentUser });
 
         if (!id || !currentUser) {
-            console.warn('[SkuLinking] ❌ Cannot fetch product: missing id or currentUser', { id, hasUser: !!currentUser });
             return;
         }
-        
+
         try {
             const response = await fetch(`${BASE_URL}/api/products/${currentUser.uid}/${id}`);
-            
+
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                console.warn('[SkuLinking] ❌ API error:', errorData.error || 'Unknown error');
                 setSelectedProduct({});
                 return;
             }
 
             const result = await response.json();
-            
+
             if (result.error) {
-                console.warn('[SkuLinking] ❌ API returned error:', result.error);
                 setSelectedProduct({});
                 return;
             }
 
             const product = result.data;
-            console.log('[SkuLinking] ✅ Product data received from backend:', {
-                productName: product.productName,
-                price: product.price,
-                priceType: typeof product.price,
-                unit: product.unit
-            });
-            
+
             setSelectedProduct(product);
-            
+            const fetchedPrice = Number(product?.price || 0);
+
+            // ALWAYS use the fetched product unit price. 
+            // selectedSku.unitPrice incorrectly holds the SKU's total price 
+            // from the backend, instead of the per-gram unit price.
+            setPrice(fetchedPrice > 0 ? fetchedPrice.toString() : '');
+
             // Recalculate price when product changes
             if (quantity) {
-                calculateSkuPrice(product.price, quantity, packagingPrice);
+                calculateSkuPrice(fetchedPrice, quantity, packagingPrice);
             }
         } catch (error: any) {
-            console.error('[SkuLinking] ❌ Error fetching product data:', error.message);
             setSelectedProduct({});
         }
-    }, [currentUser, BASE_URL]);
+    }, [currentUser, BASE_URL, selectedSku]);
 
     // Initialize quantity and pre-select product if selectedSku has productId
     useEffect(() => {
-        console.log('[SkuLinking] selectedSku changed:', selectedSku);
-        
+
         if (selectedSku?.productQuantity) {
             setQuantity(selectedSku.productQuantity.toString());
         }
-        
+
         if (selectedSku?.packagingPrice !== undefined && selectedSku?.packagingPrice !== null) {
             setPackagingPrice(selectedSku.packagingPrice.toString());
         }
-        
+
+        // Removed setPrice(selectedSku.unitPrice) here because it holds the TOTAL price 
+        // instead of the product's unit price. We will rely on fetchProduct to populate the unit price.
+
         // If selectedSku already has a productId, pre-select it and fetch the product
         if (selectedSku?.productId && currentUser && selectedSku.productId !== 0) {
-            console.log('[SkuLinking] Pre-selecting product with ID:', selectedSku.productId);
             setValue(selectedSku.productId);
             fetchProduct(selectedSku.productId);
         }
@@ -106,23 +110,10 @@ const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boo
 
     // Fetch product when value changes
     useEffect(() => {
-        console.log('[SkuLinking] ⚡ useEffect triggered - value changed:', { 
-            value, 
-            hasCurrentUser: !!currentUser,
-            valueType: typeof value,
-            valueLength: value?.length
-        });
-        
+
         if (value && currentUser) {
-            console.log('[SkuLinking] ✅ Conditions met, calling fetchProduct:', value);
             fetchProduct(value);
         } else {
-            console.log('[SkuLinking] ❌ Cannot fetch - missing value or currentUser:', { 
-                value, 
-                hasCurrentUser: !!currentUser,
-                valueTruthy: !!value,
-                currentUserTruthy: !!currentUser
-            });
         }
     }, [value, currentUser, fetchProduct]);
 
@@ -148,50 +139,45 @@ const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boo
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                console.warn('[SkuLinking] Error calculating price:', errorData.error || 'Unknown error');
                 return;
             }
 
             const result = await response.json();
-            
+
             if (result.error) {
-                console.warn('[SkuLinking] API returned error:', result.error);
                 return;
             }
 
             setCalculatedPrice(result.data.totalPrice);
         } catch (error: any) {
-            console.error('[SkuLinking] Error calculating SKU price:', error.message);
         }
     }, [BASE_URL]);
 
     // Recalculate price when quantity, product price, or packaging price changes
     useEffect(() => {
-        if (selectedProduct?.price && quantity) {
-            calculateSkuPrice(selectedProduct.price, quantity, packagingPrice);
+        if (resolvedUnitPrice && quantity) {
+            calculateSkuPrice(resolvedUnitPrice, quantity, packagingPrice);
         } else {
             setCalculatedPrice(0);
         }
-    }, [quantity, selectedProduct?.price, packagingPrice, calculateSkuPrice]);
+    }, [quantity, resolvedUnitPrice, packagingPrice, calculateSkuPrice]);
 
     // Fetch products list from backend API
     useEffect(() => {
         if (!currentUser) return;
-        
+
         const fetchProducts = async () => {
             try {
                 const response = await fetch(`${BASE_URL}/api/products/${currentUser.uid}`);
-                
+
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
-                    console.error('[SkuLinking] Error fetching products:', errorData.error || 'Unknown error');
                     return;
                 }
 
                 const result = await response.json();
-                
+
                 if (result.error) {
-                    console.error('[SkuLinking] API returned error:', result.error);
                     return;
                 }
 
@@ -199,7 +185,6 @@ const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boo
                     setItems(result.data);
                 }
             } catch (error: any) {
-                console.error('[SkuLinking] Error fetching products:', error.message);
             }
         };
 
@@ -208,12 +193,11 @@ const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boo
 
     const updateSku = async () => {
         if (!value || !currentUser) {
-            console.warn('[SkuLinking] Cannot update SKU: no product selected or no user');
             return;
         }
-        
+
         const quantityNum = quantity || selectedSku.productQuantity || '0';
-        
+
         try {
             // Use backend API to calculate and update SKU (handles all calculations server-side)
             const response = await fetch(`${BASE_URL}/api/skus/${currentUser.uid}/${selectedSku.sku}`, {
@@ -226,45 +210,40 @@ const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boo
                     quantity: quantityNum,
                     productName: (selectedProduct as any)?.productName || '',
                     packagingPrice: packagingPrice || '0',
+                    unitPrice: price || selectedProduct?.price || '0',
                 }),
             });
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                console.error('[SkuLinking] Error updating SKU:', errorData.error || 'Unknown error');
                 return;
             }
 
             const result = await response.json();
-            
+
             if (result.error) {
                 console.error('[SkuLinking] API returned error:', result.error);
                 return;
             }
 
-            console.log('[SkuLinking] ✅ SKU updated successfully via backend:', result.data);
+            if (onSuccess) {
+                onSuccess(result.data);
+            }
+
             setValue(null);
             setQuantity('');
+            setPrice('');
             setPackagingPrice('');
             setCalculatedPrice(0);
             setIsvisible(false);
         } catch (error: any) {
-            console.error('[SkuLinking] ❌ Error updating SKU:', error.message);
         }
     };
 
 
-    const isFormValid = value && quantity 
+    const isFormValid = value && quantity && resolvedUnitPrice > 0
 
-    console.log('[SkuLinking] Component render:', {
-        selectedSku,
-        selectedProduct,
-        value,
-        quantity,
-        hasPrice: !!selectedProduct?.price,
-        price: selectedProduct?.price
-    });
-    
+
 
 
     const styles = getStyles(theme);
@@ -288,10 +267,8 @@ const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boo
                             setOpen={setOpen}
                             setValue={setValue}
                             onChangeValue={(selectedId) => {
-                                console.log('[SkuLinking] DropDownPicker onChangeValue called:', selectedId);
                                 // Explicitly fetch product when dropdown value changes
                                 if (selectedId && currentUser) {
-                                    console.log('[SkuLinking] Explicitly fetching product from dropdown change:', selectedId);
                                     fetchProduct(selectedId);
                                 }
                             }}
@@ -299,23 +276,23 @@ const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boo
                         />
 
 
-                      
+
                         {/* <TextInputComp keyboardType={'numeric'} cumpolsury={true} size={16} placeHolder={AppStrings.quantity} text={quantity} setText={setQuantity} /> */}
                         <View style={{ rowGap: 8 }}>
                             <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: theme.textPrimary }} numberOfLines={1}>{AppStrings.quantity}</TextComp>
 
                             <View style={{ flexDirection: 'row', columnGap: 16, alignItems: 'center' }}>
-                                <TextInputComp 
-                                    keyboardType={'numeric'} 
-                                    style={{ flex: 1 }} 
-                                    cumpolsury={false} 
-                                    size={16} 
-                                    placeHolder={'Quantity'} 
-                                    text={quantity || (selectedSku.productQuantity ? selectedSku.productQuantity.toString() : '')} 
+                                <TextInputComp
+                                    keyboardType={'numeric'}
+                                    style={{ flex: 1 }}
+                                    cumpolsury={false}
+                                    size={16}
+                                    placeHolder={'Quantity'}
+                                    text={quantity || (selectedSku.productQuantity ? selectedSku.productQuantity.toString() : '')}
                                     setText={(text: string) => {
                                         setQuantity(text);
-                                        if (selectedProduct?.price) {
-                                            calculateSkuPrice(selectedProduct.price, text, packagingPrice);
+                                        if (resolvedUnitPrice) {
+                                            calculateSkuPrice(resolvedUnitPrice, text, packagingPrice);
                                         }
                                     }}
                                     secureTextEntry={false}
@@ -328,21 +305,24 @@ const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boo
                             <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: theme.textPrimary }} numberOfLines={1}>{AppStrings.price}</TextComp>
 
                             <View style={{ flexDirection: 'row', columnGap: 16, alignItems: 'center' }}>
-                                <TextInputComp 
-                                    style={{ flex: 1 }} 
-                                    keyboardType={'numeric'} 
-                                    cumpolsury={true} 
-                                    size={16} 
-                                    placeHolder={AppStrings.price} 
-                                    text={(() => {
-                                        const price = selectedProduct?.price;
-                                        if (price !== undefined && price !== null) {
-                                            const numPrice = typeof price === 'number' ? price : parseFloat(String(price)) || 0;
-                                            return numPrice > 0 ? numPrice.toString() : '';
+                                <TextInputComp
+                                    style={{ flex: 1 }}
+                                    keyboardType={'numeric'}
+                                    cumpolsury={true}
+                                    size={16}
+                                    placeHolder={AppStrings.price}
+                                    text={price}
+                                    setText={(text: string) => {
+                                        setPrice(text);
+                                        if (quantity) {
+                                            const unit = Number(text || 0);
+                                            if (unit > 0) {
+                                                calculateSkuPrice(unit, quantity, packagingPrice);
+                                            } else {
+                                                setCalculatedPrice(0);
+                                            }
                                         }
-                                        return '';
-                                    })()} 
-                                    setText={setPrice}
+                                    }}
                                     secureTextEntry={false}
                                 />
                                 <TextComp size={12} style={{ fontFamily: FontFamilty.medium, color: theme.textSecondary }} numberOfLines={1}>{' /  ' + ((selectedProduct as any)?.unit || '')}</TextComp>
@@ -353,17 +333,17 @@ const SkuLinking = ({ setIsvisible, selectedSku }: { setIsvisible: (visible: boo
                             <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: theme.textPrimary }} numberOfLines={1}>Packaging Price (Rs.)</TextComp>
 
                             <View style={{ flexDirection: 'row', columnGap: 16, alignItems: 'center' }}>
-                                <TextInputComp 
-                                    style={{ flex: 1 }} 
-                                    keyboardType={'numeric'} 
-                                    cumpolsury={false} 
-                                    size={16} 
-                                    placeHolder={'Packaging Price'} 
-                                    text={packagingPrice} 
+                                <TextInputComp
+                                    style={{ flex: 1 }}
+                                    keyboardType={'numeric'}
+                                    cumpolsury={false}
+                                    size={16}
+                                    placeHolder={'Packaging Price'}
+                                    text={packagingPrice}
                                     setText={(text: string) => {
                                         setPackagingPrice(text);
-                                        if (selectedProduct?.price && quantity) {
-                                            calculateSkuPrice(selectedProduct.price, quantity, text);
+                                        if (resolvedUnitPrice && quantity) {
+                                            calculateSkuPrice(resolvedUnitPrice, quantity, text);
                                         }
                                     }}
                                     secureTextEntry={false}

@@ -61,7 +61,7 @@ const getIncomeDetails = asyncHandler(async (req, res, next) => {
 
   try {
     const darazApiUrl = `${baseUrl}${ordersUrlPath}`;
-    
+
     const financeResponse = await axios.get(darazApiUrl, {
       params: {
         ...orderParams,
@@ -82,7 +82,7 @@ const getIncomeDetails = asyncHandler(async (req, res, next) => {
     const isErrorCode = responseCode && responseCode !== "0" && responseCode !== 0;
     const hasErrorMessage = financeResponse.data.message;
     const hasErrorType = financeResponse.data.type;
-    
+
     if (isErrorCode || hasErrorMessage || hasErrorType) {
       const apiError = new Error("Daraz API returned an error response");
       apiError.statusCode = 500;
@@ -200,7 +200,7 @@ const getQueryIncomeDetails = asyncHandler(async (req, res, next) => {
 
   try {
     const darazApiUrl = `${baseUrl}${ordersUrlPath}`;
-    
+
     const financeResponse = await axios.get(darazApiUrl, {
       params: {
         ...orderParams,

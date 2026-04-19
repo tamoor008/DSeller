@@ -1,44 +1,51 @@
 import { getDatabase, ref, get, onValue, DataSnapshot } from 'firebase/database'
 import app from '../../config/firebase'
 
-let BASE_URL = ''
+const FALLBACK_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3002'
 
-// Initialize and fetch base URL from Firebase Realtime Database
-export const initializeBaseUrl = async () => {
-  try {
-    const database = getDatabase(app)
-    const baseUrlRef = ref(database, 'Base_URL')
+let BASE_URL = FALLBACK_BASE_URL
+let isInitialized = false
+let initializationPromise: Promise<void> | null = null
 
-    console.log('🔍 [BASE_URL] Fetching from Firebase Realtime Database...')
-    const snapshot = await get(baseUrlRef)
+/**
+ * Initializes the base URL by fetching it from Firebase Realtime Database
+ */
+export const initializeBaseUrl = async (): Promise<void> => {
+  if (initializationPromise) return initializationPromise
+  if (isInitialized) return Promise.resolve()
 
-    if (snapshot.exists()) {
-      BASE_URL = snapshot.val()
-      console.log('✅ [BASE_URL] Fetched from Firebase:', BASE_URL)
-    } else {
-      console.warn('⚠️ [BASE_URL] Base_URL not found in Firebase')
-    }
+  initializationPromise = (async () => {
+    try {
+      const database = getDatabase(app)
+      const baseUrlRef = ref(database, 'Base_URL')
 
-    // Set up real-time listener
-    onValue(baseUrlRef, (snapshot: DataSnapshot) => {
+      // Initial fetch
+      const snapshot = await get(baseUrlRef)
       if (snapshot.exists()) {
-        const newUrl = snapshot.val()
-        if (newUrl !== BASE_URL) {
-          BASE_URL = newUrl
-          console.log('🔄 [BASE_URL] Updated from Firebase:', BASE_URL)
-        }
+        BASE_URL = snapshot.val()
       }
-    })
 
-  } catch (error) {
-    console.error('❌ [BASE_URL] Failed to fetch from Firebase:', error)
-  }
+      // Set up real-time listener
+      onValue(baseUrlRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const newUrl = snapshot.val()
+          if (newUrl !== BASE_URL) {
+            BASE_URL = newUrl
+          }
+        }
+      })
+
+      isInitialized = true
+    } catch (error) {
+      console.error('Failed to initialize Base URL from Firebase:', error)
+      BASE_URL = FALLBACK_BASE_URL
+      isInitialized = true
+    }
+  })()
+
+  return initializationPromise
 }
 
-export const getBaseUrl = () => {
-  return BASE_URL
+export const getBaseUrl = (): string => {
+  return BASE_URL || FALLBACK_BASE_URL
 }
-
-
-
-

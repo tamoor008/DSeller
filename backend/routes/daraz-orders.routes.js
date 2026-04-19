@@ -14,24 +14,29 @@ const { getOrderDetails, getDeliveredOrderDetails, packAndRtsOrders } = require(
  *         required: true
  *         schema:
  *           type: string
+ *           example: daraz_access_token_here
  *         description: Daraz access token
  *       - in: query
  *         name: status
  *         required: true
  *         schema:
  *           type: string
+ *           enum: [pending, ready_to_ship, shipped, delivered, shipped_back_success, canceled]
+ *           default: pending
  *         description: Order status (pending, ready_to_ship, shipped, etc.)
  *       - in: query
  *         name: created_after
  *         schema:
  *           type: string
  *           format: date-time
+ *           example: 2026-02-01T00:00:00.000Z
  *         description: Filter orders created after this date
  *       - in: query
  *         name: update_after
  *         schema:
  *           type: string
  *           format: date-time
+ *           example: 2026-02-20T00:00:00.000Z
  *         description: Filter orders updated after this date
  *     responses:
  *       200:
@@ -66,30 +71,36 @@ router.get("/get-daraz-order-details", getOrderDetails);
  *         required: true
  *         schema:
  *           type: string
+ *           example: daraz_access_token_here
  *         description: Daraz access token
  *       - in: query
  *         name: status
  *         required: true
  *         schema:
  *           type: string
+ *           enum: [delivered, shipped_back_success, canceled]
+ *           default: delivered
  *         description: Order status (delivered, shipped_back_success, etc.)
  *       - in: query
  *         name: created_after
  *         schema:
  *           type: string
  *           format: date-time
+ *           example: 2026-02-01T00:00:00.000Z
  *         description: Filter orders created after this date
  *       - in: query
  *         name: update_after
  *         schema:
  *           type: string
  *           format: date-time
+ *           example: 2026-02-20T00:00:00.000Z
  *         description: Filter orders updated after this date
  *       - in: query
  *         name: update_before
  *         schema:
  *           type: string
  *           format: date-time
+ *           example: 2026-02-24T00:00:00.000Z
  *         description: Filter orders updated before this date
  *     responses:
  *       200:
@@ -125,6 +136,7 @@ router.get("/get-daraz-delivered-order-details", getDeliveredOrderDetails);
  *         required: true
  *         schema:
  *           type: string
+ *           example: daraz_access_token_here
  *         description: Daraz access token
  *     requestBody:
  *       required: true
@@ -186,4 +198,3 @@ router.get("/get-daraz-delivered-order-details", getDeliveredOrderDetails);
 router.post("/make-order-pack-and-rts", packAndRtsOrders);
 
 module.exports = router;
-

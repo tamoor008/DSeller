@@ -1,9 +1,6 @@
 import { createStackNavigator } from '@react-navigation/stack';
 import React from 'react';
-import {
-    StyleSheet,
-    View,
-} from 'react-native';
+import { View } from 'react-native';
 import DarazScreen from '../ui/daraz/DarazScreen';
 import HomeScreen from '../ui/home/screens/HomeScreen';
 import StockScreen from '../ui/stock/StockScreen';
@@ -18,6 +15,7 @@ import ProfitCalculatorScreen from '../ui/calculator/ProfitCalculatorScreen';
 import StoresScreen from '../ui/settings/StoresScreen';
 import ProfileScreen from '../ui/settings/ProfileScreen';
 import TermsPrivacyScreen from '../ui/settings/TermsPrivacyScreen';
+import ReviewsScreen from '../ui/home/screens/ReviewsScreen';
 
 const Stack = createStackNavigator();
 
@@ -41,6 +39,7 @@ const HomeNav = () => {
                 <Stack.Screen name="StoresScreen" component={StoresScreen} />
                 <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
                 <Stack.Screen name="TermsPrivacyScreen" component={TermsPrivacyScreen} />
+                <Stack.Screen name="ReviewsScreen" component={ReviewsScreen} />
 
 
             </Stack.Navigator>
@@ -48,12 +47,5 @@ const HomeNav = () => {
 
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1
-    },
-
-});
 
 export default HomeNav;

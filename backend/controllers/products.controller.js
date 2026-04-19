@@ -1,9 +1,9 @@
-const { 
-  getUserProducts, 
-  getProductById, 
-  createProduct, 
-  updateProduct, 
-  deleteProduct 
+const {
+  getUserProducts,
+  getProductById,
+  createProduct,
+  updateProduct,
+  deleteProduct
 } = require("../services/firebase.service");
 const { isFirebaseInitialized } = require("../config/firebase");
 
@@ -13,21 +13,21 @@ const { isFirebaseInitialized } = require("../config/firebase");
 async function getProducts(req, res, next) {
   const startTime = Date.now();
   const { userId } = req.params;
-  
-  console.log('📥 [BACKEND - GET PRODUCTS] Request received');
-  console.log('📥 [BACKEND - GET PRODUCTS] User ID:', userId);
-  console.log('📥 [BACKEND - GET PRODUCTS] Request URL:', req.originalUrl);
-  console.log('📥 [BACKEND - GET PRODUCTS] Request method:', req.method);
-  console.log('📥 [BACKEND - GET PRODUCTS] Request headers:', {
-    'content-type': req.headers['content-type'],
-    'user-agent': req.headers['user-agent'],
-    'host': req.headers['host']
-  });
-  
+
+  // console.log('📥 [BACKEND - GET PRODUCTS] Request received');
+  // console.log('📥 [BACKEND - GET PRODUCTS] User ID:', userId);
+  // console.log('📥 [BACKEND - GET PRODUCTS] Request URL:', req.originalUrl);
+  // console.log('📥 [BACKEND - GET PRODUCTS] Request method:', req.method);
+  // console.log('📥 [BACKEND - GET PRODUCTS] Request headers:', {
+  //   'content-type': req.headers['content-type'],
+  //   'user-agent': req.headers['user-agent'],
+  //   'host': req.headers['host']
+  // });
+
   try {
     if (!userId) {
       console.warn('⚠️ [BACKEND - GET PRODUCTS] Missing userId');
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: "Missing userId",
         message: "User ID is required",
         statusCode: 400
@@ -36,7 +36,7 @@ async function getProducts(req, res, next) {
 
     if (!isFirebaseInitialized()) {
       console.error('❌ [BACKEND - GET PRODUCTS] Firebase Admin not initialized');
-      return res.status(500).json({ 
+      return res.status(500).json({
         error: "Firebase Admin not initialized",
         message: "Please configure Firebase Admin credentials",
         details: "Firebase Admin is not configured. Please contact the administrator.",
@@ -44,18 +44,18 @@ async function getProducts(req, res, next) {
       });
     }
 
-    console.log('🔄 [BACKEND - GET PRODUCTS] Fetching products from Firebase...');
+    // console.log('🔄 [BACKEND - GET PRODUCTS] Fetching products from Firebase...');
     const products = await getUserProducts(userId);
-    
+
     const duration = Date.now() - startTime;
-    console.log('✅ [BACKEND - GET PRODUCTS] Products fetched successfully');
-    console.log('📊 [BACKEND - GET PRODUCTS] Products count:', products.length);
-    console.log('⏱️ [BACKEND - GET PRODUCTS] Duration:', duration, 'ms');
-    
+    // console.log('✅ [BACKEND - GET PRODUCTS] Products fetched successfully');
+    // console.log('📊 [BACKEND - GET PRODUCTS] Products count:', products.length);
+    // console.log('⏱️ [BACKEND - GET PRODUCTS] Duration:', duration, 'ms');
+
     if (products.length > 0) {
-      console.log('📦 [BACKEND - GET PRODUCTS] Sample products (first 3):', 
-        products.slice(0, 3).map(p => ({ id: p.id, productName: p.productName, price: p.price, quantity: p.quantity }))
-      );
+      // console.log('📦 [BACKEND - GET PRODUCTS] Sample products (first 3):', 
+      //   products.slice(0, 3).map(p => ({ id: p.id, productName: p.productName, price: p.price, quantity: p.quantity }))
+      // );
     }
 
     return res.status(200).json({
@@ -84,9 +84,9 @@ async function getProducts(req, res, next) {
 async function getProduct(req, res, next) {
   try {
     const { userId, productId } = req.params;
-    
+
     if (!userId || !productId) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: "Missing userId or productId",
         message: "User ID and Product ID are required",
         statusCode: 400
@@ -94,7 +94,7 @@ async function getProduct(req, res, next) {
     }
 
     if (!isFirebaseInitialized()) {
-      return res.status(500).json({ 
+      return res.status(500).json({
         error: "Firebase Admin not initialized",
         message: "Please configure Firebase Admin credentials",
         details: "Firebase Admin is not configured. Please contact the administrator.",
@@ -135,7 +135,7 @@ async function createProductHandler(req, res, next) {
     const { productName, productDescription, quantity, price, unit } = req.body;
 
     if (!userId) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: "Missing userId",
         message: "User ID is required",
         statusCode: 400
@@ -143,7 +143,7 @@ async function createProductHandler(req, res, next) {
     }
 
     if (!productName) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: "Missing productName",
         message: "Product name is required",
         statusCode: 400
@@ -151,7 +151,7 @@ async function createProductHandler(req, res, next) {
     }
 
     if (!isFirebaseInitialized()) {
-      return res.status(500).json({ 
+      return res.status(500).json({
         error: "Firebase Admin not initialized",
         message: "Please configure Firebase Admin credentials",
         statusCode: 500
@@ -194,7 +194,7 @@ async function updateProductHandler(req, res, next) {
     const updates = req.body;
 
     if (!userId || !productId) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: "Missing userId or productId",
         message: "User ID and Product ID are required",
         statusCode: 400
@@ -202,7 +202,7 @@ async function updateProductHandler(req, res, next) {
     }
 
     if (!isFirebaseInitialized()) {
-      return res.status(500).json({ 
+      return res.status(500).json({
         error: "Firebase Admin not initialized",
         message: "Please configure Firebase Admin credentials",
         statusCode: 500
@@ -236,7 +236,7 @@ async function deleteProductHandler(req, res, next) {
     const { userId, productId } = req.params;
 
     if (!userId || !productId) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: "Missing userId or productId",
         message: "User ID and Product ID are required",
         statusCode: 400
@@ -244,7 +244,7 @@ async function deleteProductHandler(req, res, next) {
     }
 
     if (!isFirebaseInitialized()) {
-      return res.status(500).json({ 
+      return res.status(500).json({
         error: "Firebase Admin not initialized",
         message: "Please configure Firebase Admin credentials",
         statusCode: 500

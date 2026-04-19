@@ -5,12 +5,12 @@ const { calculateOrderTotals, calculateStockTotal } = require("../services/calcu
  */
 function calculateOrdersTotals(req, res, next) {
   const startTime = Date.now();
-  
-  console.log('📥 [BACKEND - CALCULATE ORDERS TOTALS] Request received');
-  
+
+  // console.log('📥 [BACKEND - CALCULATE ORDERS TOTALS] Request received');
+
   try {
     const { items } = req.body;
-    console.log('📊 [BACKEND - CALCULATE ORDERS TOTALS] Items count:', items ? items.length : 0);
+    // console.log('📊 [BACKEND - CALCULATE ORDERS TOTALS] Items count:', items ? items.length : 0);
 
     if (!items || !Array.isArray(items)) {
       console.warn('⚠️ [BACKEND - CALCULATE ORDERS TOTALS] Invalid items array');
@@ -21,14 +21,14 @@ function calculateOrdersTotals(req, res, next) {
       });
     }
 
-    console.log('🔄 [BACKEND - CALCULATE ORDERS TOTALS] Calculating totals...');
+    // console.log('🔄 [BACKEND - CALCULATE ORDERS TOTALS] Calculating totals...');
     const result = calculateOrderTotals(items);
-    
+
     const duration = Date.now() - startTime;
-    console.log('✅ [BACKEND - CALCULATE ORDERS TOTALS] Calculation completed');
-    console.log('💰 [BACKEND - CALCULATE ORDERS TOTALS] Grand total:', result.summary?.grandTotal);
-    console.log('📈 [BACKEND - CALCULATE ORDERS TOTALS] Total items:', result.summary?.totalItems);
-    console.log('⏱️ [BACKEND - CALCULATE ORDERS TOTALS] Duration:', duration, 'ms');
+    // console.log('✅ [BACKEND - CALCULATE ORDERS TOTALS] Calculation completed');
+    // console.log('💰 [BACKEND - CALCULATE ORDERS TOTALS] Grand total:', result.summary?.grandTotal);
+    // console.log('📈 [BACKEND - CALCULATE ORDERS TOTALS] Total items:', result.summary?.totalItems);
+    // console.log('⏱️ [BACKEND - CALCULATE ORDERS TOTALS] Duration:', duration, 'ms');
 
     return res.status(200).json({
       message: "Order totals calculated successfully",
@@ -53,12 +53,12 @@ function calculateOrdersTotals(req, res, next) {
  */
 function calculateStock(req, res, next) {
   const startTime = Date.now();
-  
-  console.log('📥 [BACKEND - CALCULATE STOCK TOTAL] Request received');
-  
+
+  // console.log('📥 [BACKEND - CALCULATE STOCK TOTAL] Request received');
+
   try {
     const { products } = req.body;
-    console.log('📊 [BACKEND - CALCULATE STOCK TOTAL] Products count:', products ? products.length : 0);
+    // console.log('📊 [BACKEND - CALCULATE STOCK TOTAL] Products count:', products ? products.length : 0);
 
     if (!products || !Array.isArray(products)) {
       console.warn('⚠️ [BACKEND - CALCULATE STOCK TOTAL] Invalid products array');
@@ -69,14 +69,14 @@ function calculateStock(req, res, next) {
       });
     }
 
-    console.log('🔄 [BACKEND - CALCULATE STOCK TOTAL] Calculating totals...');
+    // console.log('🔄 [BACKEND - CALCULATE STOCK TOTAL] Calculating totals...');
     const result = calculateStockTotal(products);
-    
+
     const duration = Date.now() - startTime;
-    console.log('✅ [BACKEND - CALCULATE STOCK TOTAL] Calculation completed');
-    console.log('💰 [BACKEND - CALCULATE STOCK TOTAL] Total stock value:', result.summary?.totalStockValue);
-    console.log('📈 [BACKEND - CALCULATE STOCK TOTAL] Total products:', result.summary?.totalProducts);
-    console.log('⏱️ [BACKEND - CALCULATE STOCK TOTAL] Duration:', duration, 'ms');
+    // console.log('✅ [BACKEND - CALCULATE STOCK TOTAL] Calculation completed');
+    // console.log('💰 [BACKEND - CALCULATE STOCK TOTAL] Total stock value:', result.summary?.totalStockValue);
+    // console.log('📈 [BACKEND - CALCULATE STOCK TOTAL] Total products:', result.summary?.totalProducts);
+    // console.log('⏱️ [BACKEND - CALCULATE STOCK TOTAL] Duration:', duration, 'ms');
 
     return res.status(200).json({
       message: "Stock total calculated successfully",

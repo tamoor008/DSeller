@@ -75,6 +75,8 @@ export const AppStrings = {
     businessDetails:'Business Details',
     deliveredOrdersToday:'Delivered Orders Today',
     failedOrdersToday:'Failed Delivery Today',
+    reviews:'Reviews',
+    reviewsInfo:'This section shows latest customer reviews from your connected Daraz stores including rating details and your seller replies.',
     DeliveredOrders:'Delivered Orders',
     FailedDeliveredOrders:'Failed Delivered Orders',
     settings:'Settings',

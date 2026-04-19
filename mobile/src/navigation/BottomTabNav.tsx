@@ -1,16 +1,16 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
-import Icon from '@expo/vector-icons/Ionicons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../context/ThemeContext';
 import HomeNav from './HomeNav';
-import OrdersScreen from '../ui/home/screens/OrdersScreen';
+import ProductsNav from './ProductsNav';
 import ProfitCalculatorScreen from '../ui/calculator/ProfitCalculatorScreen';
 
 const Tab = createBottomTabNavigator();
 
 const BottomTabNav = () => {
     const { theme } = useTheme();
-    
+
     return (
         <Tab.Navigator
             screenOptions={{
@@ -37,7 +37,17 @@ const BottomTabNav = () => {
                 options={{
                     tabBarLabel: 'Home',
                     tabBarIcon: ({ color, size, focused }) => (
-                        <Icon name={focused ? "home" : "home-outline"} size={size} color={color} />
+                        <Ionicons name={focused ? "home" : "home-outline"} size={size} color={color} />
+                    ),
+                }}
+            />
+            <Tab.Screen
+                name="Products"
+                component={ProductsNav}
+                options={{
+                    tabBarLabel: 'Products',
+                    tabBarIcon: ({ color, size, focused }) => (
+                        <Ionicons name={focused ? "cube" : "cube-outline"} size={size} color={color} />
                     ),
                 }}
             />
@@ -47,7 +57,7 @@ const BottomTabNav = () => {
                 options={{
                     tabBarLabel: 'Calculator',
                     tabBarIcon: ({ color, size, focused }) => (
-                        <Icon name={focused ? "calculator" : "calculator-outline"} size={size} color={color} />
+                        <Ionicons name={focused ? "calculator" : "calculator-outline"} size={size} color={color} />
                     ),
                 }}
             />

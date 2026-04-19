@@ -36,15 +36,15 @@ const StockTab = ({ }) => {
 
     useEffect(() => {
         if (!currentUser) return;
-        
+
         const fetchProducts = async () => {
             try {
                 setLoader(true);
                 const response = await fetch(`${BASE_URL}/api/products/${currentUser.uid}`);
-                
+
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
-                    console.error('Error fetching products:', errorData.error || 'Unknown error');
+                    // console.error('Error fetching products:', errorData.error || 'Unknown error');
                     setProducts([]);
                     setLoader(false);
                     return;
@@ -52,17 +52,17 @@ const StockTab = ({ }) => {
 
                 const result = await response.json();
                 if (result.error) {
-                    console.error('API returned error:', result.error);
+                    // console.error('API returned error:', result.error);
                     setProducts([]);
                     setLoader(false);
                     return;
                 }
 
-                console.log('Products fetched:', result.data);
+                // console.log('Products fetched:', result.data);
                 setProducts(result.data || []);
                 setLoader(false);
             } catch (error: any) {
-                console.error('Error fetching products:', error.message);
+                // console.error('Error fetching products:', error.message);
                 setProducts([]);
                 setLoader(false);
             }
@@ -82,7 +82,7 @@ const StockTab = ({ }) => {
 
         try {
             const BASE_URL = getBaseUrl();
-            
+
             const response = await fetch(`${BASE_URL}/api/stock/calculate-total`, {
                 method: 'POST',
                 headers: {
@@ -105,7 +105,7 @@ const StockTab = ({ }) => {
                 }
             }
         } catch (error: any) {
-            console.error('[StockTab] Error calculating stock total:', error.message);
+            // console.error('[StockTab] Error calculating stock total:', error.message);
         }
 
         // If API fails, set to 0 (no client-side fallback)
@@ -203,7 +203,7 @@ const StockTab = ({ }) => {
                                     <View style={{ flex: 2, flexDirection: 'row', alignItems: 'center', borderRadius: 100 }}>
                                         <TextComp size={12} style={{ fontFamily: FontFamilty.medium, color: theme.textPrimary }}>{item.productName}</TextComp>
                                     </View>
-                                    <TouchableOpacity 
+                                    <TouchableOpacity
                                         onPress={() => {
                                             setSelectedProduct(item);
                                             setEditPriceVisible(true);
@@ -211,7 +211,7 @@ const StockTab = ({ }) => {
                                         activeOpacity={0.7}
                                         style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', columnGap: 4 }}
                                     >
-                                        <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: theme.textPrimary, textAlign: 'center' }}>{'Rs ' + formatPrice(item.price)+'/'+item.unit}</TextComp>
+                                        <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: theme.textPrimary, textAlign: 'center' }}>{'Rs ' + formatPrice(item.price) + '/' + item.unit}</TextComp>
                                         <Icon name="create-outline" size={14} color={theme.primaryOrange} />
                                     </TouchableOpacity>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: theme.textPrimary, flex: 1, textAlign: 'center' }}>{item.quantity}</TextComp>
@@ -232,7 +232,7 @@ const StockTab = ({ }) => {
                             </View>
                         </View> :
                         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.bgcolor }}>
-                            <TextComp size={16} numberOfLines={1} style={{ fontFamily: FontFamilty.semibold, textAlign:'center', color: theme.textPrimary }}>{AppStrings.therearenoproductsaddnewproductstoseethemhere}</TextComp>
+                            <TextComp size={16} numberOfLines={1} style={{ fontFamily: FontFamilty.semibold, textAlign: 'center', color: theme.textPrimary }}>{AppStrings.therearenoproductsaddnewproductstoseethemhere}</TextComp>
 
                         </View>}
                 </View>

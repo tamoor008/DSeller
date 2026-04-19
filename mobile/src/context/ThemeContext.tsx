@@ -105,7 +105,6 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           setThemeModeState('system');
         }
       } catch (error) {
-        console.error('Error loading theme:', error);
         // Default to system on error
         setThemeModeState('system');
       } finally {
@@ -121,7 +120,6 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       await AsyncStorage.setItem(THEME_STORAGE_KEY, mode);
       setThemeModeState(mode);
     } catch (error) {
-      console.error('Error saving theme:', error);
     }
   };
 
@@ -132,8 +130,8 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   // Determine if dark mode should be active
-  const isDark = themeMode === 'system' 
-    ? systemColorScheme === 'dark' 
+  const isDark = themeMode === 'system'
+    ? systemColorScheme === 'dark'
     : themeMode === 'dark';
 
   // Get current theme based on mode

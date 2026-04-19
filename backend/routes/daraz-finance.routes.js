@@ -14,6 +14,7 @@ const { getIncomeDetails, getQueryIncomeDetails } = require("../controllers/dara
  *         required: true
  *         schema:
  *           type: string
+ *           example: daraz_access_token_here
  *         description: Daraz access token
  *       - in: query
  *         name: created_after
@@ -21,11 +22,13 @@ const { getIncomeDetails, getQueryIncomeDetails } = require("../controllers/dara
  *         schema:
  *           type: string
  *           format: date-time
+ *           example: 2026-02-01T00:00:00.000Z
  *         description: Filter statements created after this date (mandatory)
  *       - in: query
  *         name: storeName
  *         schema:
  *           type: string
+ *           example: Tech Hunts
  *         description: Store name to attach to response
  *     responses:
  *       200:
@@ -58,38 +61,47 @@ router.get("/get-daraz-income-details", getIncomeDetails);
  *         required: true
  *         schema:
  *           type: string
+ *           example: daraz_access_token_here
  *         description: Daraz access token
  *       - in: query
  *         name: start_time
  *         schema:
  *           type: string
  *           format: date-time
+ *           example: 2026-02-01T00:00:00.000Z
  *         description: Start time for transaction query
  *       - in: query
  *         name: end_time
  *         schema:
  *           type: string
  *           format: date-time
+ *           example: 2026-02-24T00:00:00.000Z
  *         description: End time for transaction query
  *       - in: query
  *         name: trade_order_id
  *         schema:
  *           type: string
+ *           example: 123456789012345
  *         description: Trade order ID
  *       - in: query
  *         name: trade_order_line_id
  *         schema:
  *           type: string
+ *           example: 1234567890123456789
  *         description: Trade order line ID
  *       - in: query
  *         name: trans_type
  *         schema:
  *           type: string
+ *           enum: [all, payout, charge, refund]
+ *           default: all
  *         description: Transaction type
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
+ *           default: 100
+ *           example: 100
  *         description: Limit number of results
  *     responses:
  *       200:
@@ -118,4 +130,3 @@ router.get("/get-daraz-income-details", getIncomeDetails);
 router.get("/get-daraz-query-income-details", getQueryIncomeDetails);
 
 module.exports = router;
-

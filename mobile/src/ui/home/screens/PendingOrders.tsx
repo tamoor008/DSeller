@@ -1,358 +1,174 @@
-import React, { useEffect, useState } from 'react';
-import {
-    View,
-    FlatList,
-    StyleSheet,
-    TouchableOpacity,
-    Alert,
-    ActivityIndicator,
-    ScrollView,
-    RefreshControl,
-} from 'react-native';
-import { useRoute } from '@react-navigation/native';
-import { useSelector } from 'react-redux';
-import { useTheme } from '../../../context/ThemeContext';
-import TextComp from '../../components/TextComp';
-import FontFamilty from '../../../constants/FontFamilty';
-import OrderItem from '../components/OrderItem';
-import SelectStore from '../../components/SelectStore';
-import { AppStrings } from '../../../constants/AppStrings';
-import Header from '../../components/Header';
-import { getBaseUrl } from '../../../utils/api/baseUrl';
-import { packAndRtsOrders, prepareOrderData } from '../../../utils/api/packAndRtsOrders';
+import { View, Text, ScrollView, RefreshControl, Image, TouchableOpacity, Alert, ActivityIndicator, StyleSheet } from 'react-native'
+import React, { useEffect, useState } from 'react'
+import Header from '../../components/Header'
+import SelectStore from '../../components/SelectStore'
+import { useSelector } from 'react-redux'
+import { AppStrings } from '../../../constants/AppStrings'
+import { useTheme } from '../../../context/ThemeContext'
+import TextComp from '../../components/TextComp'
+import OrderItem from '../components/OrderItem'
+import { packAndRtsOrders, prepareOrderData } from '../../../utils/api/packAndRtsOrders'
+import { useNavigation } from '@react-navigation/native'
+import { getBaseUrl } from '../../../utils/api/baseUrl'
+import { checkResponseForTokenExpiration, refreshStoreTokenWithRefreshToken } from '../../../utils/api/tokenRefresh'
+import FontFamilty from '../../../constants/FontFamilty'
 
-interface NavigationProps {
-    navigation: any;
-}
-
-interface RouteParams {
-    firebaseSkus?: any[];
-    pendingOrders?: any[];
-}
-
-const PendingOrders: React.FC<NavigationProps> = ({ navigation }) => {
-    const { theme } = useTheme();
-    const BASE_URL = getBaseUrl(); // instant access, no async
-
-    const route = useRoute();
-    const selector = useSelector((state: any) => state.AppReducer);
-    const [totalCost, setTotalCost] = useState(0);
-    const [amountReceived, setAmountReceived] = useState(0);
-
-    const [darazPendingOrders, setDarazPendingOrders] = useState<any[]>([]);
-    const [darazPendingOrdersCount, setDarazPendingOrdersCount] = useState<number>(0);
-    const [all_access_tokens, setAll_access_tokens] = useState<any[]>([]);
-
-    const [processedItemIds, setProcessedItemIds] = useState<Set<string>>(new Set<string>());
-
-    
-
-    useEffect(() => {
-        let newTokens: any[] = [];
-
-        try {
-            if (selector.selectedStore?.id) {
-                const access_token = selector.selectedStore.user?.token?.access_token;
-                const name = selector.selectedStore?.user.seller.data.name;
-
-                if (access_token) {
-                    newTokens = [{
-                        access_token: access_token,
-                        storeName: name || null
-                    }];
-                }
-            } else {
-                // Filter out stores without valid access tokens
-                newTokens = Array.isArray(selector.access_tokens) 
-                    ? selector.access_tokens.filter((token: any) => 
-                        token && token.access_token && token.access_token.trim() !== ''
-                      )
-                    : [];
-            }
-
-            // Only update state if value has changed
-            const hasChanged = JSON.stringify(newTokens) !== JSON.stringify(all_access_tokens);
-            if (hasChanged) {
-                setAll_access_tokens(newTokens);
-            }
-        } catch (error) {
-            console.error('Error processing access tokens:', error);
-            setAll_access_tokens([]);
-        }
-
-    }, [selector]);
-
-    const { firebaseSkus = [], pendingOrders = [] } = route.params as RouteParams || {};
-
-    const handleCostCalculated = (orderItemId: string, cost: number, amount: number) => {
-        if (processedItemIds.has(orderItemId)) return;
-
-        setProcessedItemIds(prevSet => {
-            const newSet = new Set(prevSet);
-            newSet.add(orderItemId);
-            return newSet;
-        });
-
-        setTotalCost(prev => prev + cost);
-        setAmountReceived(prev => prev + amount);
-
-    };
-
-
-
-    const renderOrder = (item: any, onCostCalculated: any) => {
-        if (!item || !item.order_id) {
-            return null;
-        }
-
-        return (
-            <View style={styles.card}>
-                <TextComp size={14} numberOfLines={1} style={styles.orderId}>Order ID: {item.order_id}</TextComp>
-                {item.order_items && Array.isArray(item.order_items) && item.order_items.map((orderItem: any) => {
-                    if (!orderItem || !orderItem.order_item_id) {
-                        return null;
-                    }
-                    
-                    return (
-                        <OrderItem
-                            failed={false}
-                            pending={true}
-                            key={orderItem.order_item_id}
-                            item={orderItem}
-                            firebaseSkus={firebaseSkus}
-                            selector={selector}
-                            onProfitCalculated={(cost: number, amount: number) => handleCostCalculated(orderItem.order_item_id, cost, amount)}
-                            onMakeReadyToShip={handleSingleOrderReadyToShip}
-                        />
-                    );
-                })}
-                
-                {/* Ready to Ship button for the entire order */}
-                <TouchableOpacity 
-                    onPress={() =>handleSingleOrderReadyToShip(item.order_id)} 
-                    style={{
-                        padding: 8, 
-                        backgroundColor: theme.primaryOrange, 
-                        borderRadius: 8, 
-                        marginTop: 12,
-                        alignItems: 'center'
-                    }}
-                >
-                    <TextComp size={16} numberOfLines={1} style={{ color: theme.white, textAlign: 'center', fontFamily: FontFamilty.bold }}>
-                        Make Ready to Ship
-                    </TextComp>
-                </TouchableOpacity>
-            </View>
-        );
-    };
-
-
-
-
-
-
-
-
-    useEffect(() => {
-        // Use passed pendingOrders data if available, otherwise use Redux state
-        if (pendingOrders && pendingOrders.length > 0) {
-            setDarazPendingOrders(pendingOrders);
-            setDarazPendingOrdersCount(pendingOrders.length);
-        } else {
-            setDarazPendingOrders(selector.todayPendingOrders || []);
-            setDarazPendingOrdersCount(selector.todayPendingOrders?.length || 0);
-        }
-    }, [selector.todayPendingOrders, pendingOrders]);
-
+const PendingOrders = ({ route }: any) => {
+    const { theme } = useTheme()
+    const navigation = useNavigation<any>()
+    const BASE_URL = getBaseUrl()
+    const { firebaseSkus = [] } = route.params || {}
     const goBack = () => {
         navigation.goBack()
     }
 
-    const [darazOrdersLoader, setDarazOrdersLoader] = useState(false)
-    const [refreshing, setRefreshing] = useState(false)
+    const [darazPendingOrders, setDarazPendingOrders] = useState<any[]>([])
+    const [loading, setLoading] = useState(false)
+    const selector = useSelector((state: any) => state.AppReducer);
+    const store = selector?.selectedStore;
+    const [all_access_tokens, setAll_access_tokens] = useState(selector?.access_tokens || [])
+    const visibleOrdersCount = darazPendingOrders.length;
 
-    const getDarazPendingOrdersLocal = async (access_token: string) => {
-        if (!access_token) {
-            return;
+    // Handle initial params
+    useEffect(() => {
+        if (route.params?.pendingOrders) {
+            setDarazPendingOrders(route.params.pendingOrders)
         }
+    }, [route.params])
 
+    // Update access tokens when selector changes
+    useEffect(() => {
         try {
-            // Calculate date 30 days before today
-            const createdAfter = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-            
-            // Use the same API endpoint as HomeScreen with created_after parameter
-            const response = await fetch(
-                `${BASE_URL}/get-daraz-delivered-order-details?access_token=${access_token}&created_after=${encodeURIComponent(createdAfter)}&status=pending`
-            );
-
-            if (!response.ok) {
-                throw new Error(`Server error: ${response.status}`);
+            if (selector?.access_tokens && Array.isArray(selector.access_tokens)) {
+                const newTokens = JSON.parse(JSON.stringify(selector.access_tokens));
+                setAll_access_tokens(newTokens);
             }
+        } catch (error) {
+            setAll_access_tokens([]);
+        }
+    }, [selector?.access_tokens]);
+
+    // Local function to fetch orders and update state
+    const fetchDarazPendingOrdersLocal = async (access_token: string, createdAfterISO: string, status: string) => {
+        try {
+            if (!access_token) return null;
+
+            let requestUrl = `${BASE_URL}/get-daraz-order-details?access_token=${access_token}&created_after=${encodeURIComponent(createdAfterISO)}&status=${status}`;
+            let response = await fetch(requestUrl);
+
+            const isExpired = await checkResponseForTokenExpiration(response);
+            if (isExpired && store?.seller_id) {
+                const newToken = await refreshStoreTokenWithRefreshToken(store);
+                if (newToken) {
+                    requestUrl = requestUrl.replace(`access_token=${access_token}`, `access_token=${newToken}`);
+                    response = await fetch(requestUrl);
+                }
+            }
+
+            if (!response.ok) return null;
 
             const data = await response.json();
+            if (data.error || !data.orderItems || !Array.isArray(data.orderItems)) return null;
 
-            if (!data?.orderItems?.length) {
-                return;
-            }
+            // Important: Attach the access_token to each order and its items
+            const enrichedOrders = data.orderItems.map((order: any) => ({
+                ...order,
+                access_token: access_token,
+                order_items: (order.order_items || []).map((item: any) => ({
+                    ...item,
+                    access_token: access_token
+                }))
+            }));
 
-            setDarazPendingOrders(prev => [...prev, ...data.orderItems]);
-            setDarazPendingOrdersCount(prev => prev + (data.countTotal || data.orderItems.length));
+            setDarazPendingOrders(prev => [...prev, ...enrichedOrders]);
 
-        } catch (error: any) {
-            console.error("Error fetching Daraz pending orders:", error.message);
+        } catch (error) {
+            // console.error("Error fetching Daraz pending orders:", error);
         }
     };
 
-    
-
+    const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
-        if (
-            !all_access_tokens ||
-            (Array.isArray(all_access_tokens) && all_access_tokens.length === 0)) {
-            return;
-        }
+        if (!all_access_tokens || all_access_tokens.length === 0) return;
 
         const fetchOrders = async () => {
+            setLoading(true)
+            setDarazPendingOrders([])
+
+            const createdAfter = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+            const requests = all_access_tokens.map((item: any) => {
+                if (item.access_token) {
+                    return fetchDarazPendingOrdersLocal(item.access_token, createdAfter, 'pending');
+                }
+                return Promise.resolve();
+            });
+
             try {
-                setDarazPendingOrders([]);
-                setDarazPendingOrdersCount(0);
-                setTotalCost(0);
-                setAmountReceived(0);
-                setProcessedItemIds(new Set());
-                setDarazOrdersLoader(true);
-
-                let requests: Promise<void>[] = [];
-
-                if (Array.isArray(all_access_tokens) && all_access_tokens.length > 0) {
-                    // Filter out invalid access tokens before making requests
-                    const validTokens = all_access_tokens.filter((item: any) => 
-                        item && item.access_token && item.access_token.trim() !== ''
-                    );
-                    requests = validTokens.flatMap((item: any) => {
-                        return [getDarazPendingOrdersLocal(item.access_token)];
-                    });
-                } else if (all_access_tokens && Array.isArray(all_access_tokens) && all_access_tokens.length > 0) {
-                    if (all_access_tokens[0] && all_access_tokens[0].access_token && all_access_tokens[0].access_token.trim() !== '') {
-                        requests = [
-                            getDarazPendingOrdersLocal(all_access_tokens[0].access_token),
-                        ];
-                    }
-                }
-
-                if (requests.length > 0) {
-                    await Promise.all(requests);
-                }
-            } catch (error) {
-                console.error('Error while fetching orders:', error);
+                await Promise.all(requests);
             } finally {
-                setDarazOrdersLoader(false);
+                setLoading(false);
             }
         };
 
-        fetchOrders();
+        if (!route.params?.pendingOrders && all_access_tokens.length > 0) {
+            fetchOrders();
+        }
     }, [all_access_tokens]);
-
-
-
-    // Get all pending orders
-    const getOrdersBySelectedRange = () => {
-        return darazPendingOrders;
-    };
-
-    const getOrdersCountBySelectedRange = () => {
-        return darazPendingOrdersCount;
-    };
 
     const onRefresh = async () => {
         setRefreshing(true);
+        setDarazPendingOrders([]);
+
         try {
-            // Reset states
-            setDarazPendingOrders([]);
-            setDarazPendingOrdersCount(0);
-            setTotalCost(0);
-            setAmountReceived(0);
-            setProcessedItemIds(new Set());
-            
-            // Fetch fresh data
-            if (all_access_tokens && Array.isArray(all_access_tokens) && all_access_tokens.length > 0) {
-                // Filter out invalid access tokens before making requests
-                const validTokens = all_access_tokens.filter((item: any) => 
-                    item && item.access_token && item.access_token.trim() !== ''
-                );
-                const requests = validTokens.flatMap((item: any) => {
-                    if (item && item.access_token) {
-                        return [getDarazPendingOrdersLocal(item.access_token)];
+            if (all_access_tokens && all_access_tokens.length > 0) {
+                const createdAfter = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+                const requests = all_access_tokens.map((item: any) => {
+                    if (item.access_token) {
+                        return fetchDarazPendingOrdersLocal(item.access_token, createdAfter, 'pending');
                     }
-                    return [];
+                    return Promise.resolve();
                 });
-                
-                if (requests.length > 0) {
-                    await Promise.all(requests);
-                }
+                await Promise.all(requests);
             }
-        } catch (error) {
-            console.error('Error refreshing orders:', error);
         } finally {
             setRefreshing(false);
         }
     };
 
-    const handleSingleOrderReadyToShip = async (orderId: string) => {
+    const handleSingleOrderReadyToShip = async (order: any) => {
+        const orderItems = order?.order_items || [];
+        if (orderItems.length === 0) {
+            Alert.alert('Error', 'Order items are missing for this order.');
+            return;
+        }
+
         Alert.alert(
-            'Ready to Ship',
-            `Make order ${orderId} ready to ship?`,
+            'Confirm Ready to Ship',
+            `Are you sure you want to mark order ${orderItems[0].order_id} as Ready to Ship?`,
             [
-                {
-                    text: 'Cancel',
-                    style: 'cancel'
-                },
+                { text: 'Cancel', style: 'cancel' },
                 {
                     text: 'Confirm',
                     onPress: async () => {
                         try {
-                            // Find the specific order
-                            const order = darazPendingOrders.find(o => o.order_id === orderId);
-                            if (!order) {
-                                Alert.alert('Error', 'Order not found');
+                            const accessToken = order.access_token || orderItems[0]?.access_token;
+
+                            if (!accessToken) {
+                                Alert.alert('Error', 'Could not identify store for this order.');
                                 return;
                             }
 
-                            // Get the access token from the order's first item
-                            const order_access_token = order?.order_items[0]?.access_token || '';
-                            if (!order_access_token) {
-                                Alert.alert('Error', 'No access token found for this order');
-                                return;
-                            }
-
-                            // Prepare single order data with the correct access token
-                            const orderItems = order.order_items.map((item: any) => ({
-                                ...item,
-                                order_id: orderId,
-                                access_token: order_access_token
-                            }));
-
-                            // Prepare order data for API
-                            const orderData = prepareOrderData(orderItems, order_access_token);
-
-                            console.log('Single Order Data:', orderData);
-                            console.log('Access Token:', order_access_token);
-                            
-                            // Call the API with the correct access token
-                            const result = await packAndRtsOrders(orderData, order_access_token);
+                            const orderData = prepareOrderData(orderItems, accessToken);
+                            const result = await packAndRtsOrders(orderData, accessToken);
 
                             if (result.success) {
-                                Alert.alert(
-                                    'Success',
-                                    `Order ${orderId} has been marked as Ready to Ship!`
-                                );
-                                // You might want to refresh the orders list here
+                                Alert.alert('Success', `Order ${order.order_id} marked as Ready to Ship`);
+                                setDarazPendingOrders(prev => prev.filter(p => p.order_id !== order.order_id));
                             } else {
-                                Alert.alert('Error', result.message || 'Failed to process order');
+                                Alert.alert('Failed', result.message || 'Failed to process order');
                             }
-
                         } catch (error: any) {
-                            console.error('Error in single order ready to ship:', error);
                             Alert.alert('Error', error.message || 'Failed to process order');
                         }
                     }
@@ -362,120 +178,33 @@ const PendingOrders: React.FC<NavigationProps> = ({ navigation }) => {
     };
 
     const handleBulkReadyToShip = async () => {
-        if (!darazPendingOrders || darazPendingOrders.length === 0) {
-            Alert.alert('No Orders', 'No pending orders to process');
-            return;
-        }
+        if (darazPendingOrders.length === 0) return;
 
         Alert.alert(
-            'Bulk Ready to Ship',
-            `Are you sure you want to mark ${darazPendingOrders.length} orders as Ready to Ship?`,
+            'Confirm Bulk Ready to Ship',
+            `Process all ${visibleOrdersCount} orders?`,
             [
-                {
-                    text: 'Cancel',
-                    style: 'cancel'
-                },
+                { text: 'Cancel', style: 'cancel' },
                 {
                     text: 'Confirm',
                     onPress: async () => {
                         try {
-                            // Group orders by access token
-                            const ordersByAccessToken: { [accessToken: string]: any[] } = {};
-                            
+                            const ordersByAccessToken: { [key: string]: any[] } = {};
                             darazPendingOrders.forEach(order => {
-                                if (order.order_items && Array.isArray(order.order_items)) {
-                                    // Get access token from the first item of this order
-                                    const accessToken = order.order_items[0]?.access_token || '';
-                                    if (!accessToken) {
-                                        console.warn(`No access token found for order ${order.order_id}`);
-                                        return;
-                                    }
-                                    
-                                    if (!ordersByAccessToken[accessToken]) {
-                                        ordersByAccessToken[accessToken] = [];
-                                    }
-                                    
-                                    // Add all items from this order to the group
-                                    order.order_items.forEach((item: any) => {
-                                        if (item && item.order_item_id) {
-                                            ordersByAccessToken[accessToken].push({
-                                                ...item,
-                                                order_id: order.order_id,
-                                                access_token: accessToken
-                                            });
-                                        }
-                                    });
+                                const token = order.access_token;
+                                if (token) {
+                                    if (!ordersByAccessToken[token]) ordersByAccessToken[token] = [];
+                                    ordersByAccessToken[token].push(...(order.order_items || []));
                                 }
                             });
 
-                            if (Object.keys(ordersByAccessToken).length === 0) {
-                                Alert.alert('Error', 'No valid orders with access tokens found');
-                                return;
+                            for (const [token, items] of Object.entries(ordersByAccessToken)) {
+                                const orderData = prepareOrderData(items, token);
+                                await packAndRtsOrders(orderData, token);
                             }
 
-                            console.log('Orders grouped by access token:', ordersByAccessToken);
-
-                            // Process each group separately
-                            const results = [];
-                            let totalProcessed = 0;
-                            let totalFailed = 0;
-
-                            for (const [accessToken, orderItems] of Object.entries(ordersByAccessToken)) {
-                                try {
-                                    console.log(`Processing ${orderItems.length} items for access token: ${accessToken.substring(0, 10)}...`);
-                                    
-                                    // Prepare order data for this group
-                                    const orderData = prepareOrderData(orderItems, accessToken);
-                                    
-                                    // Call the API for this group
-                                    const result = await packAndRtsOrders(orderData, accessToken);
-                                    
-                                    results.push({
-                                        accessToken: accessToken.substring(0, 10) + '...',
-                                        success: result.success,
-                                        processed: result.processed_orders || 0,
-                                        failed: result.failed_orders || 0,
-                                        message: result.message
-                                    });
-                                    
-                                    totalProcessed += result.processed_orders || 0;
-                                    totalFailed += result.failed_orders || 0;
-                                    
-                                } catch (error: any) {
-                                    console.error(`Error processing group for access token ${accessToken.substring(0, 10)}...:`, error);
-                                    results.push({
-                                        accessToken: accessToken.substring(0, 10) + '...',
-                                        success: false,
-                                        processed: 0,
-                                        failed: orderItems.length,
-                                        message: error.message
-                                    });
-                                    totalFailed += orderItems.length;
-                                }
-                            }
-
-                            // Show results
-                            const successCount = results.filter(r => r.success).length;
-                            const totalGroups = results.length;
-                            
-                            Alert.alert(
-                                'Bulk Processing Complete',
-                                `Processed ${totalGroups} store groups:\n` +
-                                `✅ Successful: ${successCount} groups\n` +
-                                `❌ Failed: ${totalGroups - successCount} groups\n` +
-                                `📦 Total Orders: ${totalProcessed} processed, ${totalFailed} failed`,
-                                [
-                                    {
-                                        text: 'OK',
-                                        onPress: () => {
-                                            // You might want to refresh the orders list here
-                                        }
-                                    }
-                                ]
-                            );
-
+                            Alert.alert('Complete', 'Bulk processing finished.', [{ text: 'OK', onPress: onRefresh }]);
                         } catch (error: any) {
-                            console.error('Error in bulk ready to ship:', error);
                             Alert.alert('Error', error.message || 'Failed to process orders');
                         }
                     }
@@ -484,92 +213,93 @@ const PendingOrders: React.FC<NavigationProps> = ({ navigation }) => {
         );
     };
 
-
-
-
     const styles = getStyles(theme);
+
+    const renderOrder = (item: any) => (
+        <View style={styles.card}>
+            <TextComp size={16} style={styles.orderId} numberOfLines={1}>Order ID: {item.order_id}</TextComp>
+            {(item.order_items || []).map((orderItem: any) => (
+                <OrderItem
+                    pending={true}
+                    key={orderItem.order_item_id}
+                    item={orderItem}
+                    firebaseSkus={firebaseSkus}
+                    selector={selector}
+                    onMakeReadyToShip={() => handleSingleOrderReadyToShip(item)}
+                    onProfitCalculated={() => { }}
+                />
+            ))}
+        </View>
+    );
+
     return (
         <View style={{ flex: 1, backgroundColor: theme.bgcolor }}>
             <View style={{ flex: 1, borderBottomWidth: 0, borderColor: theme.white }}>
-
                 <View style={{ rowGap: 16, margin: 16 }}>
                     <Header title={AppStrings.pendingOrders} goBack={goBack} info={true} />
                     <SelectStore />
-                    <TouchableOpacity
-                        style={{
-                            backgroundColor: theme.primaryOrange,
-                            borderRadius: 8,
-                            paddingVertical: 12,
-                            alignItems: 'center',
-                            marginTop: 8,
-                        }}
-                        onPress={handleBulkReadyToShip}
-                    >
-                        <TextComp size={16} numberOfLines={1} style={{ color: theme.white, fontFamily: FontFamilty.bold }}>
-                            Bulk Ready to Ship All Orders
-                        </TextComp>
-                    </TouchableOpacity>
+                    {loading ? (
+                        <View style={[styles.readyToShipBtn, { opacity: darazPendingOrders.length > 0 ? 1 : 0.5, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }]}>
+                            <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.medium, color: theme.white }}>Ready To Ship ({visibleOrdersCount}) </TextComp>
+                            <ActivityIndicator size={'small'} color={theme.primaryOrange} style={{ marginLeft: 10 }} />
+                        </View>
+                    ) : (
+                        <TouchableOpacity
+                            style={[styles.readyToShipBtn, { opacity: darazPendingOrders.length > 0 ? 1 : 0.5 }]}
+                            activeOpacity={0.7}
+                            onPress={handleBulkReadyToShip}
+                            disabled={darazPendingOrders.length === 0}
+                        >
+                            <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.medium, color: theme.white }}>Ready To Ship ({visibleOrdersCount}) </TextComp>
+                        </TouchableOpacity>
+                    )}
                 </View>
 
-
-                {darazOrdersLoader ?
+                {loading && darazPendingOrders.length === 0 ? (
                     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                        <ActivityIndicator size={'large'} color={theme.primaryOrange}></ActivityIndicator>
+                        <ActivityIndicator size="large" color={theme.primaryOrange} />
                     </View>
-                    :
+                ) : (
                     <ScrollView
                         showsVerticalScrollIndicator={false}
+                        contentContainerStyle={{ paddingBottom: 100 }}
                         refreshControl={
-                            <RefreshControl
-                                refreshing={refreshing}
-                                onRefresh={onRefresh}
-                                colors={[theme.primaryOrange]}
-                                tintColor={theme.primaryOrange}
-                            />
+                            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primaryOrange]} />
                         }
                     >
+                        {darazPendingOrders.map((item, index) => (
+                            <View key={index}>
+                                {renderOrder(item)}
+                            </View>
+                        ))}
 
-
-                        <FlatList
-                            scrollEnabled={false}
-                            ListHeaderComponent={
-                                <TextComp size={16} numberOfLines={1} style={styles.headerComp}>
-                                    Total Orders: {getOrdersCountBySelectedRange()}
-                                </TextComp>
-                            }
-                            data={getOrdersBySelectedRange() || []}
-                            keyExtractor={(item) => item?.order_id?.toString() || Math.random().toString()}
-                            renderItem={({ item }) => renderOrder(item, handleCostCalculated)}
-                            contentContainerStyle={styles.container}
-                            ListEmptyComponent={
-                                <TextComp size={16} numberOfLines={1} style={styles.emptyTextComp}>
-                                    No pending orders found.
-                                </TextComp>
-                            }
-                        />
-
+                        {darazPendingOrders.length === 0 && !loading && (
+                            <View style={{ alignItems: 'center', marginTop: 50 }}>
+                                <TextComp size={16} style={{ color: theme.textSecondary }} numberOfLines={1}>No pending orders found</TextComp>
+                            </View>
+                        )}
                     </ScrollView>
-                }
-                <View style={styles.totalProfitContainer}>
-                    <TextComp size={16} numberOfLines={1} style={styles.profitText}>
-                        Total Cost: Rs. {parseFloat((totalCost || 0).toString()).toFixed(2)}
-                    </TextComp>
-                </View>
+                )}
             </View>
         </View>
     );
 };
 
 const getStyles = (theme: any) => StyleSheet.create({
-    container: {
-        padding: 16,
-        flexGrow: 1
+    readyToShipBtn: {
+        backgroundColor: theme.primaryOrange,
+        padding: 12,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginHorizontal: 16,
     },
     card: {
         backgroundColor: theme.card,
         borderRadius: 12,
         padding: 16,
         marginBottom: 16,
+        marginHorizontal: 16,
         elevation: 3,
     },
     orderId: {
@@ -577,63 +307,6 @@ const getStyles = (theme: any) => StyleSheet.create({
         marginBottom: 8,
         color: theme.textPrimary,
     },
-    orderItem: {
-        flexDirection: 'row',
-        marginBottom: 12,
-    },
-    image: {
-        width: 70,
-        height: 70,
-        borderRadius: 8,
-        marginRight: 12,
-    },
-    info: {
-        flex: 1,
-        rowGap: 8,
-    },
-    productName: {
-        fontWeight: '600',
-        fontSize: 14,
-        color: theme.textPrimary,
-    },
-    amount: {
-        color: theme.textSecondary,
-    },
-    profitBadge: {
-        borderRadius: 100,
-        backgroundColor: theme.greenbg,
-        height: 30,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 10,
-        marginTop: 4,
-    },
-    profitText: {
-        color: theme.green,
-        fontFamily: FontFamilty.medium,
-    },
-    totalProfitContainer: {
-        position: 'absolute',
-        bottom: 16,
-        backgroundColor: theme.greenbg,
-        borderRadius: 100,
-        paddingVertical: 10,
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: '100%'
-    },
-    emptyTextComp: {
-        textAlign: 'center',
-        marginTop: 50,
-        fontSize: 16,
-        color: theme.textSecondary,
-    },
-    headerComp: {
-        textAlign: 'center',
-        marginTop: 8,
-        fontSize: 16,
-        color: theme.textSecondary,
-    },
-});
+})
 
-export default PendingOrders; 
+export default PendingOrders

@@ -42,12 +42,24 @@ const OrderItem: React.FC<OrderItemProps> = ({ item, firebaseSkus, selector, onP
         const sku = firebaseSkus.find((skuItem: any) => skuItem.sku === shop_sku);
         if (!sku) return 0;
 
+        // New SKU schema:
+        // - price: base SKU cost
+        // - totalPrice: base SKU cost + packaging
+        const totalPrice = parseFloat(sku.totalPrice ?? '0') || 0;
+        if (totalPrice > 0) return totalPrice;
+
+        // Backward compatibility for legacy SKU records.
+        const basePrice = parseFloat(sku.price ?? '0') || 0;
+        const packagingPrice = parseFloat(sku.packagingPrice ?? '0') || 0;
+        if (basePrice > 0 || packagingPrice > 0) {
+            return basePrice + packagingPrice;
+        }
+
         const product = selector.firebaseProducts[sku.productId];
         if (!product) return 0;
 
         const quantity = parseFloat(sku.productQuantity || '1');
         const pricePerUnit = parseFloat(product.price || '0');
-
         return quantity * pricePerUnit;
     };
 
@@ -59,7 +71,10 @@ const OrderItem: React.FC<OrderItemProps> = ({ item, firebaseSkus, selector, onP
             try {
                 // Check if required item properties exist
                 if (!item?.access_token || !item?.order_item_id) {
-                    console.warn('Missing required item properties:', { access_token: item?.access_token, order_item_id: item?.order_item_id });
+                    console.warn(`Missing required properties for order ${item?.order_id || 'unknown'}:`, {
+                        access_token: !!item?.access_token,
+                        order_item_id: !!item?.order_item_id
+                    });
                     return;
                 }
 
@@ -74,7 +89,7 @@ const OrderItem: React.FC<OrderItemProps> = ({ item, firebaseSkus, selector, onP
                 if (!response.ok) throw new Error(`Server error: ${response.status}`);
 
                 const data = await response.json();
-                
+
                 // Handle the correct response structure
                 const received = parseFloat((data?.data?.total?.[0]?.total_amount || 0).toString().replace(/,/g, ''));
                 const cost = getCostPrice(item.sku);
@@ -90,15 +105,15 @@ const OrderItem: React.FC<OrderItemProps> = ({ item, firebaseSkus, selector, onP
                 } else {
                     onProfitCalculated(localProfit, received);
                 }
-        } catch (error: any) {
-            const errorMessage = error?.message || 'Unknown error occurred';
-            console.warn('⚠️ [OrderItem] Error fetching Income Detail of order:', errorMessage);
-            // Set default values on error - don't show alert as this happens for each item
-            setDarazAmount(0);
-            setProductPrice(0);
-            setProfit(0);
-            onProfitCalculated(0, 0);
-        }
+            } catch (error: any) {
+                const errorMessage = error?.message || 'Unknown error occurred';
+                console.warn('⚠️ [OrderItem] Error fetching Income Detail of order:', errorMessage);
+                // Set default values on error - don't show alert as this happens for each item
+                setDarazAmount(0);
+                setProductPrice(0);
+                setProfit(0);
+                onProfitCalculated(0, 0);
+            }
         };
 
         fetchData();
@@ -139,7 +154,7 @@ const OrderItem: React.FC<OrderItemProps> = ({ item, firebaseSkus, selector, onP
 
             const data = await response.json();
             console.log('Income Details Response:', JSON.stringify(data, null, 2));
-            
+
             setIncomeDetails(data);
             setIncomeModalVisible(true);
             console.log('Modal visibility set to true, incomeDetails:', data);
@@ -162,14 +177,14 @@ const OrderItem: React.FC<OrderItemProps> = ({ item, firebaseSkus, selector, onP
                     </TextComp>
                 </TouchableOpacity>
                 {pending ? (
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         onPress={() => {
                             if (onMakeReadyToShip) {
                                 onMakeReadyToShip(item.order_id);
                             } else {
                                 Alert.alert('Action', 'Make this order ready to ship?');
                             }
-                        }} 
+                        }}
                         style={{ padding: 8, backgroundColor: theme.primaryOrange, borderRadius: 8, marginTop: 8 }}
                     >
                         <TextComp size={16} numberOfLines={1} style={{ color: theme.white, textAlign: 'center' }}>
@@ -212,15 +227,15 @@ const OrderItem: React.FC<OrderItemProps> = ({ item, firebaseSkus, selector, onP
 
                 {/* Income Details Button - Only for Delivered Orders */}
                 {!pending && !readyToShip && !failed && (
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         onPress={() => {
                             console.log('Income Details button pressed for item:', item.order_item_id);
                             fetchIncomeDetails();
                         }}
                         style={{
-                            padding: 6, 
-                            backgroundColor: theme.primaryOrange, 
-                            borderRadius: 6, 
+                            padding: 6,
+                            backgroundColor: theme.primaryOrange,
+                            borderRadius: 6,
                             marginTop: 8,
                             alignItems: 'center'
                         }}
@@ -234,10 +249,10 @@ const OrderItem: React.FC<OrderItemProps> = ({ item, firebaseSkus, selector, onP
 
             </View>
             <LogisticsModal
-            item={item}
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-      />
+                item={item}
+                visible={modalVisible}
+                onClose={() => setModalVisible(false)}
+            />
 
             {/* Income Details Modal */}
             <Modal
@@ -256,14 +271,14 @@ const OrderItem: React.FC<OrderItemProps> = ({ item, firebaseSkus, selector, onP
                                 <TextComp size={20} numberOfLines={1} style={styles.closeButton}>×</TextComp>
                             </TouchableOpacity>
                         </View>
-                        
+
                         <ScrollView showsVerticalScrollIndicator={false} style={styles.modalBody}>
                             {incomeDetails ? (
                                 <View>
                                     <TextComp size={16} numberOfLines={1} style={styles.sectionTitle}>
                                         Order Item ID: {item.order_item_id}
                                     </TextComp>
-                                    
+
                                     {incomeDetails.data?.total && incomeDetails.data.total.length > 0 && (
                                         <View style={styles.totalSection}>
                                             <TextComp size={16} numberOfLines={1} style={styles.sectionTitle}>
@@ -313,12 +328,12 @@ const OrderItem: React.FC<OrderItemProps> = ({ item, firebaseSkus, selector, onP
                                         </View>
                                     )}
 
-                                    {(!incomeDetails.data?.total || incomeDetails.data.total.length === 0) && 
-                                     (!incomeDetails.data?.transactions || incomeDetails.data.transactions.length === 0) && (
-                                        <TextComp size={16} numberOfLines={1} style={styles.noDataText}>
-                                            No income details found for this order item.
-                                        </TextComp>
-                                    )}
+                                    {(!incomeDetails.data?.total || incomeDetails.data.total.length === 0) &&
+                                        (!incomeDetails.data?.transactions || incomeDetails.data.transactions.length === 0) && (
+                                            <TextComp size={16} numberOfLines={1} style={styles.noDataText}>
+                                                No income details found for this order item.
+                                            </TextComp>
+                                        )}
                                 </View>
                             ) : (
                                 <TextComp size={16} numberOfLines={1} style={styles.noDataText}>

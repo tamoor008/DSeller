@@ -45,7 +45,7 @@ const OrderTabs = ({ }) => {
     const [allOrdersTotal, setAllOrdersTotal] = useState(0)
     const [firebaseDataLoaded, setfirebaseDataLoaded] = useState(false)
     const [refreshing, setRefreshing] = useState(false)
-    
+
     // Use refs to prevent infinite loops
     const allOrderRef = useRef(allOrder);
     const isProcessingFailedRef = useRef(false);
@@ -53,37 +53,68 @@ const OrderTabs = ({ }) => {
     const isProcessingAllRef = useRef(false);
     const firebaseProductsRef = useRef(selector.firebaseProducts);
     const firebaseProductsKeysRef = useRef<string>('');
-    
+
     // Update ref when firebaseProducts actually changes (by comparing keys)
     const currentKeys = Object.keys(selector.firebaseProducts || {}).sort().join(',');
     if (currentKeys !== firebaseProductsKeysRef.current) {
         firebaseProductsKeysRef.current = currentKeys;
         firebaseProductsRef.current = selector.firebaseProducts;
     }
-    
+
     // Use ref for stable reference
     const memoizedFirebaseProducts = firebaseProductsRef.current;
+
+    const normalizeSku = (sku: any) => (sku ?? '').toString().trim().toLowerCase();
+    const formatAmount = (value: any) => {
+        const numericValue = Number(value);
+        if (!Number.isFinite(numericValue)) return '0';
+        const rounded = Math.round((numericValue + Number.EPSILON) * 100) / 100;
+        return rounded.toFixed(2).replace(/\.?0+$/, '');
+    };
+    const toSafeNumber = (value: any) => {
+        const numericValue = Number(value);
+        return Number.isFinite(numericValue) ? numericValue : 0;
+    };
+    const getItemQuantity = (item: any) => toSafeNumber(item?.quantity ?? item?.productQuantity ?? 0);
+    const getNetItemTotal = (item: any) => {
+        const quantity = getItemQuantity(item);
+        const total = item?.totalPrice !== undefined && item?.totalPrice !== null
+            ? toSafeNumber(item.totalPrice)
+            : toSafeNumber(item?.price ?? item?.unitPrice ?? 0) * quantity;
+        return Math.max(total, 0);
+    };
+    const getNetGrandTotal = (items: any[] = []) =>
+        items.reduce((sum, item) => sum + getNetItemTotal(item), 0);
+
+    const firebaseSkusByNormalizedSku = useMemo(() => {
+        const map: { [key: string]: any } = {};
+        (firebaseSkus || []).forEach((item: any) => {
+            const normalized = normalizeSku(item?.sku);
+            if (normalized) {
+                map[normalized] = item;
+            }
+        });
+        return map;
+    }, [firebaseSkus]);
 
     // Initialize Firebase products listener
     useEffect(() => {
         if (!currentUser) return;
-        
-        console.log('[OrderTabs] Starting Firebase products listener');
+
         startFirebaseListener(dispatch);
     }, [currentUser, dispatch]);
 
     // Fetch SKUs from backend
     useEffect(() => {
         if (!currentUser) return;
-        
+
         const fetchSkus = async () => {
             try {
                 const response = await fetch(`${BASE_URL}/api/skus/${currentUser.uid}`);
-                
+
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
                     const errorMessage = errorData.error || 'Unknown error';
-                    console.warn('⚠️ [OrderTabs] Error fetching SKUs:', errorMessage);
                     Alert.alert('Error', 'Failed to load SKU data. Please try again.', [{ text: 'OK' }]);
                     setFirebaseSkus([]);
                     return;
@@ -92,7 +123,6 @@ const OrderTabs = ({ }) => {
                 const result = await response.json();
                 if (result.error) {
                     const errorMessage = result.error || 'Unknown error';
-                    console.warn('⚠️ [OrderTabs] API returned error:', errorMessage);
                     Alert.alert('Error', result.message || 'Failed to load SKU data. Please try again.', [{ text: 'OK' }]);
                     setFirebaseSkus([]);
                     return;
@@ -101,27 +131,7 @@ const OrderTabs = ({ }) => {
                 const skus = result.data || [];
                 const skusWithPrice = skus.filter(s => s.price && s.price > 0);
                 const skusWithZeroPrice = skus.filter(s => !s.price || s.price === 0);
-                
-                console.log('📦 [OrderTabs] SKUs loaded:', {
-                    count: skus.length,
-                    skusWithPrice: skusWithPrice.length,
-                    skusWithZeroPrice: skusWithZeroPrice.length,
-                    sample: skus.slice(0, 5).map(sku => ({
-                        sku: sku.sku,
-                        productId: sku.productId,
-                        price: sku.price,
-                        priceType: typeof sku.price,
-                        productQuantity: sku.productQuantity
-                    })),
-                    sampleWithPrice: skusWithPrice.slice(0, 5).map(sku => ({
-                        sku: sku.sku,
-                        price: sku.price
-                    })),
-                    sampleZeroPrice: skusWithZeroPrice.slice(0, 5).map(sku => ({
-                        sku: sku.sku,
-                        price: sku.price
-                    }))
-                });
+
 
                 setFirebaseSkus(skus);
                 setfirebaseDataLoaded(true);
@@ -142,15 +152,14 @@ const OrderTabs = ({ }) => {
 
     useEffect(() => {
         if (!currentUser) return;
-        
+
         const fetchData = async () => {
             try {
                 const response = await fetch(`${BASE_URL}/api/products/${currentUser.uid}`);
-                
+
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
                     const errorMessage = errorData.error || 'Unknown error';
-                    console.warn('⚠️ [OrderTabs] Error fetching products:', errorMessage);
                     Alert.alert('Error', 'Failed to fetch products. Please try again.', [{ text: 'OK' }]);
                     setLoader(false);
                     return;
@@ -159,7 +168,6 @@ const OrderTabs = ({ }) => {
                 const result = await response.json();
                 if (result.error) {
                     const errorMessage = result.error || 'Unknown error';
-                    console.warn('⚠️ [OrderTabs] API returned error:', errorMessage);
                     Alert.alert('Error', result.message || 'Failed to fetch products. Please try again.', [{ text: 'OK' }]);
                     setLoader(false);
                     return;
@@ -194,10 +202,10 @@ const OrderTabs = ({ }) => {
             }];
         } else {
             // Filter out stores without valid access tokens
-            newTokens = Array.isArray(selector.access_tokens) 
-                ? selector.access_tokens.filter((token: any) => 
+            newTokens = Array.isArray(selector.access_tokens)
+                ? selector.access_tokens.filter((token: any) =>
                     token && token.access_token && token.access_token.trim() !== ''
-                  )
+                )
                 : [];
         }
 
@@ -216,21 +224,6 @@ const OrderTabs = ({ }) => {
     }, [allOrder]);
 
     useEffect(() => {
-        console.log('[OrderTabs] firebaseProducts changed:', {
-            keysCount: Object.keys(memoizedFirebaseProducts || {}).length,
-            keys: Object.keys(memoizedFirebaseProducts || {}).slice(0, 10),
-            sampleProduct: memoizedFirebaseProducts ? (() => {
-                const firstKey = Object.keys(memoizedFirebaseProducts)[0];
-                const firstProduct = memoizedFirebaseProducts[firstKey];
-                return firstProduct ? {
-                    key: firstKey,
-                    productName: firstProduct.productName,
-                    price: firstProduct.price,
-                    hasSku: !!firstProduct.sku,
-                    sku: firstProduct.sku
-                } : null;
-            })() : null
-        });
     }, [memoizedFirebaseProducts]);
 
     useEffect(() => {
@@ -257,112 +250,100 @@ const OrderTabs = ({ }) => {
             return;
         }
 
-            // Reset all state first
-            setFailedOrder([]);
-            setFailedOrderCount(0);
-            setOrderCount(0);
-            setShippedOrderCount(0);
-            setShippedOrder([]);
+        // Reset all state first
+        setFailedOrder([]);
+        setFailedOrderCount(0);
+        setOrderCount(0);
+        setShippedOrderCount(0);
+        setShippedOrder([]);
         if (showLoader) {
             setLoader(true);
         }
-            setAllOrder([]);
-            setITRSOrder([]);
+        setAllOrder([]);
+        setITRSOrder([]);
 
-            const createdAfter = new Date(Date.now() - 1000 * 24 * 60 * 60 * 1000).toISOString(); // 7 days ago
+        const createdAfter = new Date(Date.now() - 1000 * 24 * 60 * 60 * 1000).toISOString(); // 7 days ago
 
-            let requests = [];
+        let requests = [];
 
-            if (Array.isArray(all_access_tokens)) {
-                // Filter out invalid access tokens before making requests
-                const validTokens = all_access_tokens.filter(item => 
-                    item && item.access_token && item.access_token.trim() !== ''
-                );
-                console.log('🔄 [ORDER TABS] Fetching for', validTokens.length, 'stores (filtered from', all_access_tokens.length, 'total)');
-                requests = validTokens.flatMap(item => [
-                    getDarazOrders(item.access_token, createdAfter, 'shipped'),
-                    getDarazOrders(item.access_token, createdAfter, 'failed_delivery'),
-                    getDarazOrders(item.access_token, createdAfter, 'shipped_back'),
-                ]);
-            } else if (all_access_tokens && all_access_tokens.access_token && all_access_tokens.access_token.trim() !== '') {
-                requests = [
-                    getDarazOrders(all_access_tokens.access_token, createdAfter, 'shipped'),
-                    getDarazOrders(all_access_tokens.access_token, createdAfter, 'failed_delivery'),
-                    getDarazOrders(all_access_tokens.access_token, createdAfter, 'shipped_back'),
-                ];
-            } else {
-                console.log('⚠️ [ORDER TABS] No valid access tokens available');
-            }
+        if (Array.isArray(all_access_tokens)) {
+            // Filter out invalid access tokens before making requests
+            const validTokens = all_access_tokens.filter(item =>
+                item && item.access_token && item.access_token.trim() !== ''
+            );
+            requests = validTokens.flatMap(item => [
+                getDarazOrders(item.access_token, createdAfter, 'shipped'),
+                getDarazOrders(item.access_token, createdAfter, 'failed_delivery'),
+                getDarazOrders(item.access_token, createdAfter, 'shipped_back'),
+            ]);
+        } else if (all_access_tokens && all_access_tokens.access_token && all_access_tokens.access_token.trim() !== '') {
+            requests = [
+                getDarazOrders(all_access_tokens.access_token, createdAfter, 'shipped'),
+                getDarazOrders(all_access_tokens.access_token, createdAfter, 'failed_delivery'),
+                getDarazOrders(all_access_tokens.access_token, createdAfter, 'shipped_back'),
+            ];
+        } else {
+        }
 
-            try {
-                // Wait for all requests to complete and collect results
-                const results = await Promise.all(requests);
-                
-                // Aggregate all data before updating state (prevents race conditions)
-                let totalOrderCount = 0;
-                let totalShippedCount = 0;
-                let totalFailedCount = 0;
-                const allShippedSkus = [];
-                const allFailedSkus = [];
-                const allITRSSkus = [];
+        try {
+            // Wait for all requests to complete and collect results
+            const results = await Promise.all(requests);
 
-                results.forEach((result) => {
-                    if (!result) return; // Skip failed requests
-                    
-                    totalOrderCount += result.countTotal || 0;
+            // Aggregate all data before updating state (prevents race conditions)
+            let totalOrderCount = 0;
+            let totalShippedCount = 0;
+            let totalFailedCount = 0;
+            const allShippedSkus = [];
+            const allFailedSkus = [];
+            const allITRSSkus = [];
 
-                    if (result.status === 'shipped') {
-                        totalShippedCount += result.countTotal || 0;
-                        allShippedSkus.push(...result.skus);
-                    } else if (result.status === 'shipped_back') {
-                        totalFailedCount += result.countTotal || 0;
-                        allFailedSkus.push(...result.skus);
-                    } else if (result.status === 'failed_delivery') {
-                        totalFailedCount += result.countTotal || 0;
-                        allITRSSkus.push(...result.skus);
-                    }
-                });
+            results.forEach((result) => {
+                if (!result) return; // Skip failed requests
 
-                // Update all state at once to prevent race conditions
-                setOrderCount(totalOrderCount);
-                setShippedOrderCount(totalShippedCount);
-                setFailedOrderCount(totalFailedCount);
-                
-                // Set orders first, then set loader to false
-                // This ensures that when loader becomes false, shippedOrder already has data
-                setShippedOrder(allShippedSkus);
-                setFailedOrder(allFailedSkus);
-                setITRSOrder(allITRSSkus);
-                
-                // Set loader to false AFTER setting orders
-                // This ensures the useEffect will run when loader changes from true to false
-                if (showLoader) {
-                    setLoader(false);
+                totalOrderCount += result.countTotal || 0;
+
+                if (result.status === 'shipped') {
+                    totalShippedCount += result.countTotal || 0;
+                    allShippedSkus.push(...result.skus);
+                } else if (result.status === 'shipped_back') {
+                    totalFailedCount += result.countTotal || 0;
+                    allFailedSkus.push(...result.skus);
+                } else if (result.status === 'failed_delivery') {
+                    totalFailedCount += result.countTotal || 0;
+                    allITRSSkus.push(...result.skus);
                 }
+            });
 
-                console.log('✅ [OrderTabs] Orders fetched and state updated:', {
-                    totalOrderCount,
-                    totalShippedCount,
-                    totalFailedCount,
-                    shippedSkusCount: allShippedSkus.length,
-                    failedSkusCount: allFailedSkus.length,
-                    itrsSkusCount: allITRSSkus.length
-                });
+            // Update all state at once to prevent race conditions
+            setOrderCount(totalOrderCount);
+            setShippedOrderCount(totalShippedCount);
+            setFailedOrderCount(totalFailedCount);
 
-            } catch (error: any) {
-                const errorMessage = error?.message || 'Unknown error occurred';
-                console.warn('⚠️ [OrderTabs] Error while fetching orders:', errorMessage);
-                Alert.alert('Error', 'Failed to fetch some orders. Please check your connection and try again.', [{ text: 'OK' }]);
-                if (showLoader) {
+            // Set orders first, then set loader to false
+            // This ensures that when loader becomes false, shippedOrder already has data
+            setShippedOrder(allShippedSkus);
+            setFailedOrder(allFailedSkus);
+            setITRSOrder(allITRSSkus);
+
+            // Set loader to false AFTER setting orders
+            // This ensures the useEffect will run when loader changes from true to false
+            if (showLoader) {
                 setLoader(false);
-                }
             }
+
+
+        } catch (error: any) {
+            const errorMessage = error?.message || 'Unknown error occurred';
+            Alert.alert('Error', 'Failed to fetch some orders. Please check your connection and try again.', [{ text: 'OK' }]);
+            if (showLoader) {
+                setLoader(false);
+            }
+        }
     };
 
     // Refresh handler for pull-to-refresh
     const onRefresh = async () => {
         setRefreshing(true);
-        console.log('🔄 [OrderTabs] Refreshing orders...');
         try {
             await fetchOrders(false); // Don't show main loader during refresh
         } finally {
@@ -379,49 +360,26 @@ const OrderTabs = ({ }) => {
         if (!firebaseDataLoaded || !memoizedFirebaseProducts) return; // Wait for data to be ready
         if (loader) return; // Don't process while fetching
         if ((!failedOrder || failedOrder.length === 0) && (!ITRSOrder || ITRSOrder.length === 0)) return; // Don't process empty data
-        
+
         isProcessingFailedRef.current = true;
-        
-        console.log('[OrderTabs] Processing failed orders:', {
-            failedOrderCount: failedOrder.length,
-            ITRSOrderCount: ITRSOrder.length,
-            firebaseProductsKeys: Object.keys(memoizedFirebaseProducts || {}).length
-        });
-        
+
+
         const merged = mergeSkuCounts(failedOrder, ITRSOrder);
-        console.log('[OrderTabs] Merged failed orders:', {
-            mergedCount: merged.length,
-            sample: merged.slice(0, 3).map(m => ({
-                sku: m.sku,
-                productId: m.productId,
-                quantity: m.quantity
-            }))
-        });
-        
+
         const enriched = enrichProductsWithPrices(memoizedFirebaseProducts, merged)
 
         // Calculate totals using backend API and get enriched items with calculated prices
         const calculateFailedOrdersTotal = async () => {
             try {
                 const requestBody = {
-                        items: enriched.map(item => ({
-                            price: item.unitPrice || item.price,
-                            quantity: item.quantity || item.productQuantity,
-                            ...item,
-                        })),
+                    items: enriched.map(item => ({
+                        price: item.unitPrice || item.price,
+                        quantity: item.quantity || item.productQuantity,
+                        ...item,
+                    })),
                 };
-                
-                console.log('📊 [OrderTabs - Failed Orders] Starting calculation...');
-                console.log('📤 [OrderTabs - Failed Orders] Request URL:', `${BASE_URL}/api/orders/calculate-totals`);
-                console.log('📤 [OrderTabs - Failed Orders] Items count:', requestBody.items.length);
-                console.log('📤 [OrderTabs - Failed Orders] Items with price > 0:', requestBody.items.filter(i => (i.unitPrice || i.price) > 0).length);
-                console.log('📤 [OrderTabs - Failed Orders] Items with price = 0:', requestBody.items.filter(i => (i.unitPrice || i.price) === 0).length);
-                console.log('📤 [OrderTabs - Failed Orders] Sample items:', requestBody.items.slice(0, 3).map(i => ({
-                    sku: i.sku,
-                    price: i.unitPrice || i.price,
-                    quantity: i.quantity || i.productQuantity
-                })));
-                
+
+
                 const response = await fetch(`${BASE_URL}/api/orders/calculate-totals`, {
                     method: 'POST',
                     headers: {
@@ -429,19 +387,13 @@ const OrderTabs = ({ }) => {
                     },
                     body: JSON.stringify(requestBody),
                 });
-                
-                console.log('📥 [OrderTabs - Failed Orders] Response status:', response.status, response.statusText);
+
 
                 if (response.ok) {
                     const result = await response.json();
-                    console.log('✅ [OrderTabs - Failed Orders] Response data:', JSON.stringify(result, null, 2));
-                    
+
                     if (!result.error && result.data) {
                         // Use backend-calculated totals
-                        if (result.data.summary) {
-                            console.log('💰 [OrderTabs - Failed Orders] Grand total:', result.data.summary.grandTotal);
-                            setfailedOrdersTotal(result.data.summary.grandTotal);
-                        }
                         // Update enriched items with backend-calculated totalPrice
                         const enrichedWithTotals = enriched.map((item, idx) => {
                             const backendItem = result.data.items?.[idx];
@@ -452,26 +404,22 @@ const OrderTabs = ({ }) => {
                                 price: item.unitPrice || item.price, // Keep unit price for display
                             } : item;
                         });
+                        setfailedOrdersTotal(getNetGrandTotal(enrichedWithTotals));
                         setFailedDeliveries(enrichedWithTotals);
                         return;
                     } else {
-                        console.warn('⚠️ [OrderTabs - Failed Orders] Response contains error:', result.error);
                     }
                 } else {
                     const errorData = await response.json().catch(() => ({}));
-                    console.warn('⚠️ [OrderTabs - Failed Orders] HTTP Error:', response.status, errorData);
                 }
             } catch (error: any) {
                 const errorMessage = error?.message || 'Unknown error occurred';
-                console.warn('⚠️ [OrderTabs] Error calculating failed orders total:', errorMessage);
                 if (error?.stack) {
-                    console.warn('⚠️ [OrderTabs] Stack:', error.stack);
                 }
                 // Don't show alert for calculation errors, just log and use default value
             }
             // If API fails, still set items but with 0 total
-            console.warn('⚠️ [OrderTabs - Failed Orders] Setting total to 0');
-            setfailedOrdersTotal(0);
+            setfailedOrdersTotal(getNetGrandTotal(enriched));
             setFailedDeliveries(enriched);
         };
 
@@ -483,62 +431,30 @@ const OrderTabs = ({ }) => {
     }, [failedOrder, ITRSOrder, firebaseSkus, memoizedFirebaseProducts, firebaseDataLoaded, loader])
 
     useEffect(() => {
-        console.log('[OrderTabs] Shipped orders useEffect triggered:', {
-            isProcessing: isProcessingShippedRef.current,
-            firebaseDataLoaded,
-            hasFirebaseProducts: !!memoizedFirebaseProducts,
-            firebaseProductsKeys: Object.keys(memoizedFirebaseProducts || {}).length,
-            loader,
-            shippedOrderLength: shippedOrder?.length || 0,
-            shippedOrderSample: shippedOrder?.slice(0, 3),
-            finalShippedOrderLength: finalShippedOrder?.length || 0
-        });
-        
+
         if (isProcessingShippedRef.current) {
-            console.log('⏸️ [OrderTabs] Skipping shipped orders processing - already processing');
             return; // Prevent concurrent processing
         }
         if (!firebaseDataLoaded || !memoizedFirebaseProducts) {
-            console.log('⏸️ [OrderTabs] Skipping shipped orders processing - data not loaded');
             return; // Wait for data to be ready
         }
         if (loader) {
-            console.log('⏸️ [OrderTabs] Skipping shipped orders processing - loader is true');
             return; // Don't process while fetching
         }
         if (!shippedOrder || shippedOrder.length === 0) {
-            console.log('⏸️ [OrderTabs] Skipping shipped orders processing - no shipped orders');
             // If we have no shipped orders but we previously had data, clear finalShippedOrder
             if (finalShippedOrder && finalShippedOrder.length > 0) {
-                console.log('🧹 [OrderTabs] Clearing finalShippedOrder because shippedOrder is now empty');
                 setFinalShippedOrder([]);
                 setshippedOrdersTotal(0);
             }
             return; // Don't process empty data
         }
-        
-        console.log('✅ [OrderTabs] Processing shipped orders:', {
-            shippedOrderCount: shippedOrder.length,
-            firebaseProductsKeys: Object.keys(memoizedFirebaseProducts || {}).length,
-            sampleShippedOrder: shippedOrder.slice(0, 3)
-        });
-        
+
+
         const data = enrichProductsWithPrices(memoizedFirebaseProducts, shippedOrder)
-        
-        console.log('📦 [OrderTabs - Shipped Orders] Enriched data after enrichProductsWithPrices:', {
-            dataLength: data.length,
-            dataSample: data.slice(0, 3).map(item => ({
-                sku: item.sku,
-                price: item.price,
-                unitPrice: item.unitPrice,
-                quantity: item.quantity,
-                status: item.status,
-                productName: item.productName
-            }))
-        });
-        
+
+
         if (!data || data.length === 0) {
-            console.warn('⚠️ [OrderTabs - Shipped Orders] No enriched data, setting empty array');
             setFinalShippedOrder([]);
             setshippedOrdersTotal(0);
             isProcessingShippedRef.current = false;
@@ -549,18 +465,14 @@ const OrderTabs = ({ }) => {
         const calculateShippedOrdersTotal = async () => {
             try {
                 const requestBody = {
-                        items: data.map(item => ({
-                            price: item.unitPrice || item.price,
-                            quantity: item.quantity || item.productQuantity,
-                            ...item,
-                        })),
+                    items: data.map(item => ({
+                        price: item.unitPrice || item.price,
+                        quantity: item.quantity || item.productQuantity,
+                        ...item,
+                    })),
                 };
-                
-                console.log('📊 [OrderTabs - Shipped Orders] Starting calculation...');
-                console.log('📤 [OrderTabs - Shipped Orders] Items count:', requestBody.items.length);
-                console.log('📤 [OrderTabs - Shipped Orders] Items with price > 0:', requestBody.items.filter(i => (i.unitPrice || i.price) > 0).length);
-                console.log('📤 [OrderTabs - Shipped Orders] Items with price = 0:', requestBody.items.filter(i => (i.unitPrice || i.price) === 0).length);
-                
+
+
                 const response = await fetch(`${BASE_URL}/api/orders/calculate-totals`, {
                     method: 'POST',
                     headers: {
@@ -568,19 +480,13 @@ const OrderTabs = ({ }) => {
                     },
                     body: JSON.stringify(requestBody),
                 });
-                
-                console.log('📥 [OrderTabs - Shipped Orders] Response status:', response.status, response.statusText);
+
 
                 if (response.ok) {
                     const result = await response.json();
-                    console.log('✅ [OrderTabs - Shipped Orders] Response data:', JSON.stringify(result, null, 2));
-                    
+
                     if (!result.error && result.data) {
                         // Use backend-calculated totals
-                        if (result.data.summary) {
-                            console.log('💰 [OrderTabs - Shipped Orders] Grand total:', result.data.summary.grandTotal);
-                            setshippedOrdersTotal(result.data.summary.grandTotal);
-                        }
                         // Update items with backend-calculated totalPrice
                         const enrichedWithTotals = data.map((item, idx) => {
                             const backendItem = result.data.items?.[idx];
@@ -591,59 +497,34 @@ const OrderTabs = ({ }) => {
                                 price: item.unitPrice || item.price, // Keep unit price for display
                             } : item;
                         });
-                        console.log('✅ [OrderTabs - Shipped Orders] Setting finalShippedOrder with', enrichedWithTotals.length, 'items');
+                        setshippedOrdersTotal(getNetGrandTotal(enrichedWithTotals));
                         setFinalShippedOrder(enrichedWithTotals);
                         isProcessingShippedRef.current = false;
                         return;
                     } else {
-                        console.warn('⚠️ [OrderTabs - Shipped Orders] Response contains error:', result.error);
                     }
                 } else {
                     const errorData = await response.json().catch(() => ({}));
-                    console.warn('⚠️ [OrderTabs - Shipped Orders] HTTP Error:', response.status, errorData);
                 }
             } catch (error: any) {
                 const errorMessage = error?.message || 'Unknown error occurred';
-                console.warn('⚠️ [OrderTabs] Error calculating shipped orders total:', errorMessage);
                 if (error?.stack) {
-                    console.warn('⚠️ [OrderTabs] Stack:', error.stack);
                 }
                 // Don't show alert for calculation errors, just log and use default value
             }
             // If API fails, still set items but with 0 total
-            console.warn('⚠️ [OrderTabs - Shipped Orders] API failed, setting items with 0 total');
-            console.log('📦 [OrderTabs - Shipped Orders] Data to set:', {
-                dataLength: data.length,
-                sample: data.slice(0, 3).map(item => ({
-                    sku: item.sku,
-                    price: item.price,
-                    unitPrice: item.unitPrice,
-                    quantity: item.quantity,
-                    status: item.status
-                }))
-            });
-            setshippedOrdersTotal(0);
+            setshippedOrdersTotal(getNetGrandTotal(data));
             setFinalShippedOrder(data);
-            console.log('✅ [OrderTabs - Shipped Orders] finalShippedOrder set with', data.length, 'items');
         };
 
         isProcessingShippedRef.current = true;
         calculateShippedOrdersTotal().finally(() => {
             isProcessingShippedRef.current = false;
-            console.log('✅ [OrderTabs - Shipped Orders] Processing complete');
         });
     }, [shippedOrder, firebaseSkus, memoizedFirebaseProducts, firebaseDataLoaded, loader])
 
     // Debug: Log when finalShippedOrder changes
     useEffect(() => {
-        console.log('🔍 [OrderTabs] finalShippedOrder state changed:', {
-            length: finalShippedOrder?.length || 0,
-            sample: finalShippedOrder?.slice(0, 3).map(item => ({
-                sku: item.sku,
-                price: item.price,
-                quantity: item.quantity
-            }))
-        });
     }, [finalShippedOrder]);
 
     useEffect(() => {
@@ -673,49 +554,26 @@ const OrderTabs = ({ }) => {
         if (loader) return; // Don't process while fetching
         if (!shippedOrder || !failedDeliveries) return; // Guard against missing data
         if ((!shippedOrder || shippedOrder.length === 0) && (!failedDeliveries || failedDeliveries.length === 0)) return; // Don't process empty data
-        
+
         isProcessingAllRef.current = true;
-        
-        console.log('[OrderTabs] Processing all orders:', {
-            shippedOrderCount: shippedOrder.length,
-            failedDeliveriesCount: failedDeliveries.length,
-            firebaseProductsKeys: Object.keys(memoizedFirebaseProducts || {}).length,
-            firebaseSkusCount: firebaseSkus.length
-        });
+
 
         const merged = mergeSkuCounts(shippedOrder, failedDeliveries);
-        console.log('[OrderTabs] Merged all orders:', {
-            mergedCount: merged.length,
-            sample: merged.slice(0, 3).map(m => ({
-                sku: m.sku,
-                productId: m.productId,
-                quantity: m.quantity
-            }))
-        });
 
         const enriched = enrichProductsWithPrices(memoizedFirebaseProducts, merged);
-        
+
         // Calculate totals using backend API and get enriched items with calculated prices
         const calculateAllOrdersTotal = async () => {
             try {
                 const requestBody = {
-                        items: enriched.map(item => ({
-                            price: item.unitPrice || item.price,
-                            quantity: item.quantity || item.productQuantity,
-                            ...item,
-                        })),
+                    items: enriched.map(item => ({
+                        price: item.unitPrice || item.price,
+                        quantity: item.quantity || item.productQuantity,
+                        ...item,
+                    })),
                 };
-                
-                console.log('📊 [OrderTabs - All Orders] Starting calculation...');
-                console.log('📤 [OrderTabs - All Orders] Items count:', requestBody.items.length);
-                console.log('📤 [OrderTabs - All Orders] Items with price > 0:', requestBody.items.filter(i => (i.unitPrice || i.price) > 0).length);
-                console.log('📤 [OrderTabs - All Orders] Items with price = 0:', requestBody.items.filter(i => (i.unitPrice || i.price) === 0).length);
-                console.log('📤 [OrderTabs - All Orders] Sample items:', requestBody.items.slice(0, 3).map(i => ({
-                    sku: i.sku,
-                    price: i.unitPrice || i.price,
-                    quantity: i.quantity || i.productQuantity
-                })));
-                
+
+
                 const response = await fetch(`${BASE_URL}/api/orders/calculate-totals`, {
                     method: 'POST',
                     headers: {
@@ -723,20 +581,13 @@ const OrderTabs = ({ }) => {
                     },
                     body: JSON.stringify(requestBody),
                 });
-                
-                console.log('📥 [OrderTabs - All Orders] Response status:', response.status, response.statusText);
+
 
                 if (response.ok) {
                     const result = await response.json();
-                    console.log('✅ [OrderTabs - All Orders] Response data:', JSON.stringify(result, null, 2));
-                    
+
                     if (!result.error && result.data) {
                         // Use backend-calculated totals
-                        if (result.data.summary) {
-                            console.log('💰 [OrderTabs - All Orders] Grand total:', result.data.summary.grandTotal);
-                            console.log('✅ [OrderTabs - All Orders] Setting allOrdersTotal to:', result.data.summary.grandTotal);
-                            setAllOrdersTotal(result.data.summary.grandTotal);
-                        }
                         // Update enriched items with backend-calculated totalPrice
                         const enrichedWithTotals = enriched.map((item, idx) => {
                             const backendItem = result.data.items?.[idx];
@@ -747,28 +598,24 @@ const OrderTabs = ({ }) => {
                                 price: item.unitPrice || item.price, // Keep unit price for display
                             } : item;
                         });
+                        setAllOrdersTotal(getNetGrandTotal(enrichedWithTotals));
                         setAllOrder(enrichedWithTotals);
                         allOrderRef.current = enrichedWithTotals; // Update ref
                         isProcessingAllRef.current = false;
                         return;
                     } else {
-                        console.warn('⚠️ [OrderTabs - All Orders] Response contains error:', result.error);
                     }
                 } else {
                     const errorData = await response.json().catch(() => ({}));
-                    console.warn('⚠️ [OrderTabs - All Orders] HTTP Error:', response.status, errorData);
                 }
             } catch (error: any) {
                 const errorMessage = error?.message || 'Unknown error occurred';
-                console.warn('⚠️ [OrderTabs] Error calculating all orders total:', errorMessage);
                 if (error?.stack) {
-                    console.warn('⚠️ [OrderTabs] Stack:', error.stack);
                 }
                 // Don't show alert for calculation errors, just log and use default value
             }
             // If API fails, still set items but with 0 total
-            console.warn('⚠️ [OrderTabs - All Orders] Setting total to 0');
-            setAllOrdersTotal(0);
+            setAllOrdersTotal(getNetGrandTotal(enriched));
             setAllOrder(enriched);
             allOrderRef.current = enriched; // Update ref
             isProcessingAllRef.current = false;
@@ -777,18 +624,18 @@ const OrderTabs = ({ }) => {
         calculateAllOrdersTotal();
     }, [shippedOrder, failedDeliveries, firebaseSkus, memoizedFirebaseProducts, firebaseDataLoaded, loader])
 
-  
+
     //This function gets the price of any sku
     const getQuantitybySku = (skuList, targetSku) => {
-        const found = firebaseSkus.find(item => item.sku === targetSku);
+        const found = firebaseSkusByNormalizedSku[normalizeSku(targetSku)];
         return found ? found.productQuantity : 0; // returns null if not found
     };
 
     //This function gets the price of any sku
     const getIdbySku = (skuList, targetSku) => {
-        const found = firebaseSkus.find(item => item.sku === targetSku);
+        const found = firebaseSkusByNormalizedSku[normalizeSku(targetSku)];
         const productId = found ? found.productId : 0;
-        
+
         if (!found) {
             console.log(`[getIdbySku] SKU ${targetSku} not found in firebaseSkus`, {
                 targetSku,
@@ -805,7 +652,7 @@ const OrderTabs = ({ }) => {
                 }
             });
         }
-        
+
         return productId; // returns 0 if not found
     }
 
@@ -815,7 +662,8 @@ const OrderTabs = ({ }) => {
 
         data.forEach(order => {
             order.order_items.forEach(item => {
-                const sku = item.sku;
+                const sku = normalizeSku(item.sku);
+                if (!sku) return;
                 skuCount[sku] = (skuCount[sku] || 0) + 1;
             });
         });
@@ -823,7 +671,7 @@ const OrderTabs = ({ }) => {
         const result = Object.entries(skuCount).map(([sku, quantity]) => {
             const productId = getIdbySku(firebaseSkus, sku);
             const productQuantity = getQuantitybySku(firebaseSkus, sku);
-            
+
             if (!productId || productId === 0) {
                 console.log(`[countSkusFromOrders] SKU ${sku} has no productId in firebaseSkus`, {
                     sku,
@@ -831,10 +679,10 @@ const OrderTabs = ({ }) => {
                     firebaseSkusCount: firebaseSkus.length
                 });
             }
-            
+
             return {
-            sku,
-            quantity,
+                sku,
+                quantity,
                 productQuantity,
                 productId,
             };
@@ -854,22 +702,26 @@ const OrderTabs = ({ }) => {
         const combined = {};
         // Add existing items to the map
         existing.forEach(item => {
-            combined[item.sku] = (combined[item.sku] || 0) + item.quantity;
+            const normalizedSku = normalizeSku(item.sku);
+            if (!normalizedSku) return;
+            combined[normalizedSku] = (combined[normalizedSku] || 0) + item.quantity;
         });
 
         // Merge in the new incoming items
         incoming.forEach(item => {
-            combined[item.sku] = (combined[item.sku] || 0) + item.quantity;
+            const normalizedSku = normalizeSku(item.sku);
+            if (!normalizedSku) return;
+            combined[normalizedSku] = (combined[normalizedSku] || 0) + item.quantity;
         });
 
         // Convert back to array format
         const result = Object.entries(combined).map(([sku, quantity]) => {
             const productId = getIdbySku(firebaseSkus, sku);
             const productQuantity = getQuantitybySku(firebaseSkus, sku);
-            
+
             return {
-            sku,
-            quantity,
+                sku,
+                quantity,
                 productQuantity,
                 productId,
             };
@@ -922,6 +774,24 @@ const OrderTabs = ({ }) => {
         );
     };
 
+    const handleSkuUpdated = (updatedSku: any) => {
+        if (!updatedSku?.sku) return;
+
+        setFirebaseSkus((prevSkus: any[]) => {
+            const existingIndex = prevSkus.findIndex((item: any) => item?.sku === updatedSku.sku);
+            if (existingIndex === -1) {
+                return [...prevSkus, updatedSku];
+            }
+
+            const next = [...prevSkus];
+            next[existingIndex] = {
+                ...next[existingIndex],
+                ...updatedSku,
+            };
+            return next;
+        });
+    };
+
 
     const enrichProductsWithPrices = (firebaseProducts, items) => {
         if (!firebaseProducts || !items || !Array.isArray(items)) {
@@ -942,13 +812,13 @@ const OrderTabs = ({ }) => {
         // Create a lookup map: productId -> product, and also SKU -> product if products have SKU field
         const productByIdMap = {};
         const productBySkuMap = {};
-        
+
         // Build lookup maps from firebaseProducts
         Object.entries(firebaseProducts).forEach(([key, product]: [string, any]) => {
             productByIdMap[key] = product;
             // If product has a SKU field, also index by SKU
             if (product?.sku) {
-                productBySkuMap[product.sku] = product;
+                productBySkuMap[normalizeSku(product.sku)] = product;
             }
         });
 
@@ -970,9 +840,11 @@ const OrderTabs = ({ }) => {
         });
 
         const results = items.map((item, index) => {
+            const normalizedItemSku = normalizeSku(item.sku);
+            const skuItem = normalizedItemSku ? firebaseSkusByNormalizedSku[normalizedItemSku] : null;
             let product = null;
             const lookupSteps = [];
-            
+
             // First try to find by productId
             if (item.productId && item.productId !== 0) {
                 product = productByIdMap[item.productId];
@@ -980,16 +852,15 @@ const OrderTabs = ({ }) => {
             } else {
                 lookupSteps.push(`productId lookup: SKIPPED (productId: ${item.productId})`);
             }
-            
+
             // If not found by productId, try to find by SKU
             if (!product && item.sku) {
                 // Try direct SKU lookup
-                product = productBySkuMap[item.sku];
+                product = productBySkuMap[normalizedItemSku];
                 lookupSteps.push(`SKU direct lookup: ${item.sku} -> ${product ? 'FOUND' : 'NOT FOUND'}`);
-                
+
                 // If still not found, try to find productId from firebaseSkus and then lookup
                 if (!product && firebaseSkus.length > 0) {
-                    const skuItem = firebaseSkus.find(sku => sku.sku === item.sku);
                     if (skuItem) {
                         lookupSteps.push(`firebaseSkus found: sku=${skuItem.sku}, productId=${skuItem.productId}`);
                         if (skuItem.productId && skuItem.productId !== 0) {
@@ -1011,8 +882,6 @@ const OrderTabs = ({ }) => {
             // Log detailed info for first few items, items that fail, or specific SKUs we're debugging
             const shouldLog = index < 3 || !product || item.sku === 'moringa-500gram';
             if (shouldLog) {
-                const skuItem = item.sku && firebaseSkus ? firebaseSkus.find(sku => sku.sku === item.sku) : null;
-                
                 // Calculate final price using same logic as below
                 let finalPrice = 0;
                 if (skuItem && skuItem.price !== undefined && skuItem.price !== null) {
@@ -1027,7 +896,7 @@ const OrderTabs = ({ }) => {
                         finalPrice = productPrice;
                     }
                 }
-                
+
                 console.log(`[enrichProductsWithPrices] Item ${index} (SKU: ${item.sku}):`, {
                     item: {
                         sku: item.sku,
@@ -1055,22 +924,11 @@ const OrderTabs = ({ }) => {
                 });
             }
 
-            if (!product) {
-                return {
-                    ...item,
-                    productName: null,
-                    unitPrice: null,
-                    totalPrice: 0,
-                    status: false
-                };
-            }
-
             // Priority: Use SKU price from firebaseSkus if available, otherwise use product price
             let price = 0;
-            
+
             // First, try to get price from firebaseSkus (SKU-specific price takes priority)
             if (item.sku && firebaseSkus && firebaseSkus.length > 0) {
-                const skuItem = firebaseSkus.find(sku => sku.sku === item.sku);
                 console.log(`[enrichProductsWithPrices] Price lookup for SKU ${item.sku}:`, {
                     skuItemFound: !!skuItem,
                     skuItemPrice: skuItem?.price,
@@ -1078,7 +936,7 @@ const OrderTabs = ({ }) => {
                     firebaseSkusLength: firebaseSkus.length,
                     sampleSkus: firebaseSkus.slice(0, 3).map(s => ({ sku: s.sku, price: s.price }))
                 });
-                
+
                 if (skuItem && skuItem.price !== undefined && skuItem.price !== null) {
                     const skuPrice = parseFloat(skuItem.price);
                     if (!isNaN(skuPrice)) {
@@ -1101,9 +959,9 @@ const OrderTabs = ({ }) => {
                     firebaseSkusLength: firebaseSkus?.length || 0
                 });
             }
-            
+
             // If no SKU price found, fall back to product price
-            if (price === 0 && product.price !== undefined && product.price !== null) {
+            if (price === 0 && product && product.price !== undefined && product.price !== null) {
                 const productPrice = parseFloat(product.price);
                 if (!isNaN(productPrice)) {
                     price = productPrice;
@@ -1113,19 +971,25 @@ const OrderTabs = ({ }) => {
                 }
             } else if (price === 0) {
                 console.warn(`⚠️ [enrichProductsWithPrices] No price found for ${item.sku} - price will be 0`, {
-                    productPriceUndefined: product.price === undefined,
-                    productPriceNull: product.price === null,
-                    productPrice: product.price
+                    productPriceUndefined: !product || product.price === undefined,
+                    productPriceNull: !product || product.price === null,
+                    productPrice: product?.price
                 });
             }
-            
-            // Backend will calculate total price, we just pass unit price
+
+            // A SKU is considered complete only when it has an explicit SKU mapping
+            // with both base price and packaging price configured.
+            const hasSkuMapping = !!skuItem;
+            const hasBasePrice = price > 0;
+            const hasPackagingPrice = toSafeNumber(skuItem?.packagingPrice) > 0;
+            const isSkuComplete = hasSkuMapping && hasBasePrice && hasPackagingPrice;
             return {
                 ...item,
-                productName: product.productName || '',
+                productName: product?.productName || skuItem?.productName || '',
                 unitPrice: price,
-                price: price, // Unit price only - backend calculates total
-                status: true
+                price: price, // Base SKU price only (excluding packaging)
+                packagingPrice: toSafeNumber(skuItem?.packagingPrice),
+                status: isSkuComplete
             };
         });
 
@@ -1133,7 +997,7 @@ const OrderTabs = ({ }) => {
         const notFoundCount = results.filter(r => !r.status).length;
         const itemsWithPrice = results.filter(r => r.price > 0).length;
         const itemsWithZeroPrice = results.filter(r => r.price === 0).length;
-        
+
         console.log('📊 [enrichProductsWithPrices] Enrichment complete:', {
             total: results.length,
             found: foundCount,
@@ -1182,9 +1046,9 @@ const OrderTabs = ({ }) => {
                                 <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: theme.white, flex: 1, textAlign: 'center' }}>{AppStrings.total}</TextComp>
                             </View>
 
-                            <ScrollView 
-                                showsVerticalScrollIndicator={false} 
-                                contentContainerStyle={{ paddingBottom: 24 }} 
+                            <ScrollView
+                                showsVerticalScrollIndicator={false}
+                                contentContainerStyle={{ paddingBottom: 24 }}
                                 style={{ paddingVertical: 8, paddingHorizontal: 16, flex: 1 }}
                                 refreshControl={
                                     <RefreshControl
@@ -1204,11 +1068,11 @@ const OrderTabs = ({ }) => {
                                         <TextComp numberOfLines={1} size={12} style={{ fontFamily: FontFamilty.regular, color: item.status ? theme.textPrimary : theme.primaryOrange, textDecorationLine: item.status ? 'normal' : 'underline' }}>{item.sku}</TextComp>
 
                                     </TouchableOpacity>
-                                    <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: theme.textPrimary, flex: 1, textAlign: 'center' }}>{item.price}</TextComp>
+                                    <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: theme.textPrimary, flex: 1, textAlign: 'center' }}>{formatAmount(item.price)}</TextComp>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: theme.textPrimary, flex: 1, textAlign: 'center' }}>{item.quantity}</TextComp>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
                                         <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: theme.textSecondary, textAlign: 'right' }}>{'Rs '}</TextComp>
-                                        <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: theme.textPrimary, textAlign: 'right' }}>{item.totalPrice || item.price || 0}</TextComp>
+                                        <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: theme.textPrimary, textAlign: 'right' }}>{formatAmount(getNetItemTotal(item))}</TextComp>
                                     </View>
 
                                 </View>)}
@@ -1218,7 +1082,7 @@ const OrderTabs = ({ }) => {
                                 <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: theme.white, flex: 2, }}>{AppStrings.total}</TextComp>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: theme.white80, textAlign: 'right' }}>{'Rs '}</TextComp>
-                                    <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: theme.white, textAlign: 'right' }}>  {parseFloat(allOrdersTotal).toFixed(2)}</TextComp>
+                                    <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: theme.white, textAlign: 'right' }}>  {formatAmount(allOrdersTotal)}</TextComp>
                                 </View>
                             </View>
                         </View>
@@ -1242,9 +1106,9 @@ const OrderTabs = ({ }) => {
                                 <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: theme.white, flex: 1, textAlign: 'center' }}>{AppStrings.total}</TextComp>
                             </View>
 
-                            <ScrollView 
-                                showsVerticalScrollIndicator={false} 
-                                contentContainerStyle={{ paddingBottom: 24 }} 
+                            <ScrollView
+                                showsVerticalScrollIndicator={false}
+                                contentContainerStyle={{ paddingBottom: 24 }}
                                 style={{ paddingVertical: 8, paddingHorizontal: 16, flex: 1 }}
                                 refreshControl={
                                     <RefreshControl
@@ -1257,21 +1121,21 @@ const OrderTabs = ({ }) => {
                             >
                                 {finalShippedOrder && finalShippedOrder.length > 0 ? (
                                     finalShippedOrder.map((item, index) => <View style={{ flexDirection: 'row', alignItems: 'center' }} key={index}>
-                                    <TouchableOpacity style={{ flex: 2 }} activeOpacity={0.9} onPress={() => {
-                                        console.log(item);
+                                        <TouchableOpacity style={{ flex: 2 }} activeOpacity={0.9} onPress={() => {
+                                            console.log(item);
 
-                                        setmodalVisible(true)
-                                        setSelectedSku(item)
-                                    }}>
-                                        <TextComp numberOfLines={1} size={12} style={{ fontFamily: FontFamilty.regular, color: item.status ? theme.textPrimary : theme.primaryOrange, textDecorationLine: item.status ? 'normal' : 'underline' }}>{item.sku}</TextComp>
+                                            setmodalVisible(true)
+                                            setSelectedSku(item)
+                                        }}>
+                                            <TextComp numberOfLines={1} size={12} style={{ fontFamily: FontFamilty.regular, color: item.status ? theme.textPrimary : theme.primaryOrange, textDecorationLine: item.status ? 'normal' : 'underline' }}>{item.sku}</TextComp>
 
-                                    </TouchableOpacity>
-                                    <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: theme.textPrimary, flex: 1, textAlign: 'center' }}>{item.price}</TextComp>
-                                    <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: theme.textPrimary, flex: 1, textAlign: 'center' }}>{item.quantity}</TextComp>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
-                                        <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: theme.textSecondary, textAlign: 'right' }}>{'Rs '}</TextComp>
-                                        <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: theme.textPrimary, textAlign: 'right' }}>{item.totalPrice || item.price || 0}</TextComp>
-                                    </View>
+                                        </TouchableOpacity>
+                                        <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: theme.textPrimary, flex: 1, textAlign: 'center' }}>{formatAmount(item.price)}</TextComp>
+                                        <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: theme.textPrimary, flex: 1, textAlign: 'center' }}>{item.quantity}</TextComp>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
+                                            <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: theme.textSecondary, textAlign: 'right' }}>{'Rs '}</TextComp>
+                                            <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: theme.textPrimary, textAlign: 'right' }}>{formatAmount(getNetItemTotal(item))}</TextComp>
+                                        </View>
 
                                     </View>)
                                 ) : (
@@ -1292,7 +1156,7 @@ const OrderTabs = ({ }) => {
                                 <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: theme.white, flex: 2, }}>{AppStrings.total}</TextComp>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: theme.white80, textAlign: 'right' }}>{'Rs '}</TextComp>
-                                    <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: theme.white, textAlign: 'right' }}>{parseFloat(shippedOrdersTotal).toFixed(2)}</TextComp>
+                                    <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: theme.white, textAlign: 'right' }}>{formatAmount(shippedOrdersTotal)}</TextComp>
                                 </View>
                             </View>
                         </View>
@@ -1309,9 +1173,9 @@ const OrderTabs = ({ }) => {
                                 <TextComp size={16} style={{ fontFamily: FontFamilty.regular, color: theme.white, flex: 1, textAlign: 'center' }}>{AppStrings.total}</TextComp>
                             </View>
 
-                            <ScrollView 
-                                showsVerticalScrollIndicator={false} 
-                                contentContainerStyle={{ paddingBottom: 24 }} 
+                            <ScrollView
+                                showsVerticalScrollIndicator={false}
+                                contentContainerStyle={{ paddingBottom: 24 }}
                                 style={{ paddingVertical: 8, paddingHorizontal: 16, flex: 1 }}
                                 refreshControl={
                                     <RefreshControl
@@ -1332,11 +1196,11 @@ const OrderTabs = ({ }) => {
                                         <TextComp numberOfLines={1} size={12} style={{ fontFamily: FontFamilty.regular, color: item.status ? theme.textPrimary : theme.primaryOrange, textDecorationLine: item.status ? 'normal' : 'underline' }}>{item.sku}</TextComp>
 
                                     </TouchableOpacity>
-                                    <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: theme.textPrimary, flex: 1, textAlign: 'center' }}>{item.price}</TextComp>
+                                    <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: theme.textPrimary, flex: 1, textAlign: 'center' }}>{formatAmount(item.price)}</TextComp>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: theme.textPrimary, flex: 1, textAlign: 'center' }}>{item.quantity}</TextComp>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
                                         <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: theme.textSecondary, textAlign: 'right' }}>{'Rs '}</TextComp>
-                                        <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: theme.textPrimary, textAlign: 'right' }}>{item.totalPrice || item.price || 0}</TextComp>
+                                        <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: theme.textPrimary, textAlign: 'right' }}>{formatAmount(getNetItemTotal(item))}</TextComp>
                                     </View>
 
                                 </View>)}
@@ -1346,17 +1210,21 @@ const OrderTabs = ({ }) => {
                                 <TextComp numberOfLines={1} size={16} style={{ fontFamily: FontFamilty.regular, color: theme.white, flex: 2, }}>{AppStrings.total}</TextComp>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
                                     <TextComp size={12} style={{ fontFamily: FontFamilty.regular, color: theme.white80, textAlign: 'right' }}>{'Rs '}</TextComp>
-                                    <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: theme.white, textAlign: 'right' }}>{parseFloat(failedOrdersTotal).toFixed(2)}</TextComp>
+                                    <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: theme.white, textAlign: 'right' }}>{formatAmount(failedOrdersTotal)}</TextComp>
                                 </View>
                             </View>
                         </View>
                     )}
 
-                   
+
                 </View>}
 
             {modalVisible && (
-                <SkuLinking setIsvisible={setmodalVisible} selectedSku={selectedSku} />
+                <SkuLinking
+                    setIsvisible={setmodalVisible}
+                    selectedSku={selectedSku}
+                    onSuccess={handleSkuUpdated}
+                />
             )}
 
         </View>
@@ -1375,5 +1243,3 @@ const styles = StyleSheet.create({
 });
 
 export default OrderTabs;
-
-

@@ -58,7 +58,6 @@ export const packAndRtsOrders = async (
             shipping_allocate_type: "TFS"
         };
 
-        console.log('Sending pack and RTS request:', requestBody);
 
         const response = await fetch(`${BASE_URL}/make-order-pack-and-rts?access_token=${order_access_token}`, {
             method: 'POST',
@@ -74,12 +73,10 @@ export const packAndRtsOrders = async (
 
         const data: PackAndRtsResponse = await response.json();
 
-        console.log('Pack and RTS response:', data);
 
         return data;
 
     } catch (error: any) {
-        console.error('Error in packAndRtsOrders:', error.message);
         return {
             success: false,
             message: error.message,
@@ -94,17 +91,17 @@ export const packAndRtsOrders = async (
 export const prepareOrderData = (orderItems: any[], accessToken: string): OrderItem[] => {
     // Group order items by order_id
     const orderGroups: { [key: number]: number[] } = {};
-    
+
     orderItems.forEach(item => {
         const orderId = parseInt(item.order_id);
         const orderItemId = parseInt(item.order_item_id);
-        
+
         if (!orderGroups[orderId]) {
             orderGroups[orderId] = [];
         }
         orderGroups[orderId].push(orderItemId);
     });
-    
+
     // Convert to the required format
     return Object.keys(orderGroups).map(orderId => ({
         order_id: parseInt(orderId),

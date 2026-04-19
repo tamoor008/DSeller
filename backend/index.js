@@ -18,6 +18,8 @@ const darazOrdersRoutes = require("./routes/daraz-orders.routes");
 const darazFinanceRoutes = require("./routes/daraz-finance.routes");
 const storesRoutes = require("./routes/stores.routes");
 const personalInfoRoutes = require("./routes/personal-info.routes");
+const darazProductsRoutes = require("./routes/daraz-products.routes");
+const darazReviewsRoutes = require("./routes/daraz-reviews.routes");
 
 // Initialize Firebase
 initializeFirebase();
@@ -43,26 +45,26 @@ app.use((req, res, next) => {
   // Get host header to see what the client thinks the server is
   const hostHeader = req.get('host') || 'unknown';
 
-  console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log(`📥 [${timestamp}] ${req.method} ${req.url}`);
-  console.log(`📍 [REQUEST] Client IP: ${clientIP}`);
-  console.log(`📍 [REQUEST] Host header: ${hostHeader}`);
-  console.log(`📍 [REQUEST] User-Agent: ${req.get('user-agent') || 'N/A'}`);
-  console.log(`📋 [REQUEST] Query params:`, req.query);
-  console.log(`📋 [REQUEST] Body keys:`, req.body ? Object.keys(req.body) : 'none');
-  console.log(`📋 [REQUEST] Params:`, req.params);
-  console.log(`⏱️ [REQUEST] Request received at: ${new Date().toISOString()}`);
+  // console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  // console.log(`📥 [${timestamp}] ${req.method} ${req.url}`);
+  // console.log(`📍 [REQUEST] Client IP: ${clientIP}`);
+  // console.log(`📍 [REQUEST] Host header: ${hostHeader}`);
+  // console.log(`📍 [REQUEST] User-Agent: ${req.get('user-agent') || 'N/A'}`);
+  // console.log(`📋 [REQUEST] Query params:`, req.query);
+  // console.log(`📋 [REQUEST] Body keys:`, req.body ? Object.keys(req.body) : 'none');
+  // console.log(`📋 [REQUEST] Params:`, req.params);
+  // console.log(`⏱️ [REQUEST] Request received at: ${new Date().toISOString()}`);
 
   // Log response when it finishes
   const originalSend = res.send;
   res.send = function (data) {
     const duration = Date.now() - startTime;
-    console.log(`📤 [RESPONSE] ${req.method} ${req.url} - Status: ${res.statusCode} - Duration: ${duration}ms`);
-    console.log(`⏱️ [RESPONSE] Response sent at: ${new Date().toISOString()}`);
+    // console.log(`📤 [RESPONSE] ${req.method} ${req.url} - Status: ${res.statusCode} - Duration: ${duration}ms`);
+    // console.log(`⏱️ [RESPONSE] Response sent at: ${new Date().toISOString()}`);
     if (duration > 1000) {
-      console.warn(`⚠️ [PERFORMANCE] Slow request detected: ${duration}ms for ${req.method} ${req.url}`);
+      // console.warn(`⚠️ [PERFORMANCE] Slow request detected: ${duration}ms for ${req.method} ${req.url}`);
     }
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    // console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
     return originalSend.call(this, data);
   };
 
@@ -72,7 +74,7 @@ app.use((req, res, next) => {
 // Swagger setup
 const swaggerSpec = swaggerJsdoc({
   definition: swaggerDefinition,
-  apis: [],
+  apis: ["./routes/*.js"],
 });
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
@@ -89,6 +91,8 @@ app.use("/", practitionersRoutes);
 app.use("/", darazAuthRoutes);
 app.use("/", darazOrdersRoutes);
 app.use("/", darazFinanceRoutes);
+app.use("/api/daraz-products", darazProductsRoutes);
+app.use("/api/daraz-reviews", darazReviewsRoutes);
 
 // 404 handler - must be after all routes
 app.use(notFoundHandler);
@@ -133,17 +137,17 @@ app.listen(PORT, '0.0.0.0', async () => {
 
   const baseUrl = `http://${localIP}:${PORT}`;
 
-  console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log(`🚀 Backend server is running on port ${PORT}`);
-  console.log(`📡 API available at http://localhost:${PORT}`);
-  console.log(`📱 API available on local network at ${baseUrl}`);
-  console.log(`📚 API docs available at http://localhost:${PORT}/docs`);
-  console.log(`🔍 Test endpoint: ${baseUrl}/test`);
-  console.log(`🏪 Stores endpoint: ${baseUrl}/api/stores/:userId`);
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log(`🌐 [NETWORK INFO] Detected local IP: ${localIP}`);
-  console.log(`🌐 [NETWORK INFO] Server bound to: 0.0.0.0:${PORT} (all interfaces)`);
-  console.log(`🌐 [NETWORK INFO] Make sure mobile app uses: ${baseUrl}`);
+  // console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  // console.log(`🚀 Backend server is running on port ${PORT}`);
+  // console.log(`📡 API available at http://localhost:${PORT}`);
+  // console.log(`📱 API available on local network at ${baseUrl}`);
+  // console.log(`📚 API docs available at http://localhost:${PORT}/docs`);
+  // console.log(`🔍 Test endpoint: ${baseUrl}/test`);
+  // console.log(`🏪 Stores endpoint: ${baseUrl}/api/stores/:userId`);
+  // console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  // console.log(`🌐 [NETWORK INFO] Detected local IP: ${localIP}`);
+  // console.log(`🌐 [NETWORK INFO] Server bound to: 0.0.0.0:${PORT} (all interfaces)`);
+  // console.log(`🌐 [NETWORK INFO] Make sure mobile app uses: ${baseUrl}`);
 
   // Update Firebase Base_URL
   try {
@@ -176,8 +180,8 @@ app.listen(PORT, '0.0.0.0', async () => {
     console.error(`❌ [FIREBASE] Unexpected error during update:`, error.message);
   }
 
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-  console.log('⏳ Waiting for requests...\n');
-  console.log(`💡 For iPhone testing, use: ${baseUrl}\n`);
+  // console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+  // console.log('⏳ Waiting for requests...\n');
+  // console.log(`💡 For iPhone testing, use: ${baseUrl}\n`);
 });
 

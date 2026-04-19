@@ -7,20 +7,17 @@ export const TokenRefreshService = {
      */
     refreshAllStores: async (userId: string) => {
         const BASE_URL = getBaseUrl();
-        console.log('🔄 [TOKEN REFRESH] Starting refresh for user:', userId);
 
         try {
             // 1. Fetch all stores
             const response = await fetch(`${BASE_URL}/api/stores/${userId}`);
 
             if (!response.ok) {
-                console.error('❌ [TOKEN REFRESH] Failed to fetch stores:', response.status);
                 return;
             }
 
             const result = await response.json();
             const stores = result.data || [];
-            console.log(`📊 [TOKEN REFRESH] Found ${stores.length} stores to check`);
 
             // 2. Iterate and refresh each store
             // We use Promise.all to do it in parallel, or for loop for serial
@@ -29,9 +26,7 @@ export const TokenRefreshService = {
                 await refreshStoreToken(store, userId, BASE_URL);
             }
 
-            console.log('✅ [TOKEN REFRESH] All stores processed');
         } catch (error) {
-            console.error('❌ [TOKEN REFRESH] Error during refresh process:', error);
         }
     }
 };
@@ -44,11 +39,9 @@ async function refreshStoreToken(store: any, userId: string, baseUrl: string) {
     const refreshToken = store.user?.token?.refresh_token;
 
     if (!storeId || !refreshToken) {
-        console.log(`⚠️ [TOKEN REFRESH] Skipping store ${storeId || 'unknown'} - missing ID or refresh token`);
         return;
     }
 
-    console.log(`🔄 [TOKEN REFRESH] Refreshing token for store ${storeId}...`);
 
     try {
         const response = await fetch(`${baseUrl}/auth/token/refresh`, {
@@ -64,17 +57,14 @@ async function refreshStoreToken(store: any, userId: string, baseUrl: string) {
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`❌ [TOKEN REFRESH] Failed for store ${storeId}: ${response.status} - ${errorText}`);
+            await response.text();
             return;
         }
 
-        const data = await response.json();
-        console.log(`✅ [TOKEN REFRESH] Successfully refreshed token for store ${storeId}`);
+        await response.json();
 
         // Note: We don't need to update local state here because the backend 
         // updates Firebase, and the app listens to Firebase (or re-fetches)
     } catch (error) {
-        console.error(`❌ [TOKEN REFRESH] Exception for store ${storeId}:`, error);
     }
 }

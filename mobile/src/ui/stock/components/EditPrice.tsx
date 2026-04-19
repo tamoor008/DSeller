@@ -45,20 +45,16 @@ const EditPrice = ({ setIsvisible, product }) => {
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                console.error('Error updating price:', errorData.error || 'Unknown error');
                 return;
             }
 
             const result = await response.json();
             if (result.error) {
-                console.error('API returned error:', result.error);
                 return;
             }
 
-            console.log('Price updated successfully:', result.data);
             setIsvisible(false);
         } catch (error: any) {
-            console.error('Error updating price:', error.message);
         }
     }
 
@@ -73,23 +69,23 @@ const EditPrice = ({ setIsvisible, product }) => {
                     <View style={{ backgroundColor: AppColors.white, padding: 16, borderRadius: 16, rowGap: 16 }}>
                         <TextComp size={16} style={{ fontFamily: FontFamilty.semibold }}>{AppStrings.editprice}</TextComp>
                         <TextComp size={14} style={{ fontFamily: FontFamilty.regular, color: AppColors.black80 }}>{product.productName}</TextComp>
-                        <TextInputComp 
-                            keyboardType={'numeric'} 
-                            cumpolsury={true} 
-                            size={16} 
-                            placeHolder={`${AppStrings.price} / ${product.unit || 'unit'}`} 
-                            text={price} 
-                            setText={setPrice} 
+                        <TextInputComp
+                            keyboardType={'numeric'}
+                            cumpolsury={true}
+                            size={16}
+                            placeHolder={`${AppStrings.price} / ${product.unit || 'unit'}`}
+                            text={price}
+                            setText={setPrice}
                         />
                         <View style={{ flexDirection: 'row', alignItems: 'center', columnGap: 16 }}>
                             <TouchableOpacity onPress={() => setIsvisible(false)} activeOpacity={0.9} style={{ flex: 1, height: 50, alignItems: 'center', justifyContent: 'center', borderRadius: 4 }}>
                                 <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: AppColors.black80, textAlign: 'center' }}>{AppStrings.cancel}</TextComp>
                             </TouchableOpacity>
 
-                            <TouchableOpacity 
-                                onPress={updatePrice} 
-                                disabled={!isFormValid} 
-                                activeOpacity={0.9} 
+                            <TouchableOpacity
+                                onPress={updatePrice}
+                                disabled={!isFormValid}
+                                activeOpacity={0.9}
                                 style={{ flex: 1, backgroundColor: isFormValid ? AppColors.primaryOrange : AppColors.black, height: 50, alignItems: 'center', justifyContent: 'center', borderRadius: 4 }}
                             >
                                 <TextComp size={16} style={{ fontFamily: FontFamilty.semibold, color: AppColors.white, textAlign: 'center' }}>{AppStrings.save}</TextComp>

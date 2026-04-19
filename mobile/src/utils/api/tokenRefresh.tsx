@@ -12,7 +12,7 @@ export const refreshStoreToken = async (sellerId: string | any): Promise<string 
     if (typeof sellerId === 'object' && sellerId !== null) {
         return refreshStoreTokenWithRefreshToken(sellerId);
     }
-    
+
     // Otherwise, create a storeInfo object with just seller_id
     return refreshStoreTokenWithRefreshToken({ seller_id: sellerId });
 };
@@ -40,13 +40,13 @@ export const isTokenExpired = (response: Response): boolean => {
  */
 export const getSellerIdFromStore = (store: any): string | null => {
     if (!store) return null;
-    
+
     // Try different possible paths for seller ID
-    return store.user?.seller?.data?.short_code || 
-           store.user?.seller?.data?.seller_id ||
-           store.seller_id ||
-           store.id ||
-           null;
+    return store.user?.seller?.data?.short_code ||
+        store.user?.seller?.data?.seller_id ||
+        store.seller_id ||
+        store.id ||
+        null;
 };
 
 /**
@@ -56,12 +56,12 @@ export const getSellerIdFromStore = (store: any): string | null => {
  */
 export const getAccessTokenFromStore = (store: any): string | null => {
     if (!store) return null;
-    
+
     // Try different possible paths for access token
     return store.user?.token?.access_token ||
-           store.token?.access_token ||
-           store.access_token ||
-           null;
+        store.token?.access_token ||
+        store.access_token ||
+        null;
 };
 
 /**
@@ -71,12 +71,12 @@ export const getAccessTokenFromStore = (store: any): string | null => {
  */
 export const getRefreshTokenFromStore = (store: any): string | null => {
     if (!store) return null;
-    
+
     // Try different possible paths for refresh token
     return store.user?.token?.refresh_token ||
-           store.token?.refresh_token ||
-           store.refresh_token ||
-           null;
+        store.token?.refresh_token ||
+        store.refresh_token ||
+        null;
 };
 
 /**
@@ -86,15 +86,15 @@ export const getRefreshTokenFromStore = (store: any): string | null => {
  */
 export const isTokenExpiredByTime = (storeInfo: any): boolean => {
     if (!storeInfo) return false;
-    
+
     // If we have expires_in (seconds until expiration), calculate expiration time
     const expiresIn = storeInfo.expires_in || storeInfo.store?.user?.token?.expires_in || storeInfo.store?.token?.expires_in;
-    
+
     if (expiresIn) {
         // If we have token creation time, use it; otherwise assume token was just created
         const tokenCreatedAt = storeInfo.token_created_at || storeInfo.store?.token_created_at;
         const now = Math.floor(Date.now() / 1000); // Current time in seconds
-        
+
         if (tokenCreatedAt) {
             const expirationTime = tokenCreatedAt + expiresIn;
             const timeUntilExpiration = expirationTime - now;
@@ -102,7 +102,7 @@ export const isTokenExpiredByTime = (storeInfo: any): boolean => {
             return timeUntilExpiration < 3600;
         }
     }
-    
+
     // If we don't have expiration info, return false (assume not expired)
     return false;
 };
@@ -116,47 +116,39 @@ export const refreshStoreTokenWithRefreshToken = async (storeInfo: any): Promise
     try {
         const BASE_URL = getBaseUrl();
         const currentUser = auth.currentUser;
-        
+
         if (!currentUser) {
-            console.warn('⚠️ [TOKEN REFRESH] No authenticated user');
             return null;
         }
 
         // Extract seller ID and refresh token
-        const sellerId = storeInfo?.seller_id || 
-                        storeInfo?.store?.user?.seller?.data?.short_code ||
-                        storeInfo?.store?.user?.seller?.data?.seller_id ||
-                        storeInfo?.store?.seller_id ||
-                        getSellerIdFromStore(storeInfo?.store) ||
-                        getSellerIdFromStore(storeInfo);
-        
+        const sellerId = storeInfo?.seller_id ||
+            storeInfo?.store?.user?.seller?.data?.short_code ||
+            storeInfo?.store?.user?.seller?.data?.seller_id ||
+            storeInfo?.store?.seller_id ||
+            getSellerIdFromStore(storeInfo?.store) ||
+            getSellerIdFromStore(storeInfo);
+
         // Extract refresh token - check multiple possible paths
         const refreshToken = storeInfo?.refresh_token ||
-                            storeInfo?.store?.user?.token?.refresh_token ||
-                            storeInfo?.store?.token?.refresh_token ||
-                            getRefreshTokenFromStore(storeInfo?.store) ||
-                            getRefreshTokenFromStore(storeInfo);
+            storeInfo?.store?.user?.token?.refresh_token ||
+            storeInfo?.store?.token?.refresh_token ||
+            getRefreshTokenFromStore(storeInfo?.store) ||
+            getRefreshTokenFromStore(storeInfo);
 
         if (!sellerId) {
-            console.warn('⚠️ [TOKEN REFRESH] No seller ID found');
             return null;
         }
 
         const storeName = storeInfo?.storeName || storeInfo?.name || 'Unknown Store';
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log(`🔄 [TOKEN REFRESH - ${storeName}] Starting token refresh`);
-        console.log(`🆔 [TOKEN REFRESH - ${storeName}] Seller ID: ${sellerId}`);
-        console.log(`🔑 [TOKEN REFRESH - ${storeName}] Has refresh token: ${!!refreshToken}`);
 
         // Build request body with refresh token if available
         const requestBody: any = {};
         if (refreshToken) {
             requestBody.refresh_token = refreshToken;
-            console.log(`🔑 [TOKEN REFRESH - ${storeName}] Using refresh token for refresh`);
         }
 
         const url = `${BASE_URL}/api/stores/${currentUser.uid}/${sellerId}/refresh-token`;
-        console.log(`📍 [TOKEN REFRESH - ${storeName}] URL: ${url}`);
 
         const response = await fetch(url, {
             method: 'POST',
@@ -166,42 +158,31 @@ export const refreshStoreTokenWithRefreshToken = async (storeInfo: any): Promise
             body: Object.keys(requestBody).length > 0 ? JSON.stringify(requestBody) : undefined,
         });
 
-        console.log(`📥 [TOKEN REFRESH - ${storeName}] Response status: ${response.status} ${response.statusText}`);
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            console.warn(`⚠️ [TOKEN REFRESH - ${storeName}] Failed to refresh token:`, response.status, errorData);
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             return null;
         }
 
         const result = await response.json();
-        
+
         if (result.error) {
-            console.warn(`⚠️ [TOKEN REFRESH - ${storeName}] Error from server:`, result.error);
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             return null;
         }
 
         const newAccessToken = result.data?.access_token || result.access_token;
         const newRefreshToken = result.data?.refresh_token || result.refresh_token;
-        
+
         if (newAccessToken) {
-            console.log(`✅ [TOKEN REFRESH - ${storeName}] Token refreshed successfully`);
             if (newRefreshToken) {
-                console.log(`✅ [TOKEN REFRESH - ${storeName}] New refresh token received`);
             }
             console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             return newAccessToken;
         }
 
-        console.warn(`⚠️ [TOKEN REFRESH - ${storeName}] No access token in response`);
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         return null;
     } catch (error) {
         const storeName = storeInfo?.storeName || storeInfo?.name || 'Unknown Store';
-        console.error(`❌ [TOKEN REFRESH - ${storeName}] Exception:`, error);
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         return null;
     }
 };
@@ -226,9 +207,9 @@ export const checkResponseForTokenExpiration = async (response: Response): Promi
         if (contentType && contentType.includes('application/json')) {
             const data = await clonedResponse.json();
             const errorMessage = (data.error || data.message || '').toLowerCase();
-            
+
             // Check for common token expiration messages
-            if (errorMessage.includes('expired') || 
+            if (errorMessage.includes('expired') ||
                 errorMessage.includes('invalid token') ||
                 errorMessage.includes('unauthorized') ||
                 (errorMessage.includes('token') && errorMessage.includes('invalid'))) {

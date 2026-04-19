@@ -8,6 +8,7 @@ const BottomNav = () => {
 
   const tabs = [
     { path: '/', label: 'Home', icon: 'home' },
+    { path: '/reviews', label: 'Reviews', icon: 'star' },
     { path: '/profit-calculator', label: 'Calculator', icon: 'calculator' },
   ]
 
@@ -82,6 +83,8 @@ const BottomNav = () => {
                 <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
               ) : tab.icon === 'calculator' ? (
                 <path d="M4 2h16a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm3 4v2h2V6H7zm0 4v2h2v-2H7zm0 4v2h2v-2H7zm4-8v2h8V6h-8zm0 4v2h8v-2h-8zm0 4v2h8v-2h-8z" />
+              ) : tab.icon === 'star' ? (
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
               ) : (
                 <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
               )}

@@ -25,6 +25,14 @@ const swaggerDefinition = {
       description: "Daraz order details endpoints for fetching order items",
     },
     {
+      name: "Daraz Products",
+      description: "Daraz product listing endpoints for connected stores",
+    },
+    {
+      name: "Daraz Reviews",
+      description: "Daraz review retrieval and seller reply endpoints",
+    },
+    {
       name: "Finance",
       description: "Financial endpoints for payout status and transaction details",
     },
@@ -129,4 +137,3 @@ const swaggerDefinition = {
 };
 
 module.exports = swaggerDefinition;
-

@@ -31,7 +31,6 @@ const AddNewItem = ({ setIsvisible }) => {
     const addItem = async () => {
         if (!currentUser) return;
 
-        console.log('ADD ITEM');
 
         try {
             const response = await fetch(`${BASE_URL}/api/products/${currentUser.uid}`, {
@@ -50,24 +49,20 @@ const AddNewItem = ({ setIsvisible }) => {
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                console.error('Error adding product:', errorData.error || 'Unknown error');
                 return;
             }
 
             const result = await response.json();
             if (result.error) {
-                console.error('API returned error:', result.error);
                 return;
             }
 
-            console.log('Product added successfully:', result.data);
             setProductName('')
             setProductDescription('')
             setQuantity('')
             setPrice('')
             setValue(null)
         } catch (error: any) {
-            console.error('Error adding product:', error.message);
         }
     }
 
@@ -100,7 +95,7 @@ const AddNewItem = ({ setIsvisible }) => {
                             </TouchableOpacity>
                         </View>
                         <TextInputComp cumpolsury={true} size={16} placeHolder={AppStrings.productname} text={productName} setText={setProductName} />
-                        <DropDownPicker 
+                        <DropDownPicker
                             placeholder={'Select Measuring Unit'}
                             open={open}
                             value={value}

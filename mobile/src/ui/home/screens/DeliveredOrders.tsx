@@ -57,9 +57,9 @@ const DeliveredOrders = ({ navigation }) => {
     useEffect(() => {
         let newTokens = [];
 
-        if (selector.selectedStore?.id) {
-            const access_token = selector.selectedStore.user?.token?.access_token;
-            const name = selector.selectedStore?.user.seller.data.name;
+        if (selector?.selectedStore?.id) {
+            const access_token = selector?.selectedStore?.user?.token?.access_token;
+            const name = selector?.selectedStore?.user?.seller?.data?.name;
 
             newTokens = [{
                 access_token: access_token || null,
@@ -67,10 +67,10 @@ const DeliveredOrders = ({ navigation }) => {
             }];
         } else {
             // Filter out stores without valid access tokens
-            newTokens = Array.isArray(selector.access_tokens) 
-                ? selector.access_tokens.filter((token: any) => 
+            newTokens = Array.isArray(selector?.access_tokens)
+                ? selector?.access_tokens.filter((token: any) =>
                     token && token.access_token && token.access_token.trim() !== ''
-                  )
+                )
                 : [];
         }
 
@@ -85,7 +85,7 @@ const DeliveredOrders = ({ navigation }) => {
 
     const { firebaseSkus = [] } = route.params || {};
 
-    const handleProfitCalculated = (orderItemId, profit,amount) => {
+    const handleProfitCalculated = (orderItemId, profit, amount) => {
         if (processedItemIds.has(orderItemId)) return;
 
         setProcessedItemIds(prevSet => {
@@ -113,7 +113,7 @@ const DeliveredOrders = ({ navigation }) => {
                     item={orderItem}
                     firebaseSkus={firebaseSkus}
                     selector={selector}
-                    onProfitCalculated={(profit,amount) => handleProfitCalculated(orderItem.order_item_id, profit,amount)}
+                    onProfitCalculated={(profit, amount) => handleProfitCalculated(orderItem.order_item_id, profit, amount)}
 
                 />
             ))}
@@ -147,31 +147,39 @@ const DeliveredOrders = ({ navigation }) => {
 
             const data = await response.json();
 
-            if (!data?.orderItems?.length) return;
+            // Important: Attach the access_token to each order and its items
+            const enrichedOrders = data.orderItems.map((order: any) => ({
+                ...order,
+                access_token: access_token,
+                order_items: (order.order_items || []).map((item: any) => ({
+                    ...item,
+                    access_token: access_token
+                }))
+            }));
 
             if (selectedRange === 'today') {
-                setDarazDeliveredOrders(prev => [...prev, ...data.orderItems]);
-                setDarazDeliveredOrdersCount(prev => prev + data.orderItems.length);
+                setDarazDeliveredOrders(prev => [...prev, ...enrichedOrders]);
+                setDarazDeliveredOrdersCount(prev => prev + enrichedOrders.length);
             }
             else if (selectedRange === 'yesterday') {
-                setDarazDeliveredOrdersYesterday(prev => [...prev, ...data.orderItems]);
-                setDarazDeliveredOrdersYesterdayCount(prev => prev + data.orderItems.length);
+                setDarazDeliveredOrdersYesterday(prev => [...prev, ...enrichedOrders]);
+                setDarazDeliveredOrdersYesterdayCount(prev => prev + enrichedOrders.length);
             }
             else if (selectedRange === '7days') {
-                setDarazDeliveredOrdersSevenDays(prev => [...prev, ...data.orderItems]);
-                setDarazDeliveredOrdersSevenDaysCount(prev => prev + data.orderItems.length);
+                setDarazDeliveredOrdersSevenDays(prev => [...prev, ...enrichedOrders]);
+                setDarazDeliveredOrdersSevenDaysCount(prev => prev + enrichedOrders.length);
             }
             else if (selectedRange === '30days') {
-                setDarazDeliveredOrdersThirtyDays(prev => [...prev, ...data.orderItems]);
-                setDarazDeliveredOrdersThirtyDaysCount(prev => prev + data.orderItems.length);
+                setDarazDeliveredOrdersThirtyDays(prev => [...prev, ...enrichedOrders]);
+                setDarazDeliveredOrdersThirtyDaysCount(prev => prev + enrichedOrders.length);
             }
             else if (selectedRange === 'By Week') {
-                setDarazDeliveredOrdersByWeek(prev => [...prev, ...data.orderItems]);
-                setDarazDeliveredOrdersByWeekCount(prev => prev + data.orderItems.length);
+                setDarazDeliveredOrdersByWeek(prev => [...prev, ...enrichedOrders]);
+                setDarazDeliveredOrdersByWeekCount(prev => prev + enrichedOrders.length);
             }
             else if (selectedRange === 'custom') {
-                setDarazDeliveredOrdersCustom(prev => [...prev, ...data.orderItems]);
-                setDarazDeliveredOrdersCustomCount(prev => prev + data.orderItems.length);
+                setDarazDeliveredOrdersCustom(prev => [...prev, ...enrichedOrders]);
+                setDarazDeliveredOrdersCustomCount(prev => prev + enrichedOrders.length);
             }
 
         } catch (error) {
@@ -179,7 +187,7 @@ const DeliveredOrders = ({ navigation }) => {
         }
     };
 
-    
+
 
 
     useEffect(() => {
@@ -277,7 +285,7 @@ const DeliveredOrders = ({ navigation }) => {
 
             if (Array.isArray(all_access_tokens)) {
                 // Filter out invalid access tokens before making requests
-                const validTokens = all_access_tokens.filter(item => 
+                const validTokens = all_access_tokens.filter(item =>
                     item && item.access_token && item.access_token.trim() !== ''
                 );
                 requests = validTokens.flatMap(item => [
@@ -301,7 +309,7 @@ const DeliveredOrders = ({ navigation }) => {
         };
 
         fetchOrders();
-    }, [selectedRange, customDate, startWeek]);
+    }, [selectedRange, customDate, startWeek, endWeek, all_access_tokens]);
 
     const onRefresh = async () => {
         setRefreshing(true);
@@ -377,7 +385,7 @@ const DeliveredOrders = ({ navigation }) => {
             // Fetch fresh data
             if (all_access_tokens && Array.isArray(all_access_tokens) && all_access_tokens.length > 0) {
                 // Filter out invalid access tokens before making requests
-                const validTokens = all_access_tokens.filter((item: any) => 
+                const validTokens = all_access_tokens.filter((item: any) =>
                     item && item.access_token && item.access_token.trim() !== ''
                 );
                 const requests = validTokens.flatMap((item: any) => {
@@ -386,7 +394,7 @@ const DeliveredOrders = ({ navigation }) => {
                     }
                     return [];
                 });
-                
+
                 if (requests.length > 0) {
                     await Promise.all(requests);
                 }
@@ -479,7 +487,7 @@ const DeliveredOrders = ({ navigation }) => {
                         <ActivityIndicator size={'large'} color={theme.primaryOrange}></ActivityIndicator>
                     </View>
                     :
-                    <ScrollView 
+                    <ScrollView
                         showsVerticalScrollIndicator={false}
                         refreshControl={
                             <RefreshControl

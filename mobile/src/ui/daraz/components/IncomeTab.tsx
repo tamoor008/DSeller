@@ -73,13 +73,11 @@ const IncomeTab = ({ }) => {
 
 
     } catch (error) {
-      console.error("Error fetching Daraz orders:", error.message);
       return null;
     }
   };
 
   useEffect(() => {
-    console.log(all_access_tokens);
 
     setLoader(true)
     if (!all_access_tokens || (Array.isArray(all_access_tokens) && all_access_tokens.length === 0)) return;
@@ -94,7 +92,7 @@ const IncomeTab = ({ }) => {
 
       if (Array.isArray(all_access_tokens)) {
         // Filter out invalid access tokens before making requests
-        const validTokens = all_access_tokens.filter(item => 
+        const validTokens = all_access_tokens.filter(item =>
           item && item.access_token && item.access_token.trim() !== ''
         );
         requests = validTokens.flatMap(item => [
@@ -105,13 +103,11 @@ const IncomeTab = ({ }) => {
           getDarazIncome(all_access_tokens.access_token, all_access_tokens.name, createdAfter),
         ];
       } else {
-        console.log('⚠️ [INCOME TAB] No valid access tokens available');
       }
 
       try {
         await Promise.all(requests); // Wait for all async tasks to complete
       } catch (error) {
-        console.error('Error while fetching income:', error);
       } finally {
         setLoader(false);
         // allOrder.map((item,index)=>console.log(item.sku))
@@ -138,13 +134,12 @@ const IncomeTab = ({ }) => {
       }
     } else {
       // Filter out stores without valid access tokens
-      newTokens = Array.isArray(selector.access_tokens) 
-        ? selector.access_tokens.filter((token: any) => 
-            token && token.access_token && token.access_token.trim() !== ''
-          )
+      newTokens = Array.isArray(selector.access_tokens)
+        ? selector.access_tokens.filter((token: any) =>
+          token && token.access_token && token.access_token.trim() !== ''
+        )
         : [];
     }
-    console.log(newTokens, 'newTokens');
 
 
     // Only update state if value has changed
@@ -210,7 +205,7 @@ const IncomeTab = ({ }) => {
                     </View>
                   </View>
 
-               
+
                   {index < income.length - 1 && (
                     <View style={{ height: 1, backgroundColor: AppColors.black25 }} />
                   )}

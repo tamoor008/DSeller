@@ -8,21 +8,21 @@ const { isFirebaseInitialized } = require("../config/firebase");
 async function getSkus(req, res, next) {
   const startTime = Date.now();
   const { userId } = req.params;
-  
-  console.log('📥 [BACKEND - GET SKUS] Request received');
-  console.log('📥 [BACKEND - GET SKUS] User ID:', userId);
-  console.log('📥 [BACKEND - GET SKUS] Request URL:', req.originalUrl);
-  console.log('📥 [BACKEND - GET SKUS] Request method:', req.method);
-  console.log('📥 [BACKEND - GET SKUS] Request headers:', {
-    'content-type': req.headers['content-type'],
-    'user-agent': req.headers['user-agent'],
-    'host': req.headers['host']
-  });
-  
+
+  // console.log('📥 [BACKEND - GET SKUS] Request received');
+  // console.log('📥 [BACKEND - GET SKUS] User ID:', userId);
+  // console.log('📥 [BACKEND - GET SKUS] Request URL:', req.originalUrl);
+  // console.log('📥 [BACKEND - GET SKUS] Request method:', req.method);
+  // console.log('📥 [BACKEND - GET SKUS] Request headers:', {
+  //   'content-type': req.headers['content-type'],
+  //   'user-agent': req.headers['user-agent'],
+  //   'host': req.headers['host']
+  // });
+
   try {
     if (!userId) {
       console.warn('⚠️ [BACKEND - GET SKUS] Missing userId');
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: "Missing userId",
         message: "User ID is required",
         statusCode: 400
@@ -31,25 +31,25 @@ async function getSkus(req, res, next) {
 
     if (!isFirebaseInitialized()) {
       console.error('❌ [BACKEND - GET SKUS] Firebase Admin not initialized');
-      return res.status(500).json({ 
+      return res.status(500).json({
         error: "Firebase Admin not initialized",
         message: "Please configure Firebase Admin credentials",
         statusCode: 500
       });
     }
 
-    console.log('🔄 [BACKEND - GET SKUS] Fetching SKUs from Firebase...');
+    // console.log('🔄 [BACKEND - GET SKUS] Fetching SKUs from Firebase...');
     const skus = await getUserSkus(userId);
-    
+
     const duration = Date.now() - startTime;
-    console.log('✅ [BACKEND - GET SKUS] SKUs fetched successfully');
-    console.log('📊 [BACKEND - GET SKUS] SKUs count:', skus.length);
-    console.log('⏱️ [BACKEND - GET SKUS] Duration:', duration, 'ms');
-    
+    // console.log('✅ [BACKEND - GET SKUS] SKUs fetched successfully');
+    // console.log('📊 [BACKEND - GET SKUS] SKUs count:', skus.length);
+    // console.log('⏱️ [BACKEND - GET SKUS] Duration:', duration, 'ms');
+
     if (skus.length > 0) {
-      console.log('📦 [BACKEND - GET SKUS] Sample SKUs (first 3):', 
-        skus.slice(0, 3).map(s => ({ sku: s.sku, price: s.price, productId: s.productId }))
-      );
+      // console.log('📦 [BACKEND - GET SKUS] Sample SKUs (first 3):', 
+      //   skus.slice(0, 3).map(s => ({ sku: s.sku, price: s.price, productId: s.productId }))
+      // );
     }
 
     return res.status(200).json({
@@ -118,10 +118,10 @@ function calculateSku(req, res, next) {
 async function updateSkuHandler(req, res, next) {
   try {
     const { userId, sku } = req.params;
-    const { productId, quantity, productName, packagingPrice } = req.body;
+    const { productId, quantity, productName, packagingPrice, unitPrice } = req.body;
 
     if (!userId || !sku) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: "Missing userId or sku",
         message: "User ID and SKU are required",
         statusCode: 400
@@ -129,7 +129,7 @@ async function updateSkuHandler(req, res, next) {
     }
 
     if (!productId) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: "Missing productId",
         message: "Product ID is required",
         statusCode: 400
@@ -137,7 +137,7 @@ async function updateSkuHandler(req, res, next) {
     }
 
     if (!isFirebaseInitialized()) {
-      return res.status(500).json({ 
+      return res.status(500).json({
         error: "Firebase Admin not initialized",
         message: "Please configure Firebase Admin credentials",
         details: "Firebase Admin is not configured. Please contact the administrator.",
@@ -160,17 +160,25 @@ async function updateSkuHandler(req, res, next) {
     const quantityNum = parseFloat(quantity || '0') || 0;
     const packagingNum = parseFloat(packagingPrice || '0') || 0;
 
-    // Calculate total price server-side: (quantity × unit price) + packaging price
-    const productTotal = quantityNum * product.price;
-    const calculatedPrice = productTotal + packagingNum;
+    const unitPriceNum = unitPrice !== undefined && unitPrice !== null && unitPrice !== ''
+      ? parseFloat(unitPrice) || 0
+      : product.price;
+
+    // Calculate SKU pricing:
+    // price: base SKU cost (quantity × unit price)
+    // totalPrice: base SKU cost + packaging
+    const basePrice = quantityNum * unitPriceNum;
+    const calculatedTotalPrice = basePrice + packagingNum;
 
     // Update SKU in Firebase
     const updates = {
-      price: calculatedPrice,
+      price: basePrice,
+      totalPrice: calculatedTotalPrice,
       productId: productId,
       productQuantity: quantityNum.toString(),
       productName: productName || product.productName || '',
       packagingPrice: packagingNum,
+      packagingPriceConfigured: true,
       sku: sku,
     };
 
@@ -181,7 +189,7 @@ async function updateSkuHandler(req, res, next) {
       data: {
         sku,
         ...updates,
-        unitPrice: product.price,
+        unitPrice: unitPriceNum,
       },
       error: null,
       statusCode: 200,
@@ -203,7 +211,7 @@ async function batchUpdateSkusHandler(req, res, next) {
     const { skus } = req.body; // Object of SKU data keyed by SKU identifier
 
     if (!userId) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: "Missing userId",
         message: "User ID is required",
         statusCode: 400
@@ -211,7 +219,7 @@ async function batchUpdateSkusHandler(req, res, next) {
     }
 
     if (!skus || typeof skus !== 'object') {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: "Missing or invalid skus",
         message: "SKUs must be an object with SKU identifiers as keys",
         statusCode: 400
@@ -219,7 +227,7 @@ async function batchUpdateSkusHandler(req, res, next) {
     }
 
     if (!isFirebaseInitialized()) {
-      return res.status(500).json({ 
+      return res.status(500).json({
         error: "Firebase Admin not initialized",
         message: "Please configure Firebase Admin credentials",
         statusCode: 500
@@ -229,13 +237,13 @@ async function batchUpdateSkusHandler(req, res, next) {
     // SAFETY CHECK: Log what we're about to update
     const skusWithPriceZero = Object.values(skus).filter(sku => !sku.price || sku.price === 0).length;
     const skusWithPrice = Object.values(skus).filter(sku => sku && sku.price > 0).length;
-    
-    console.log(`🔒 [batchUpdateSkusHandler] SAFETY CHECK before update:`, {
-      totalSkusToUpdate: Object.keys(skus).length,
-      skusWithPrice: skusWithPrice,
-      skusWithPriceZero: skusWithPriceZero,
-      warning: skusWithPriceZero > 0 ? '⚠️ Some SKUs have price 0 - backend will preserve existing prices > 0' : 'OK'
-    });
+
+    // console.log(`🔒 [batchUpdateSkusHandler] SAFETY CHECK before update:`, {
+    //   totalSkusToUpdate: Object.keys(skus).length,
+    //   skusWithPrice: skusWithPrice,
+    //   skusWithPriceZero: skusWithPriceZero,
+    //   warning: skusWithPriceZero > 0 ? '⚠️ Some SKUs have price 0 - backend will preserve existing prices > 0' : 'OK'
+    // });
 
     await batchUpdateSkus(userId, skus);
 

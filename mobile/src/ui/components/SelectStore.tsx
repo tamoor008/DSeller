@@ -24,6 +24,9 @@ import { getBaseUrl } from '../../utils/api/baseUrl';
 import { fetchWithTimeout } from '../../utils/api/fetchWithTimeout';
 
 
+let storesCacheByUser: { [userId: string]: any[] } = {};
+let hasCheckedApiHealth = false;
+
 const SelectStore = () => {
     const { theme } = useTheme();
     const BASE_URL = getBaseUrl(); // instant access, no async
@@ -42,15 +45,15 @@ const SelectStore = () => {
     const AUTH_URL = `https://api.daraz.pk/oauth/authorize?response_type=code&force_auth=true&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&client_id=${CLIENT_ID}`;
 
     useEffect(() => {
-        console.log(AUTH_URL, 'AUTH_URL');
+        // console.log(AUTH_URL, 'AUTH_URL');
     }, [AUTH_URL]);
 
     // Health check function to test if API is working
     const checkApiHealth = async () => {
         try {
-            console.log('🔍 [API Health Check] Testing API connection...');
-            console.log('📍 [API Health Check] URL:', `${BASE_URL}/test`);
-            
+            // console.log('🔍 [API Health Check] Testing API connection...');
+            // console.log('📍 [API Health Check] URL:', `${BASE_URL}/test`);
+
             const response = await fetchWithTimeout(`${BASE_URL}/test`, {
                 method: 'GET',
                 headers: {
@@ -58,33 +61,33 @@ const SelectStore = () => {
                 },
             }, 5000);
 
-            console.log('📊 [API Health Check] Response Status:', response.status);
-            console.log('📊 [API Health Check] Response OK:', response.ok);
-            console.log('📊 [API Health Check] Content-Type:', response.headers.get('content-type'));
+            // console.log('📊 [API Health Check] Response Status:', response.status);
+            // console.log('📊 [API Health Check] Response OK:', response.ok);
+            // console.log('📊 [API Health Check] Content-Type:', response.headers.get('content-type'));
 
             // Get response as text first to handle both JSON and plain text responses
             const responseText = await response.text();
-            console.log('📥 [API Health Check] Raw Response Text:', responseText);
+            // console.log('📥 [API Health Check] Raw Response Text:', responseText);
 
             let data;
             try {
                 // Try to parse as JSON
                 data = JSON.parse(responseText);
-                console.log('✅ [API Health Check] Parsed as JSON:', JSON.stringify(data, null, 2));
+                // console.log('✅ [API Health Check] Parsed as JSON:', JSON.stringify(data, null, 2));
             } catch (jsonError) {
                 // If not JSON, treat as plain text
-                console.log('ℹ️ [API Health Check] Response is not JSON, treating as plain text');
+                // console.log('ℹ️ [API Health Check] Response is not JSON, treating as plain text');
                 data = responseText;
-                console.log('✅ [API Health Check] Response Data (text):', data);
+                // console.log('✅ [API Health Check] Response Data (text):', data);
             }
-            
+
             return { success: response.ok, data, isJson: typeof data === 'object' };
         } catch (error) {
-            console.error('❌ [API Health Check] Error:', error);
-            console.error('❌ [API Health Check] Error Type:', error instanceof Error ? error.constructor.name : typeof error);
-            console.error('❌ [API Health Check] Error Message:', error instanceof Error ? error.message : String(error));
+            // console.error('❌ [API Health Check] Error:', error);
+            // console.error('❌ [API Health Check] Error Type:', error instanceof Error ? error.constructor.name : typeof error);
+            // console.error('❌ [API Health Check] Error Message:', error instanceof Error ? error.message : String(error));
             if (error instanceof Error && error.stack) {
-                console.error('❌ [API Health Check] Stack Trace:', error.stack);
+                // console.error('❌ [API Health Check] Stack Trace:', error.stack);
             }
             return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
@@ -94,14 +97,14 @@ const SelectStore = () => {
     const addAccessToken = async (user) => {
         try {
             const sellerId = user.seller_id || user.user?.seller?.data?.short_code;
-            
-            console.log('💾 [Backend] Starting addAccessToken operation...');
-            console.log('👤 [Backend] User UID:', currentUser.uid);
-            console.log('🏪 [Backend] Seller ID:', sellerId);
-            console.log('📦 [Backend] User Data Keys:', Object.keys(user));
 
-            console.log('🔍 [Backend] Checking if seller already exists...');
-            
+            // console.log('💾 [Backend] Starting addAccessToken operation...');
+            // console.log('👤 [Backend] User UID:', currentUser.uid);
+            // console.log('🏪 [Backend] Seller ID:', sellerId);
+            // console.log('📦 [Backend] User Data Keys:', Object.keys(user));
+
+            // console.log('🔍 [Backend] Checking if seller already exists...');
+
             // Add store via backend API
             const response = await fetchWithTimeout(`${BASE_URL}/api/stores/${currentUser.uid}`, {
                 method: 'POST',
@@ -117,7 +120,7 @@ const SelectStore = () => {
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 const errorMessage = errorData.error || 'Unknown error';
-                console.warn('⚠️ [SelectStore] Error adding store:', errorMessage);
+                // console.warn('⚠️ [SelectStore] Error adding store:', errorMessage);
                 throw new Error(errorMessage);
             }
 
@@ -127,30 +130,30 @@ const SelectStore = () => {
             }
 
             if (!result.data.added) {
-                console.log('⚠️ [Backend] Store already connected:', sellerId);
+                // console.log('⚠️ [Backend] Store already connected:', sellerId);
                 return { added: false, reason: 'already_exists' };
             }
 
-            console.log('✅ [Backend] Seller added successfully!');
-            console.log('✅ [Backend] Seller ID:', sellerId);
-            
+            // console.log('✅ [Backend] Seller added successfully!');
+            // console.log('✅ [Backend] Seller ID:', sellerId);
+
             // Refresh stores list after adding
             if (fetchStoresRef.current) {
-                console.log('🔄 [SelectStore] Refreshing stores list after adding new store...');
+                // console.log('🔄 [SelectStore] Refreshing stores list after adding new store...');
                 setTimeout(() => {
-                    fetchStoresRef.current?.();
+                    fetchStoresRef.current?.(true);
                 }, 500); // Small delay to ensure backend has processed the addition
             }
-            
+
             return { added: true, sellerId };
 
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             const errorType = error instanceof Error ? error.constructor.name : typeof error;
-            console.warn('⚠️ [SelectStore] Error saving seller data:', errorMessage);
-            console.warn('⚠️ [SelectStore] Error Type:', errorType);
+            // console.warn('⚠️ [SelectStore] Error saving seller data:', errorMessage);
+            // console.warn('⚠️ [SelectStore] Error Type:', errorType);
             if (error instanceof Error && error.stack) {
-                console.warn('⚠️ [SelectStore] Stack Trace:', error.stack);
+                // console.warn('⚠️ [SelectStore] Stack Trace:', error.stack);
             }
             Alert.alert('Error', 'Failed to save store data. Please try again.', [{ text: 'OK' }]);
             throw error;
@@ -158,31 +161,64 @@ const SelectStore = () => {
     };
 
     // Store the fetch function reference so we can call it manually when needed
-    const fetchStoresRef = useRef<(() => Promise<void>) | null>(null);
+    const fetchStoresRef = useRef<((force?: boolean) => Promise<void>) | null>(null);
 
     const listenToStores = (currentUser, setStores) => {
         if (!currentUser || !currentUser.uid) {
-            console.warn('User not authenticated');
+            // console.warn('User not authenticated');
             return;
         }
 
-        const fetchStores = async () => {
+        const buildAccessTokens = (dataset: any[]) => {
+            return dataset
+                .map((item: any) => {
+                    const token = item.user?.token || item.token || {};
+                    const access_token = token.access_token;
+                    const refresh_token = token.refresh_token;
+                    const expires_in = token.expires_in;
+                    const refresh_expires_in = token.refresh_expires_in;
+
+                    return {
+                        access_token: access_token,
+                        refresh_token: refresh_token,
+                        expires_in: expires_in,
+                        refresh_expires_in: refresh_expires_in,
+                        name: item.user?.seller?.data?.name || item.user?.seller?.name,
+                        seller_id: item.user?.seller?.data?.short_code ||
+                            item.user?.seller?.data?.seller_id ||
+                            item.seller_id ||
+                            item.id,
+                        store: item,
+                    };
+                })
+                .filter((token: any) => token.access_token && token.access_token.trim() !== '');
+        };
+
+        const fetchStores = async (force: boolean = false) => {
             try {
+                const cachedStores = storesCacheByUser[currentUser.uid];
+                if (!force && Array.isArray(cachedStores)) {
+                    dispatch(setAccessTokens(buildAccessTokens(cachedStores)));
+                    setStores(cachedStores);
+                    setStoresLoading(false);
+                    return;
+                }
+
                 setStoresLoading(true); // Start loading
                 const requestUrl = `${BASE_URL}/api/stores/${currentUser.uid}`;
-                console.log('📤 [SELECT STORE] Fetching stores...');
-                console.log('📤 [SELECT STORE] Request URL:', requestUrl);
-                console.log('📤 [SELECT STORE] User ID:', currentUser.uid);
-                
+                // console.log('📤 [SELECT STORE] Fetching stores...');
+                // console.log('📤 [SELECT STORE] Request URL:', requestUrl);
+                // console.log('📤 [SELECT STORE] User ID:', currentUser.uid);
+
                 const response = await fetchWithTimeout(requestUrl, {}, 8000);
-                
-                console.log('📥 [SELECT STORE] Response status:', response.status, response.statusText);
-                
+
+                // console.log('📥 [SELECT STORE] Response status:', response.status, response.statusText);
+
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
                     const errorMessage = errorData.error || errorData.message || 'Unknown error';
-                    console.warn('⚠️ [SELECT STORE] HTTP Error:', response.status);
-                    console.warn('⚠️ [SELECT STORE] Error message:', errorMessage);
+                    // console.warn('⚠️ [SELECT STORE] HTTP Error:', response.status);
+                    // console.warn('⚠️ [SELECT STORE] Error message:', errorMessage);
                     Alert.alert('Error', 'Failed to load stores. Please try again.', [{ text: 'OK' }]);
                     setStores([]);
                     setStoresLoading(false); // Stop loading
@@ -190,13 +226,13 @@ const SelectStore = () => {
                 }
 
                 const result = await response.json();
-                console.log('✅ [SELECT STORE] Response received');
-                console.log('📊 [SELECT STORE] Response data:', JSON.stringify(result, null, 2));
-                
+                // console.log('✅ [SELECT STORE] Response received');
+                // console.log('📊 [SELECT STORE] Response data:', JSON.stringify(result, null, 2));
+
                 if (result.error) {
                     const errorMessage = result.error || 'Unknown error';
-                    console.warn('⚠️ [SELECT STORE] API returned error:', errorMessage);
-                    console.warn('⚠️ [SELECT STORE] Error message:', result.message || 'No message');
+                    // console.warn('⚠️ [SELECT STORE] API returned error:', errorMessage);
+                    // console.warn('⚠️ [SELECT STORE] Error message:', result.message || 'No message');
                     Alert.alert('Error', result.message || 'Failed to load stores. Please try again.', [{ text: 'OK' }]);
                     setStores([]);
                     setStoresLoading(false); // Stop loading
@@ -204,56 +240,35 @@ const SelectStore = () => {
                 }
 
                 const dataset = result.data || [];
-                console.log('📦 [SELECT STORE] Stores count:', dataset.length);
-                
-                // Filter out stores without access tokens and include seller_id and refresh_token for token refresh
-                const access_tokens = dataset
-                    .map((item: any) => {
-                        // Extract token information - handle both nested (user.token) and direct (token) structures
-                        const token = item.user?.token || item.token || {};
-                        const access_token = token.access_token;
-                        const refresh_token = token.refresh_token;
-                        const expires_in = token.expires_in; // Token expiration time in seconds
-                        const refresh_expires_in = token.refresh_expires_in; // Refresh token expiration time in seconds
-                        
-                        return {
-                            access_token: access_token,
-                            refresh_token: refresh_token, // Include refresh token for token refresh
-                            expires_in: expires_in, // Access token expiration
-                            refresh_expires_in: refresh_expires_in, // Refresh token expiration
-                            name: item.user?.seller?.data?.name || item.user?.seller?.name,
-                            seller_id: item.user?.seller?.data?.short_code || 
-                                      item.user?.seller?.data?.seller_id || 
-                                      item.seller_id || 
-                                      item.id,
-                            store: item, // Store full store object for token refresh
-                        };
-                    })
-                    .filter((token: any) => token.access_token && token.access_token.trim() !== '');
-                
-                console.log('🔑 [SELECT STORE] Access tokens extracted:', access_tokens.length);
-                console.log('🔑 [SELECT STORE] Valid access tokens:', access_tokens.length, 'out of', dataset.length, 'stores');
-                console.log('🔑 [SELECT STORE] Access tokens:', access_tokens.map((t: any) => ({
-                    name: t.name,
-                    seller_id: t.seller_id,
-                    has_refresh_token: !!t.refresh_token,
-                    expires_in: t.expires_in ? `${Math.floor(t.expires_in / 86400)} days` : 'N/A',
-                    token_preview: t.access_token ? t.access_token.substring(0, 10) + '...' : 'N/A'
-                })));
-                
+                // console.log('📦 [SELECT STORE] Stores count:', dataset.length);
+
+                storesCacheByUser[currentUser.uid] = dataset;
+                const access_tokens = buildAccessTokens(dataset);
+
+                // console.log('🔑 [SELECT STORE] Access tokens extracted:', access_tokens.length);
+                // console.log('🔑 [SELECT STORE] Valid access tokens:', access_tokens.length, 'out of', dataset.length, 'stores');
+                // console.log('🔑 [SELECT STORE] Access tokens:', access_tokens.map((t: any) => ({
+                //     name: t.name,
+                //     seller_id: t.seller_id,
+                //     has_refresh_token: !!t.refresh_token,
+                //     expires_in: t.expires_in ? `${Math.floor(t.expires_in / 86400)} days` : 'N/A',
+                //     token_preview: t.access_token ? t.access_token.substring(0, 10) + '...' : 'N/A'
+                // })));
+
                 dispatch(setAccessTokens(access_tokens));
                 setStores(dataset);
-                console.log('✅ [SELECT STORE] Stores state updated successfully');
+                // console.log('✅ [SELECT STORE] Stores state updated successfully');
                 setStoresLoading(false); // Stop loading
             } catch (error: any) {
                 const errorMessage = error?.message || 'Unknown error occurred';
-                console.warn('⚠️ [SELECT STORE] Exception:', errorMessage);
-                console.warn('⚠️ [SELECT STORE] Error type:', error?.name || 'Unknown');
+                // console.warn('⚠️ [SELECT STORE] Exception:', errorMessage);
+                // console.warn('⚠️ [SELECT STORE] Error type:', error?.name || 'Unknown');
                 if (error?.stack) {
-                    console.warn('⚠️ [SELECT STORE] Stack:', error.stack);
+                    // console.warn('⚠️ [SELECT STORE] Stack:', error.stack);
                 }
                 Alert.alert('Error', 'Failed to load stores. Please check your connection and try again.', [{ text: 'OK' }]);
                 setStores([]);
+                storesCacheByUser[currentUser.uid] = [];
                 setStoresLoading(false); // Stop loading on error
             }
         };
@@ -265,7 +280,7 @@ const SelectStore = () => {
         // Stores are only fetched when:
         // 1. Component mounts
         // 2. User manually adds/deletes a store (which will call fetchStoresRef.current())
-        fetchStores();
+        fetchStores(false);
 
         // No cleanup needed since we're not using intervals
         return () => {
@@ -282,7 +297,7 @@ const SelectStore = () => {
                     {
                         text: "Cancel",
                         onPress: () => {
-                            console.log("Deletion cancelled");
+                            // console.log("Deletion cancelled");
                             resolve({ success: false, message: "Cancelled by user" });
                         },
                         style: "cancel",
@@ -299,9 +314,9 @@ const SelectStore = () => {
                                 if (!response.ok) {
                                     const errorData = await response.json().catch(() => ({}));
                                     if (response.status === 404) {
-                                    console.log(`Seller with ID ${sellerId} does not exist.`);
-                                    resolve({ success: false, message: "Seller not found" });
-                                    return;
+                                        // console.log(`Seller with ID ${sellerId} does not exist.`);
+                                        resolve({ success: false, message: "Seller not found" });
+                                        return;
                                     }
                                     throw new Error(errorData.error || 'Failed to delete store');
                                 }
@@ -310,20 +325,20 @@ const SelectStore = () => {
                                 if (result.error) {
                                     throw new Error(result.error);
                                 }
-                                console.log(`Seller with ID ${sellerId} has been deleted.`);
-                                
+                                // console.log(`Seller with ID ${sellerId} has been deleted.`);
+
                                 // Refresh stores list after deleting
                                 if (fetchStoresRef.current) {
-                                    console.log('🔄 [SelectStore] Refreshing stores list after deleting store...');
+                                    // console.log('🔄 [SelectStore] Refreshing stores list after deleting store...');
                                     setTimeout(() => {
-                                        fetchStoresRef.current?.();
+                                        fetchStoresRef.current?.(true);
                                     }, 500); // Small delay to ensure backend has processed the deletion
                                 }
-                                
+
                                 resolve({ success: true });
                             } catch (error: any) {
                                 const errorMessage = error?.message || 'Unknown error occurred';
-                                console.warn('⚠️ [SelectStore] Error deleting seller:', errorMessage);
+                                // console.warn('⚠️ [SelectStore] Error deleting seller:', errorMessage);
                                 Alert.alert('Error', 'Failed to delete store. Please try again.', [{ text: 'OK' }]);
                                 reject(error);
                             }
@@ -345,7 +360,7 @@ const SelectStore = () => {
             const code = match?.[1];
 
             if (code) {
-                console.log('Authorization Code:', code);
+                // console.log('Authorization Code:', code);
                 getDarazToken(code)
                 setLoading(true)
             }
@@ -356,13 +371,13 @@ const SelectStore = () => {
         try {
             const url = `${BASE_URL}/get-daraz-token`;
             const requestBody = { code };
-            
-            console.log('🚀 [API Request] Starting get-daraz-token API call...');
-            console.log('📍 [API Request] URL:', url);
-            console.log('📤 [API Request] Method: POST');
-            console.log('📤 [API Request] Headers:', { 'Content-Type': 'application/json' });
-            console.log('📤 [API Request] Body:', JSON.stringify(requestBody, null, 2));
-            console.log('📤 [API Request] Authorization Code:', code);
+
+            // console.log('🚀 [API Request] Starting get-daraz-token API call...');
+            // console.log('📍 [API Request] URL:', url);
+            // console.log('📤 [API Request] Method: POST');
+            // console.log('📤 [API Request] Headers:', { 'Content-Type': 'application/json' });
+            // console.log('📤 [API Request] Body:', JSON.stringify(requestBody, null, 2));
+            // console.log('📤 [API Request] Authorization Code:', code);
 
             const response = await fetchWithTimeout(url, {
                 method: "POST",
@@ -372,49 +387,49 @@ const SelectStore = () => {
                 body: JSON.stringify(requestBody),
             }, 15000);
 
-            console.log('📊 [API Response] Status:', response.status);
-            console.log('📊 [API Response] Status Text:', response.statusText);
-            console.log('📊 [API Response] OK:', response.ok);
-            console.log('📊 [API Response] Headers:', Object.fromEntries(response.headers.entries()));
+            // console.log('📊 [API Response] Status:', response.status);
+            // console.log('📊 [API Response] Status Text:', response.statusText);
+            // console.log('📊 [API Response] OK:', response.ok);
+            // console.log('📊 [API Response] Headers:', Object.fromEntries(response.headers.entries()));
 
             if (!response.ok) {
                 const errorText = await response.text();
-                console.warn('⚠️ [SelectStore] Error Response Body:', errorText);
+                // console.warn('⚠️ [SelectStore] Error Response Body:', errorText);
                 throw new Error(`Server error: ${response.status} - ${errorText}`);
             }
 
             const data = await response.json();
-            console.log('✅ [API Response] Success!');
-            console.log('📥 [API Response] Full Response Data:', JSON.stringify(data, null, 2));
-            console.log('📥 [API Response] Response Keys:', Object.keys(data));
-            
+            // console.log('✅ [API Response] Success!');
+            // console.log('📥 [API Response] Full Response Data:', JSON.stringify(data, null, 2));
+            // console.log('📥 [API Response] Response Keys:', Object.keys(data));
+
             if (data.access_token) {
-                console.log('🔑 [API Response] Access Token received:', data.access_token.substring(0, 20) + '...');
+                // console.log('🔑 [API Response] Access Token received:', data.access_token.substring(0, 20) + '...');
             }
             if (data.user_info || data.user) {
-                console.log('👤 [API Response] User Info received');
+                // console.log('👤 [API Response] User Info received');
             }
             if (data.seller_id || data.user?.seller?.data?.short_code) {
                 const sellerId = data.seller_id || data.user?.seller?.data?.short_code;
-                console.log('🏪 [API Response] Seller ID:', sellerId);
+                // console.log('🏪 [API Response] Seller ID:', sellerId);
             }
 
             // Call addAccessToken with logging
-            console.log('💾 [Backend] Starting to add access token...');
+            // console.log('💾 [Backend] Starting to add access token...');
             await addAccessToken(data);
-            console.log('✅ [Backend] Access token added successfully');
-            
+            // console.log('✅ [Backend] Access token added successfully');
+
             setDarazOAuth(false);
-            console.log('✅ [UI] Modal closed after successful token retrieval');
+            // console.log('✅ [UI] Modal closed after successful token retrieval');
 
             return data;
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : String(err);
             const errorType = err instanceof Error ? err.constructor.name : typeof err;
-            console.warn('⚠️ [SelectStore] Failed to fetch Daraz token:', errorMessage);
-            console.warn('⚠️ [SelectStore] Error Type:', errorType);
+            // console.warn('⚠️ [SelectStore] Failed to fetch Daraz token:', errorMessage);
+            // console.warn('⚠️ [SelectStore] Error Type:', errorType);
             if (err instanceof Error && err.stack) {
-                console.warn('⚠️ [SelectStore] Stack Trace:', err.stack);
+                // console.warn('⚠️ [SelectStore] Stack Trace:', err.stack);
             }
             Alert.alert('Error', 'Failed to authenticate with Daraz. Please try again.', [{ text: 'OK' }]);
         }
@@ -424,7 +439,8 @@ const SelectStore = () => {
         const unsubscribe = listenToStores(currentUser, setStores);
 
         // Check API health when component mounts
-        if (BASE_URL) {
+        if (BASE_URL && !hasCheckedApiHealth) {
+            hasCheckedApiHealth = true;
             checkApiHealth();
         }
 
@@ -439,7 +455,7 @@ const SelectStore = () => {
     const [expandedSellers, setExpandedSellers] = useState(false)
 
     const setStore = (details) => {
-        // console.log(details);
+        // // console.log(details);
         dispatch(setSelectedStore(details))
         setExpandedSellers(false)
     }
@@ -457,13 +473,13 @@ const SelectStore = () => {
             ) : stores.length <= 0 ? (
                 <View>
                     <TextComp size={14} numberOfLines={1} style={{ fontFamily: FontFamilty.medium, color: theme.textSecondary }}>{AppStrings.youhavenoconnecteddarazstoreatthemoment}</TextComp>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         onPress={() => {
-                            console.log('🔘 [SELECT STORE] Add Account button pressed');
-                            console.log('🔘 [SELECT STORE] Current darazOAuth state:', darazOAuth);
-                            console.log('🔘 [SELECT STORE] Setting darazOAuth to true');
+                            // console.log('🔘 [SELECT STORE] Add Account button pressed');
+                            // console.log('🔘 [SELECT STORE] Current darazOAuth state:', darazOAuth);
+                            // console.log('🔘 [SELECT STORE] Setting darazOAuth to true');
                             setDarazOAuth(true);
-                            console.log('🔘 [SELECT STORE] AUTH_URL:', AUTH_URL);
+                            // console.log('🔘 [SELECT STORE] AUTH_URL:', AUTH_URL);
                         }}
                         activeOpacity={0.7}
                     >
@@ -492,10 +508,10 @@ const SelectStore = () => {
                                 return (
                                     <View key={index} style={{ paddingBottom: 8, flexDirection: 'row', alignItems: 'center' }}>
                                         <View style={{ flex: 1 }}>
-                                            <TextComp size={16} numberOfLines={1} style={{ color: theme.textPrimary, fontFamily: FontFamilty.medium,}}>
+                                            <TextComp size={16} numberOfLines={1} style={{ color: theme.textPrimary, fontFamily: FontFamilty.medium, }}>
                                                 {item?.user?.seller?.data?.name}
                                             </TextComp>
-                                            <TouchableOpacity style={{ }} onPress={() => setStore(item)}>
+                                            <TouchableOpacity style={{}} onPress={() => setStore(item)}>
                                                 <TextComp size={12} numberOfLines={1} style={{ color: theme.primaryOrange, fontFamily: FontFamilty.medium, }}>
                                                     {AppStrings.watchdetailsonlyforthisstore}
                                                 </TextComp>
@@ -519,13 +535,13 @@ const SelectStore = () => {
                         </View>
                     )}
                     <TextComp size={12} numberOfLines={1} style={{ fontFamily: FontFamilty.medium, color: theme.textSecondary }}>{AppStrings.total + ' : ' + stores.length}</TextComp>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         onPress={() => {
-                            console.log('🔘 [SELECT STORE] Add Account button pressed');
-                            console.log('🔘 [SELECT STORE] Current darazOAuth state:', darazOAuth);
-                            console.log('🔘 [SELECT STORE] Setting darazOAuth to true');
+                            // console.log('🔘 [SELECT STORE] Add Account button pressed');
+                            // console.log('🔘 [SELECT STORE] Current darazOAuth state:', darazOAuth);
+                            // console.log('🔘 [SELECT STORE] Setting darazOAuth to true');
                             setDarazOAuth(true);
-                            console.log('🔘 [SELECT STORE] AUTH_URL:', AUTH_URL);
+                            // console.log('🔘 [SELECT STORE] AUTH_URL:', AUTH_URL);
                         }}
                         activeOpacity={0.7}
                     >
@@ -540,18 +556,18 @@ const SelectStore = () => {
                     animationType="slide"
                     presentationStyle="fullScreen"
                     onRequestClose={() => {
-                        console.log('🔘 [SELECT STORE] Modal close requested');
+                        // console.log('🔘 [SELECT STORE] Modal close requested');
                         setDarazOAuth(false);
                     }}
                     onShow={() => {
-                        console.log('✅ [SELECT STORE] OAuth Modal opened');
-                        console.log('✅ [SELECT STORE] Modal AUTH_URL:', AUTH_URL);
+                        // console.log('✅ [SELECT STORE] OAuth Modal opened');
+                        // console.log('✅ [SELECT STORE] Modal AUTH_URL:', AUTH_URL);
                     }}
                 >
                     <SafeAreaView style={{ flex: 1, backgroundColor: theme.bgcolor }}>
                         <View style={{ alignItems: 'flex-end', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8 }}>
                             <TouchableOpacity onPress={() => {
-                                console.log('🔘 [SELECT STORE] Close button pressed');
+                                // console.log('🔘 [SELECT STORE] Close button pressed');
                                 setDarazOAuth(false);
                             }}>
                                 <Icon name="close" size={24} color={theme.textPrimary} />
@@ -566,7 +582,7 @@ const SelectStore = () => {
                             </View>
                         )}
                         <WebView
-                           userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                            userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
                             style={{ flex: 1 }}
                             source={{ uri: AUTH_URL }}
                             javaScriptEnabled={true}
@@ -576,71 +592,71 @@ const SelectStore = () => {
                             allowsInlineMediaPlayback={true}
                             mediaPlaybackRequiresUserAction={false}
                             onLoadStart={() => {
-                                console.log('🌐 [WEBVIEW] Loading started:', AUTH_URL);
+                                // console.log('🌐 [WEBVIEW] Loading started:', AUTH_URL);
                                 setLoading(true);
                             }}
                             onLoadEnd={() => {
-                                console.log('✅ [WEBVIEW] Loading completed');
+                                // console.log('✅ [WEBVIEW] Loading completed');
                                 setLoading(false);
                             }}
                             onError={(syntheticEvent) => {
                                 const { nativeEvent } = syntheticEvent;
-                                console.error('❌ [WEBVIEW] Error loading:', nativeEvent.url);
-                                console.error('❌ [WEBVIEW] Error code:', nativeEvent.code);
-                                console.error('❌ [WEBVIEW] Error description:', nativeEvent.description);
+                                // console.error('❌ [WEBVIEW] Error loading:', nativeEvent.url);
+                                // console.error('❌ [WEBVIEW] Error code:', nativeEvent.code);
+                                // console.error('❌ [WEBVIEW] Error description:', nativeEvent.description);
                                 setLoading(false);
                             }}
                             onHttpError={(syntheticEvent) => {
                                 const { nativeEvent } = syntheticEvent;
-                                console.error('❌ [WEBVIEW] HTTP Error:', nativeEvent.statusCode, nativeEvent.url);
+                                // console.error('❌ [WEBVIEW] HTTP Error:', nativeEvent.statusCode, nativeEvent.url);
                                 setLoading(false);
                             }}
                             onNavigationStateChange={(navState) => {
-                                console.log('🌐 [WEBVIEW] Navigation changed to:', navState.url);
-                                console.log('🌐 [WEBVIEW] Can go back:', navState.canGoBack);
-                                console.log('🌐 [WEBVIEW] Can go forward:', navState.canGoForward);
-                                console.log('🌐 [WEBVIEW] Loading:', navState.loading);
+                                // console.log('🌐 [WEBVIEW] Navigation changed to:', navState.url);
+                                // console.log('🌐 [WEBVIEW] Can go back:', navState.canGoBack);
+                                // console.log('🌐 [WEBVIEW] Can go forward:', navState.canGoForward);
+                                // console.log('🌐 [WEBVIEW] Loading:', navState.loading);
                                 handleNavigationStateChange(navState);
                             }}
                             onShouldStartLoadWithRequest={(request) => {
                                 // Prevent opening in external apps, force web view
                                 const url = request.url;
-                                console.log('🔍 [WEBVIEW] Should start load with request:', url);
-                                console.log('🔍 [WEBVIEW] Request method:', request.method);
-                                console.log('🔍 [WEBVIEW] Request navigationType:', request.navigationType);
-                                
+                                // console.log('🔍 [WEBVIEW] Should start load with request:', url);
+                                // console.log('🔍 [WEBVIEW] Request method:', request.method);
+                                // console.log('🔍 [WEBVIEW] Request navigationType:', request.navigationType);
+
                                 // Allow navigation within Daraz domains or to redirect URI
                                 if (
-                                    url.startsWith('https://api.daraz.pk') || 
-                                    url.startsWith(REDIRECT_URI) || 
-                                    url.startsWith('https://www.daraz.pk') || 
+                                    url.startsWith('https://api.daraz.pk') ||
+                                    url.startsWith(REDIRECT_URI) ||
+                                    url.startsWith('https://www.daraz.pk') ||
                                     url.startsWith('https://login.daraz.pk') ||
                                     url.startsWith('https://sellercenter.daraz.pk') ||
                                     url.startsWith('https://account.daraz.pk')
                                 ) {
-                                    console.log('✅ [WEBVIEW] Allowing navigation to:', url);
+                                    // console.log('✅ [WEBVIEW] Allowing navigation to:', url);
                                     return true;
                                 }
                                 // Block other URLs to prevent app opening
-                                console.log('⚠️ [WEBVIEW] Blocking navigation to:', url);
+                                // console.log('⚠️ [WEBVIEW] Blocking navigation to:', url);
                                 return false;
                             }}
                             onMessage={(event) => {
-                                console.log('📨 [WEBVIEW] Message from WebView:', event.nativeEvent.data);
+                                // console.log('📨 [WEBVIEW] Message from WebView:', event.nativeEvent.data);
                             }}
                             injectedJavaScript={`
                                 (function() {
-                                    console.log('🔧 [WEBVIEW] JavaScript injected');
+                                    // console.log('🔧 [WEBVIEW] JavaScript injected');
                                     // Enable all button clicks
                                     document.addEventListener('click', function(e) {
-                                        console.log('🖱️ [WEBVIEW] Click detected on:', e.target);
-                                        console.log('🖱️ [WEBVIEW] Click target tag:', e.target.tagName);
-                                        console.log('🖱️ [WEBVIEW] Click target href:', e.target.href || 'none');
+                                        // console.log('🖱️ [WEBVIEW] Click detected on:', e.target);
+                                        // console.log('🖱️ [WEBVIEW] Click target tag:', e.target.tagName);
+                                        // console.log('🖱️ [WEBVIEW] Click target href:', e.target.href || 'none');
                                     }, true);
                                     
                                     // Log when page is ready
                                     if (document.readyState === 'complete') {
-                                        console.log('✅ [WEBVIEW] Page fully loaded');
+                                        // console.log('✅ [WEBVIEW] Page fully loaded');
                                         window.ReactNativeWebView.postMessage('PageLoaded');
                                     }
                                 })();

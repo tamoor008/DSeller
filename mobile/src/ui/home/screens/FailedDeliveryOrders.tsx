@@ -58,18 +58,18 @@ const FailedDeliveryOrders = ({ navigation }) => {
 
     const [returningOrders, setReturningOrders] = useState([]);
     const [returningOrdersYesterday, setReturningOrdersYesterday] = useState([]);
-const [returningOrdersSevenDays, setReturningOrdersSevenDays] = useState([]);
-const [returningOrdersThirtyDays, setReturningOrdersThirtyDays] = useState([]);
-const [returningOrdersCustom, setReturningOrdersCustom] = useState([]);
+    const [returningOrdersSevenDays, setReturningOrdersSevenDays] = useState([]);
+    const [returningOrdersThirtyDays, setReturningOrdersThirtyDays] = useState([]);
+    const [returningOrdersCustom, setReturningOrdersCustom] = useState([]);
 
 
 
-const [returningOrdersCount, setReturningOrdersCount] = useState(0);
+    const [returningOrdersCount, setReturningOrdersCount] = useState(0);
 
-const [returningOrdersYesterdayCount, setReturningOrdersYesterdayCount] = useState(0);
-const [returningOrdersSevenDaysCount, setReturningOrdersSevenDaysCount] = useState(0);
-const [returningOrdersThirtyDaysCount, setReturningOrdersThirtyDaysCount] = useState(0);
-const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
+    const [returningOrdersYesterdayCount, setReturningOrdersYesterdayCount] = useState(0);
+    const [returningOrdersSevenDaysCount, setReturningOrdersSevenDaysCount] = useState(0);
+    const [returningOrdersThirtyDaysCount, setReturningOrdersThirtyDaysCount] = useState(0);
+    const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
 
 
     const [processedItemIds, setProcessedItemIds] = useState(new Set());
@@ -78,9 +78,9 @@ const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
     useEffect(() => {
         let newTokens = [];
 
-        if (selector.selectedStore?.id) {
-            const access_token = selector.selectedStore.user?.token?.access_token;
-            const name = selector.selectedStore?.user.seller.data.name;
+        if (selector?.selectedStore?.id) {
+            const access_token = selector?.selectedStore?.user?.token?.access_token;
+            const name = selector?.selectedStore?.user?.seller?.data?.name;
 
             newTokens = [{
                 access_token: access_token || null,
@@ -88,10 +88,10 @@ const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
             }];
         } else {
             // Filter out stores without valid access tokens
-            newTokens = Array.isArray(selector.access_tokens) 
-                ? selector.access_tokens.filter((token: any) => 
+            newTokens = Array.isArray(selector?.access_tokens)
+                ? selector?.access_tokens.filter((token: any) =>
                     token && token.access_token && token.access_token.trim() !== ''
-                  )
+                )
                 : [];
         }
 
@@ -161,14 +161,18 @@ const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
             const data = await response.json();
 
 
-            if (!data?.orderItems?.length) return;
-
-            // Add store information to each order
-            const ordersWithStore = data.orderItems.map((order: any) => ({
+            // Important: Attach the access_token to each order and its items
+            const enrichedOrders = data.orderItems.map((order: any) => ({
                 ...order,
                 access_token,
                 storeName: storeName || 'Unknown Store',
+                order_items: (order.order_items || []).map((item: any) => ({
+                    ...item,
+                    access_token,
+                }))
             }));
+
+            const ordersWithStore = enrichedOrders;
 
 
             if (selectedRange === 'today') {
@@ -227,7 +231,7 @@ const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
                     setReturnedOrdersCustomCount(prev => prev + ordersWithStore.length);
                 }
             }
-            
+
 
         } catch (error: any) {
             console.error("Error fetching Daraz orders:", error?.message || 'Unknown error');
@@ -333,7 +337,7 @@ const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
 
             if (Array.isArray(all_access_tokens)) {
                 // Filter out invalid access tokens before making requests
-                const validTokens = all_access_tokens.filter((item: any) => 
+                const validTokens = all_access_tokens.filter((item: any) =>
                     item && item.access_token && item.access_token.trim() !== ''
                 );
                 requests = validTokens.flatMap((item: any) => [
@@ -456,7 +460,7 @@ const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
                     }
                     return [];
                 });
-                
+
                 if (requests.length > 0) {
                     await Promise.all(requests);
                 }
@@ -472,30 +476,30 @@ const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
 
     const getOrdersBySelectedRangeAndStatus = () => {
         if (selectedRange === 'today') {
-          if (selectedStatus === 'failed') return failedOrders;
-          if (selectedStatus === 'returning') return returningOrders;
-          if (selectedStatus === 'returned') return returnedOrders;
+            if (selectedStatus === 'failed') return failedOrders;
+            if (selectedStatus === 'returning') return returningOrders;
+            if (selectedStatus === 'returned') return returnedOrders;
         } else if (selectedRange === 'yesterday') {
-          if (selectedStatus === 'failed') return failedOrdersYesterday;
-          if (selectedStatus === 'returning') return returningOrdersYesterday;
-          if (selectedStatus === 'returned') return returnedOrdersYesterday;
+            if (selectedStatus === 'failed') return failedOrdersYesterday;
+            if (selectedStatus === 'returning') return returningOrdersYesterday;
+            if (selectedStatus === 'returned') return returnedOrdersYesterday;
         } else if (selectedRange === '7days') {
-          if (selectedStatus === 'failed') return failedOrdersSevenDays;
-          if (selectedStatus === 'returning') return returningOrdersSevenDays;
-          if (selectedStatus === 'returned') return returnedOrdersSevenDays;
+            if (selectedStatus === 'failed') return failedOrdersSevenDays;
+            if (selectedStatus === 'returning') return returningOrdersSevenDays;
+            if (selectedStatus === 'returned') return returnedOrdersSevenDays;
         } else if (selectedRange === '30days') {
-          if (selectedStatus === 'failed') return failedOrdersThirtyDays;
-          if (selectedStatus === 'returning') return returningOrdersThirtyDays;
-          if (selectedStatus === 'returned') return returnedOrdersThirtyDays;
+            if (selectedStatus === 'failed') return failedOrdersThirtyDays;
+            if (selectedStatus === 'returning') return returningOrdersThirtyDays;
+            if (selectedStatus === 'returned') return returnedOrdersThirtyDays;
         } else if (selectedRange === 'custom') {
-          if (selectedStatus === 'failed') return failedOrdersCustom;
-          if (selectedStatus === 'returning') return returningOrdersCustom;
-          if (selectedStatus === 'returned') return returnedOrdersCustom;
+            if (selectedStatus === 'failed') return failedOrdersCustom;
+            if (selectedStatus === 'returning') return returningOrdersCustom;
+            if (selectedStatus === 'returned') return returnedOrdersCustom;
         }
-      
+
         return [];
-      };
-      
+    };
+
 
     const getOrdersCountBySelectedRange = () => {
         switch (selectedRange) {
@@ -548,7 +552,7 @@ const [returningOrdersCustomCount, setReturningOrdersCustomCount] = useState(0);
                         <ActivityIndicator size={'large'} color={theme.primaryOrange}></ActivityIndicator>
                     </View>
                     :
-                    <ScrollView 
+                    <ScrollView
                         showsVerticalScrollIndicator={false}
                         refreshControl={
                             <RefreshControl

@@ -1,16 +1,17 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
+import { initializeAuth, getReactNativePersistence, Auth } from 'firebase/auth';
+import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 
 // Firebase configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyAMlnp93pBXil5eIN8M_VNlCYWHMsjRj-4",
-    authDomain: "dseller-c21ee.firebaseapp.com",
-    databaseURL: "https://dseller-c21ee-default-rtdb.firebaseio.com",
-    projectId: "dseller-c21ee",
-    storageBucket: "dseller-c21ee.firebasestorage.app",
-    messagingSenderId: "56884086045",
-    appId: "1:56884086045:web:4f86d9d268511c43a68df4",
-    measurementId: "G-WZZV3QCYFH"
+  apiKey: "AIzaSyAMlnp93pBXil5eIN8M_VNlCYWHMsjRj-4",
+  authDomain: "dseller-c21ee.firebaseapp.com",
+  databaseURL: "https://dseller-c21ee-default-rtdb.firebaseio.com",
+  projectId: "dseller-c21ee",
+  storageBucket: "dseller-c21ee.firebasestorage.app",
+  messagingSenderId: "56884086045",
+  appId: "1:56884086045:web:4f86d9d268511c43a68df4",
+  measurementId: "G-WZZV3QCYFH"
 };
 
 // Initialize Firebase
@@ -21,8 +22,10 @@ if (getApps().length === 0) {
   app = getApps()[0];
 }
 
-// Initialize Firebase services
-export const auth: Auth = getAuth(app);
+// Initialize Firebase services with persistence for React Native
+export const auth: Auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(ReactNativeAsyncStorage)
+});
 
 export default app;
 

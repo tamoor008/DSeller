@@ -5,39 +5,44 @@ import { auth } from '../config/firebase'
 import Header from '../components/Header'
 import { useTheme } from '../context/ThemeContext'
 import { AppStrings } from '../constants/strings'
+import { useAlert } from '../context/AlertContext'
 
 const SettingsPage = () => {
   const navigate = useNavigate()
   const { theme, isDark, toggleTheme } = useTheme()
+  const { showAlert, showConfirm } = useAlert()
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const [currentPlan, setCurrentPlan] = useState('Free')
 
-  const handleLogout = () => {
-    if (window.confirm('Are you sure you want to log out?')) {
+  const handleLogout = async () => {
+    const confirmed = await showConfirm('Logout', 'Are you sure you want to log out?');
+    if (confirmed) {
       signOut(auth).then(() => {
-        console.log('User signed out!')
         navigate('/app/login')
       }).catch((error) => {
         console.error('Error signing out:', error)
-        alert('Failed to sign out. Please try again.')
+        showAlert('Error', 'Failed to sign out. Please try again.')
       })
     }
   }
 
-  const handlePlanUpgrade = (planName: string) => {
-    if (window.confirm(`Are you sure you want to upgrade to ${planName} plan?`)) {
+
+  const handlePlanUpgrade = async (planName: string) => {
+    const confirmed = await showConfirm('Upgrade Plan', `Are you sure you want to upgrade to ${planName} plan?`);
+    if (confirmed) {
       setCurrentPlan(planName)
-      alert(`You have successfully upgraded to ${planName} plan!`)
+      showAlert('Success', `You have successfully upgraded to ${planName} plan!`)
     }
   }
 
-  const SettingItem = ({ 
-    icon, 
-    title, 
-    subtitle, 
-    onPress, 
-    rightComponent, 
-    showArrow = true 
+
+  const SettingItem = ({
+    icon,
+    title,
+    subtitle,
+    onPress,
+    rightComponent,
+    showArrow = true
   }: {
     icon?: string
     title: string
@@ -238,7 +243,7 @@ const SettingsPage = () => {
       margin: '0 auto'
     }}>
       <Header title={AppStrings.settings} goBack={() => navigate(-1)} />
-      
+
       <div style={{ paddingTop: '16px' }}>
         {/* Account Settings Section */}
         <div style={{ marginBottom: '24px' }}>
@@ -262,22 +267,25 @@ const SettingsPage = () => {
               icon="👤"
               title="Profile"
               subtitle="Manage your account information"
-              onPress={() => alert('Profile settings coming soon')}
+              onPress={() => showAlert('Info', 'Profile settings coming soon')}
             />
+
             <div style={{ height: '1px', backgroundColor: theme.border, marginLeft: '52px' }} />
             <SettingItem
               icon="🔒"
               title="Security"
               subtitle="Password and security settings"
-              onPress={() => alert('Security settings coming soon')}
+              onPress={() => showAlert('Info', 'Security settings coming soon')}
             />
+
             <div style={{ height: '1px', backgroundColor: theme.border, marginLeft: '52px' }} />
             <SettingItem
               icon="🏪"
               title="Stores"
               subtitle="Manage connected Daraz stores"
-              onPress={() => alert('Store management coming soon')}
+              onPress={() => showAlert('Info', 'Store management coming soon')}
             />
+
           </div>
         </div>
 
@@ -470,22 +478,25 @@ const SettingsPage = () => {
               icon="❓"
               title="Help & Support"
               subtitle="Get help and contact support"
-              onPress={() => alert('Help center coming soon')}
+              onPress={() => showAlert('Info', 'Help center coming soon')}
             />
+
             <div style={{ height: '1px', backgroundColor: theme.border, marginLeft: '52px' }} />
             <SettingItem
               icon="ℹ️"
               title="About"
               subtitle="App version and information"
-              onPress={() => alert('DSeller v1.0.0\n\nManage your Daraz business efficiently.')}
+              onPress={() => showAlert('About', 'DSeller v1.0.0\n\nManage your Daraz business efficiently.')}
             />
+
             <div style={{ height: '1px', backgroundColor: theme.border, marginLeft: '52px' }} />
             <SettingItem
               icon="📄"
               title="Terms & Privacy"
               subtitle="Terms of service and privacy policy"
-              onPress={() => alert('Terms and privacy policy coming soon')}
+              onPress={() => showAlert('Info', 'Terms and privacy policy coming soon')}
             />
+
           </div>
         </div>
 

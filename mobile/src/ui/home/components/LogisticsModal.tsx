@@ -36,42 +36,42 @@ const LogisticsModal = ({ visible, onClose, item }: LogisticsModalProps) => {
 
     const [logisticData, setlogisticData] = useState<LogisticDataItem[]>([])
     const [logisticLoader, setLogisticLoader] = useState(false)
-    
+
     const getDarazOrderLogistics = async ({ access_token, order_id, package_id, locale = 'en_PK' }: { access_token: string; order_id: string; package_id: string; locale?: string }) => {
-    
+
         setLogisticLoader(true)
 
         try {
-          const baseUrl = `${BASE_URL}/get-daraz-order-logistics`; // 🔁 Replace with your real backend URL
-      
-          const params = new URLSearchParams({
-            access_token,
-            order_id,
-            package_id_list: JSON.stringify([package_id]), // Daraz expects this to be a stringified array
-            locale,
-          });
-      
-          const response = await fetch(`${baseUrl}?${params.toString()}`);
-      
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-          }
-      
-          const data = await response.json();
-          console.log(data);
+            const baseUrl = `${BASE_URL}/get-daraz-order-logistics`; // 🔁 Replace with your real backend URL
 
-          const trackingSteps =
-  data?.data?.module?.[0]?.packageDetailInfoList?.[0]?.logisticDetailInfoList || [];
+            const params = new URLSearchParams({
+                access_token,
+                order_id,
+                package_id_list: JSON.stringify([package_id]), // Daraz expects this to be a stringified array
+                locale,
+            });
 
-setlogisticData(trackingSteps);
-          setLogisticLoader(false)
-          return data;
+            const response = await fetch(`${baseUrl}?${params.toString()}`);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+            // console.log(data);
+
+            const trackingSteps =
+                data?.data?.module?.[0]?.packageDetailInfoList?.[0]?.logisticDetailInfoList || [];
+
+            setlogisticData(trackingSteps);
+            setLogisticLoader(false)
+            return data;
         } catch (error) {
-          console.error('Error fetching logistics:', error instanceof Error ? error.message : 'Unknown error');
-          setLogisticLoader(false)
-          return null;
+            // console.error('Error fetching logistics:', error instanceof Error ? error.message : 'Unknown error');
+            setLogisticLoader(false)
+            return null;
         }
-      };
+    };
 
     useEffect(() => {
         if (visible && item?.access_token && item?.order_id && item?.package_id) {
@@ -82,7 +82,7 @@ setlogisticData(trackingSteps);
             });
         }
     }, [visible, item]);
-    
+
     const styles = getStyles(theme);
 
     return (

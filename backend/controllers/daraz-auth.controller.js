@@ -167,7 +167,7 @@ async function refreshDarazToken(req, res, next) {
         // We only want to save the token part, not the whole response if it has extra unrelated fields
         // But Daraz refresh response is usually just the token info
         await updateStoreToken(userId, storeId, newTokenData);
-        console.log(`✅ [DARAZ AUTH] Automatically updated token for store ${storeId}`);
+        // console.log(`✅ [DARAZ AUTH] Automatically updated token for store ${storeId}`);
       } catch (updateError) {
         console.error(`⚠️ [DARAZ AUTH] Failed to update token in Firebase: ${updateError.message}`);
         // Don't fail the request, just log the error

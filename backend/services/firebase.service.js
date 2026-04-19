@@ -1,6 +1,56 @@
 const { getFirebaseAdmin, isFirebaseInitialized } = require("../config/firebase");
 const { withTimeout } = require("../utils/firebaseTimeout");
 
+function toNumber(value, fallback = 0) {
+  const parsed = typeof value === "number" ? value : parseFloat(String(value ?? ""));
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function normalizeSkuPricing(rawSku = {}) {
+  const packagingPrice = toNumber(rawSku.packagingPrice, 0);
+  const hasPackagingField =
+    Object.prototype.hasOwnProperty.call(rawSku, "packagingPrice") &&
+    rawSku.packagingPrice !== null &&
+    String(rawSku.packagingPrice).trim() !== "";
+  const packagingPriceConfigured =
+    rawSku.packagingPriceConfigured !== undefined
+      ? !!rawSku.packagingPriceConfigured
+      : hasPackagingField;
+  const hasStoredTotalPrice = rawSku.totalPrice !== undefined && rawSku.totalPrice !== null && rawSku.totalPrice !== "";
+  const storedPrice = toNumber(rawSku.price, 0);
+  const storedTotalPrice = toNumber(rawSku.totalPrice, 0);
+
+  let price = storedPrice;
+  let totalPrice = storedTotalPrice;
+
+  if (hasStoredTotalPrice) {
+    totalPrice = storedTotalPrice;
+    if (price <= 0 && totalPrice > 0) {
+      price = Math.max(totalPrice - packagingPrice, 0);
+    }
+  } else if (storedPrice > 0) {
+    // Legacy SKU schema stored packaging-inclusive value in price.
+    if (packagingPrice > 0) {
+      totalPrice = storedPrice;
+      price = Math.max(storedPrice - packagingPrice, 0);
+    } else {
+      totalPrice = storedPrice;
+      price = storedPrice;
+    }
+  } else {
+    price = 0;
+    totalPrice = packagingPrice > 0 ? packagingPrice : 0;
+  }
+
+  return {
+    ...rawSku,
+    price,
+    totalPrice,
+    packagingPrice,
+    packagingPriceConfigured,
+  };
+}
+
 /**
  * Get all products for a user
  * @param {string} userId - Firebase user ID
@@ -138,15 +188,22 @@ async function updateSku(userId, sku, updates) {
     const existingSnapshot = await skuRef.once('value');
     const existingSku = existingSnapshot.val();
 
+    const normalizedUpdates = normalizeSkuPricing(updates);
     const updateData = {
-      ...updates,
+      ...normalizedUpdates,
       updatedAt: admin.database.ServerValue.TIMESTAMP,
     };
 
     // CRITICAL: Preserve existing price if it's > 0
-    if (existingSku && existingSku.price > 0 && (!updates.price || updates.price === 0)) {
-      updateData.price = existingSku.price;
+    if (existingSku && existingSku.price > 0 && (!normalizedUpdates.price || normalizedUpdates.price === 0)) {
+      const normalizedExistingSku = normalizeSkuPricing(existingSku);
+      updateData.price = toNumber(normalizedExistingSku.price, 0);
+      updateData.totalPrice = toNumber(normalizedExistingSku.totalPrice, updateData.price + toNumber(normalizedExistingSku.packagingPrice, 0));
       console.log(`🔒 [updateSku] Preserving existing price for SKU ${sku}: ${existingSku.price}`);
+    }
+
+    if (updateData.totalPrice === undefined || updateData.totalPrice === null) {
+      updateData.totalPrice = toNumber(updateData.price, 0) + toNumber(updateData.packagingPrice, 0);
     }
 
     // Use .update() which will create if doesn't exist, or update if it does
@@ -237,12 +294,15 @@ async function updateProduct(userId, productId, updates) {
     const admin = getFirebaseAdmin();
     const db = admin.database();
     const productRef = db.ref(`users/${userId}/products/${productId}`);
+    const skusRef = db.ref(`users/${userId}/skusList`);
 
     // Normalize price if it's being updated
+    let normalizedUpdatedPrice;
     if (updates.price !== undefined) {
-      updates.price = typeof updates.price === 'string'
+      normalizedUpdatedPrice = typeof updates.price === 'string'
         ? parseFloat(updates.price) || 0
         : (typeof updates.price === 'number' ? updates.price : 0);
+      updates.price = normalizedUpdatedPrice;
     }
 
     const updateData = {
@@ -251,6 +311,36 @@ async function updateProduct(userId, productId, updates) {
     };
 
     await productRef.update(updateData);
+
+    // Keep linked SKUs in sync whenever product price changes.
+    if (normalizedUpdatedPrice !== undefined) {
+      const skusSnapshot = await skusRef.once("value");
+      const skus = skusSnapshot.val() || {};
+      const skuUpdates = {};
+      const now = Date.now();
+
+      Object.entries(skus).forEach(([skuKey, rawSku]) => {
+        if (!rawSku || rawSku.productId !== productId) return;
+
+        const normalizedSku = normalizeSkuPricing(rawSku);
+        const quantityNum = toNumber(normalizedSku.productQuantity, 0);
+        const packagingNum = toNumber(normalizedSku.packagingPrice, 0);
+        const recalculatedBasePrice = quantityNum * normalizedUpdatedPrice;
+        const recalculatedTotalPrice = recalculatedBasePrice + packagingNum;
+
+        skuUpdates[`${skuKey}/price`] = recalculatedBasePrice;
+        skuUpdates[`${skuKey}/totalPrice`] = recalculatedTotalPrice;
+        skuUpdates[`${skuKey}/updatedAt`] = now;
+
+        if (updates.productName !== undefined) {
+          skuUpdates[`${skuKey}/productName`] = updates.productName;
+        }
+      });
+
+      if (Object.keys(skuUpdates).length > 0) {
+        await skusRef.update(skuUpdates);
+      }
+    }
   } catch (error) {
     if (!error.statusCode) {
       error.statusCode = 500;
@@ -332,7 +422,7 @@ async function getUserSkus(userId) {
     // Convert to array format
     return Object.entries(skus).map(([sku, value]) => ({
       sku,
-      ...value,
+      ...normalizeSkuPricing(value),
     }));
   } catch (error) {
     if (!error.statusCode) {
@@ -404,20 +494,23 @@ async function batchUpdateSkus(userId, skusData) {
     Object.keys(skusData).forEach(skuKey => {
       if (!mergedSkus[skuKey]) {
         // New SKU - add it (even if price is 0, this is OK for new SKUs)
-        mergedSkus[skuKey] = skusData[skuKey];
+        mergedSkus[skuKey] = normalizeSkuPricing(skusData[skuKey]);
         newSkusAdded++;
         console.log(`✅ [batchUpdateSkus] Adding NEW SKU: ${skuKey} with price: ${skusData[skuKey].price || 0}`);
       } else {
         // Existing SKU - CRITICAL: NEVER overwrite price if it's > 0
-        const existingPrice = parseFloat(mergedSkus[skuKey].price) || 0;
-        const newPrice = parseFloat(skusData[skuKey].price) || 0;
+        const existingNormalizedSku = normalizeSkuPricing(mergedSkus[skuKey]);
+        const incomingNormalizedSku = normalizeSkuPricing(skusData[skuKey]);
+        const existingPrice = parseFloat(existingNormalizedSku.price) || 0;
+        const newPrice = parseFloat(incomingNormalizedSku.price) || 0;
 
         if (existingPrice > 0) {
           // CRITICAL PROTECTION: Existing price > 0 - ALWAYS preserve it
           mergedSkus[skuKey] = {
-            ...mergedSkus[skuKey],
-            ...skusData[skuKey],
-            price: existingPrice // FORCE keep existing price - never overwrite with 0
+            ...existingNormalizedSku,
+            ...incomingNormalizedSku,
+            price: existingPrice, // FORCE keep existing price - never overwrite with 0
+            totalPrice: existingPrice + (parseFloat(incomingNormalizedSku.packagingPrice) || 0)
           };
           existingSkusPreserved++;
           pricesProtected++;
@@ -425,15 +518,15 @@ async function batchUpdateSkus(userId, skusData) {
         } else if (newPrice > 0) {
           // Existing price is 0, new price > 0 - update it
           mergedSkus[skuKey] = {
-            ...mergedSkus[skuKey],
-            ...skusData[skuKey]
+            ...existingNormalizedSku,
+            ...incomingNormalizedSku
           };
           console.log(`✅ [batchUpdateSkus] Updating price for SKU: ${skuKey} from ${existingPrice} to ${newPrice}`);
         } else {
           // Both are 0 - just merge other fields, don't touch price
           mergedSkus[skuKey] = {
-            ...mergedSkus[skuKey],
-            ...skusData[skuKey],
+            ...existingNormalizedSku,
+            ...incomingNormalizedSku,
             price: 0 // Explicitly keep as 0
           };
           console.log(`ℹ️ [batchUpdateSkus] Merging SKU: ${skuKey} (both prices are 0)`);
@@ -449,6 +542,11 @@ async function batchUpdateSkus(userId, skusData) {
       console.error(`❌ [batchUpdateSkus] ${error.message}`);
       throw error;
     }
+
+    // Ensure all merged SKUs keep normalized pricing fields.
+    Object.keys(mergedSkus).forEach((skuKey) => {
+      mergedSkus[skuKey] = normalizeSkuPricing(mergedSkus[skuKey]);
+    });
 
     // Use update() instead of set() to merge, not replace
     await skusRef.update(mergedSkus);
@@ -750,4 +848,3 @@ async function updateStoreToken(userId, storeId, tokenData) {
     throw error;
   }
 }
-

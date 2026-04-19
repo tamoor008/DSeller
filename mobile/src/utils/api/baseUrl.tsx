@@ -26,53 +26,32 @@ let initializationPromise: Promise<void> | null = null;
 const fetchBaseUrlFromFirebase = async (): Promise<string> => {
   const startTime = Date.now();
   try {
-    console.log('🔍 [BASE URL] Starting Firebase fetch...');
-    console.log('🔍 [BASE URL] Fallback URL:', FALLBACK_BASE_URL);
 
     const database = getDatabase(app);
     const baseUrlRef = ref(database, 'Base_URL');
 
-    console.log('⏱️ [BASE URL] Firebase get() called at:', new Date().toISOString());
     // Try to get the value once
     const snapshot = await get(baseUrlRef);
     const fetchDuration = Date.now() - startTime;
-    console.log(`⏱️ [BASE URL] Firebase get() completed in ${fetchDuration}ms`);
 
     if (snapshot.exists()) {
       const firebaseBaseUrl = snapshot.val();
-      console.log('📥 [BASE URL] Raw Firebase value:', firebaseBaseUrl);
-      console.log('📥 [BASE URL] Value type:', typeof firebaseBaseUrl);
 
       if (firebaseBaseUrl && typeof firebaseBaseUrl === 'string') {
         // Extract IP and port for logging
         try {
           const url = new URL(firebaseBaseUrl);
-          console.log('✅ [BASE URL] Fetched from Firebase:', firebaseBaseUrl);
-          console.log('🌐 [BASE URL] Parsed URL - Host:', url.hostname, 'Port:', url.port, 'Protocol:', url.protocol);
-          console.log(`⏱️ [BASE URL] Total fetch time: ${Date.now() - startTime}ms`);
           return firebaseBaseUrl;
         } catch (urlError) {
-          console.warn('⚠️ [BASE URL] Invalid URL format from Firebase:', firebaseBaseUrl);
-          console.warn('⚠️ [BASE URL] URL parse error:', urlError);
         }
       } else {
-        console.warn('⚠️ [BASE URL] Firebase value is not a valid string:', firebaseBaseUrl);
       }
     } else {
-      console.warn('⚠️ [BASE URL] Firebase snapshot does not exist');
     }
 
-    console.warn('⚠️ [BASE URL] Firebase Base_URL not found or invalid, using fallback');
-    console.log('🔄 [BASE URL] Using fallback URL:', FALLBACK_BASE_URL);
-    console.log(`⏱️ [BASE URL] Total time (with fallback): ${Date.now() - startTime}ms`);
     return FALLBACK_BASE_URL;
   } catch (error) {
     const errorDuration = Date.now() - startTime;
-    console.error('❌ [BASE URL] Error fetching from Firebase:', error);
-    console.error('❌ [BASE URL] Error message:', error instanceof Error ? error.message : String(error));
-    console.error('❌ [BASE URL] Error duration:', errorDuration, 'ms');
-    console.log('🔄 [BASE URL] Using fallback URL:', FALLBACK_BASE_URL);
-    console.log(`⏱️ [BASE URL] Total time (with error): ${Date.now() - startTime}ms`);
     return FALLBACK_BASE_URL;
   }
 };
@@ -91,15 +70,12 @@ const setupFirebaseListener = () => {
       if (snapshot.exists()) {
         const newBaseUrl = snapshot.val();
         if (newBaseUrl && typeof newBaseUrl === 'string' && newBaseUrl !== BASE_URL) {
-          console.log('🔄 [BASE URL] Updated from Firebase:', newBaseUrl);
           BASE_URL = newBaseUrl;
         }
       }
     }, (error) => {
-      console.error('❌ [BASE URL] Firebase listener error:', error);
     });
   } catch (error) {
-    console.error('❌ [BASE URL] Error setting up Firebase listener:', error);
   }
 };
 
@@ -124,9 +100,7 @@ export const initializeBaseUrl = async (): Promise<void> => {
       BASE_URL = await fetchBaseUrlFromFirebase();
       setupFirebaseListener(); // Set up real-time listener for future changes
       isInitialized = true;
-      console.log('🔧 [BASE URL] Initialized:', BASE_URL);
     } catch (error) {
-      console.error('❌ [BASE URL] Initialization error:', error);
       BASE_URL = FALLBACK_BASE_URL;
       isInitialized = true;
     }
@@ -142,16 +116,11 @@ export const initializeBaseUrl = async (): Promise<void> => {
 export const getBaseUrl = (): string => {
   // If not initialized yet, return fallback (shouldn't happen if initializeBaseUrl is called)
   if (!isInitialized) {
-    console.warn('⚠️ [BASE URL] getBaseUrl called before initialization, using fallback');
-    console.warn('⚠️ [BASE URL] Fallback URL:', FALLBACK_BASE_URL);
     return FALLBACK_BASE_URL;
   }
-  console.log('🔗 [BASE URL] getBaseUrl() called, returning:', BASE_URL);
   try {
     const url = new URL(BASE_URL);
-    console.log('🌐 [BASE URL] Current URL details - Host:', url.hostname, 'Port:', url.port || 'default', 'Protocol:', url.protocol);
   } catch (e) {
-    console.warn('⚠️ [BASE URL] Could not parse current URL:', BASE_URL);
   }
   return BASE_URL;
 };

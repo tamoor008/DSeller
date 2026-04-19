@@ -1,76 +1,52 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { log } from "console";
-import { act } from "react-test-renderer";
 
 const initialState = {
     isLoggedin: false,
     accessToken: '',
-    user:{},
-    access_tokens:[],
-    selectedStore:{},
-    firebaseProducts:{},
-    todayDeliveredOrders:[],
-    todayPendingOrders:[],
-    todayReadyToShipOrders:[]
-
-   
-
-
-
-
-
-
-
+    user: {},
+    access_tokens: [],
+    selectedStore: {},
+    firebaseProducts: {},
+    todayDeliveredOrders: [],
+    todayPendingOrders: [],
+    todayReadyToShipOrders: [],
 };
-
-
 
 export const AppSlice = createSlice({
     name: "AppReducer",
     initialState,
     reducers: {
-
-        
         setisLoggedin: (state, action) => {
-            state.isLoggedin = action.payload
+            state.isLoggedin = action.payload;
         },
-     
         setAccessToken: (state, action) => {
-            state.accessToken = action.payload
+            state.accessToken = action.payload;
         },
         setGlobalUser: (state, action) => {
-            state.user = action.payload
+            state.user = action.payload;
         },
         setAccessTokens: (state, action) => {
-            state.access_tokens = action.payload
+            state.access_tokens = action.payload;
         },
-        setSelectedStore: (state, action) => {    
-            state.selectedStore = action.payload
+        setSelectedStore: (state, action) => {
+            state.selectedStore = action.payload;
         },
-        setFirebaseProducts: (state, action) => {    
-            state.firebaseProducts = action.payload
+        setFirebaseProducts: (state, action) => {
+            state.firebaseProducts = action.payload;
         },
-        setTodayDeliveredOrders: (state, action) => {    
-            state.todayDeliveredOrders = action.payload
-            
+        setTodayDeliveredOrders: (state, action) => {
+            state.todayDeliveredOrders = action.payload;
         },
-        setTodayPendingOrders: (state, action) => {    
-            state.todayPendingOrders = action.payload
-            
-            
+        setTodayPendingOrders: (state, action) => {
+            state.todayPendingOrders = action.payload;
         },
-        setTodayReadyToShipOrders: (state, action) => {    
-            state.todayReadyToShipOrders = action.payload
-            
-            
+        setTodayReadyToShipOrders: (state, action) => {
+            state.todayReadyToShipOrders = action.payload;
         },
-        
-        
     },
 });
 
 export const {
-
     setisLoggedin,
     setAccessToken,
     setGlobalUser,
@@ -79,8 +55,7 @@ export const {
     setFirebaseProducts,
     setTodayDeliveredOrders,
     setTodayPendingOrders,
-    setTodayReadyToShipOrders
-
+    setTodayReadyToShipOrders,
 } = AppSlice.actions;
 
 export default AppSlice.reducer;
